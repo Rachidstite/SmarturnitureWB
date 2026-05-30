@@ -1,0 +1,142 @@
+import math
+from shared.enums import DoorType
+from shared.contracts import SectionConfig
+from shared.resolved_types import *
+from core.material_manager import MaterialManager
+from layout.layout_engine import LayoutEngine, LayoutContext
+from validation.geometry_validator import GeometryValidator
+from manufacturing.resolver import ManufacturingResolver
+from constraints.constraint_engine import ConstraintEngine
+from shared.issues import GeometryIssue
+
+class GeometryEngine:
+    def __init__(self, cabinet, mat: MaterialManager):
+        self.cabinet = cabinet; self.mat = mat; self.resolved_sections = []; self.resolved_top = None; self.issues = []
+        self.layout_engine = LayoutEngine(); self.validator = GeometryValidator(); self.constraint_engine = ConstraintEngine(); self.is_buildable = True
+
+    def resolve_all(self):
+        self.resolved_sections.clear(); self.issues.clear(); self.is_buildable = True
+        params = self.cabinet.params; T = self.mat.mdf_thickness; sec_count = params.sec_count
+        self.cabinet.sections = []
+        for i in range(sec_count):
+            cfg = params.sec_data.get(i, SectionConfig())
+            from engine.section import Section
+            self.cabinet.sections.append(Section(i, cfg))
+        total_inner = params.width - 2 * T
+        section_opening = total_inner / sec_count
+        global_has_sliding = any(DoorType.from_string(s.config.doors).is_sliding() for s in self.cabinet.sections)
+        sliding_track = self.mat.sliding_track_depth if global_has_sliding else 0
+        current_x = T
+        for i, sec in enumerate(self.cabinet.sections):
+            r = self._resolve_one_section(sec, i, section_opening, current_x, sliding_track, params, sec_count)
+            self.resolved_sections.append(r)
+            current_x += r.inner_width
+        self.issues.extend(self.constraint_engine.validate(self.resolved_sections, self.mat))
+        self.issues.extend(self.validator.validate(self.resolved_sections, self.mat))
+        if any(i.level == "ERROR" for i in self.issues): self.is_buildable = False
+        has_overlay = any(d.door_type.is_overlay() for sec in self.resolved_sections for d in sec.doors)
+        top_depth = params.depth + (T + self.mat.door_top_gap if has_overlay else 0)
+        top_y = -(T + self.mat.door_top_gap) if has_overlay else 0
+        self.resolved_top = ResolvedTopPanel(params.width, top_depth, T, 0, top_y, params.height - T)
+
+    def _resolve_one_section(self, sec, idx, inner_w, start_x, sliding, params, sec_count):
+        T = self.mat.mdf_thickness; D = params.depth; bp = 20; BT = self.mat.back_thickness; base_H = params.base_height
+        door_type = DoorType.from_string(sec.config.doors)
+        section_sliding = sliding if door_type.is_sliding() else 0
+        shelf_start_y = section_sliding + ((T + 2) if door_type.is_inset() else 2)
+        shelf_depth = max(D - bp - BT - self.mat.shelf_depth_margin - section_sliding, 50)
+        max_drawer_depth = self.mat.drawer_depth if self.mat.drawer_depth > 0 else D - bp - BT - section_sliding - 20
+        max_drawer_depth = min(max_drawer_depth, D - bp - BT - section_sliding - 20)
+        available_height = params.height - base_H - 2 * T
+        ctx = LayoutContext(params=params, section_config=sec.config, mat=self.mat,
+                            available_height=available_height, base_z=base_H + T,
+                            door_type=door_type, has_sliding=door_type.is_sliding(), sliding_track=sliding)
+        layout_res = self.layout_engine.resolve_zones(ctx)
+
+        # --- Drawers ---
+        drawers = []
+        for zone in layout_res.drawer_zones:
+            h = zone.height; d_type = sec.config.drawer_type
+            if d_type == "Inset":
+                face_w = inner_w - (self.mat.clearance * 2); face_x = start_x + self.mat.clearance
+                face_y = section_sliding + self.mat.drawer_reveal; box_start_y = section_sliding + T + 5
+            else:
+                face_w = inner_w + (self.mat.side_overlay if idx == 0 else self.mat.center_overlay) + (
+                    self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay) - (
+                                    self.mat.drawer_reveal * 2)
+                face_x = start_x - (self.mat.side_overlay if idx == 0 else self.mat.center_overlay) + self.mat.drawer_reveal
+                face_y = section_sliding - T + self.mat.drawer_reveal; box_start_y = section_sliding + 5
+            face_h = h - (self.mat.drawer_reveal * 2); face_z = zone.z_start + self.mat.drawer_reveal
+            box_w = inner_w - (self.mat.drawer_slide_clearance * 2)
+            box_h = ManufacturingResolver.resolve_drawer_box_height(self.mat, h)
+            box_d = ManufacturingResolver.resolve_drawer_box_depth(self.mat, max_drawer_depth, box_start_y)
+            box_start_x = start_x + self.mat.drawer_slide_clearance
+            box_start_z = zone.z_start + self.mat.drawer_bottom_clearance
+            drawers.append(ResolvedDrawer(face_x, face_y, face_z, face_w, face_h, box_start_x, box_start_y, box_start_z,
+                                          box_w, box_h, box_d, self.mat.drawer_bottom_thickness))
+
+        # --- Doors ---
+        doors = []
+        if layout_res.door_zone:
+            door_Z = layout_res.door_zone.z_start; door_H = layout_res.door_zone.height
+            door_count = getattr(sec.config, 'door_count', 2) or 1
+            if door_type.is_overlay():
+                total_w = inner_w + self.mat.side_overlay * 2
+                gap = self.mat.door_side_gap
+                door_w = (total_w - (door_count - 1) * gap) / door_count if door_count > 1 else total_w
+                start_x_door = start_x - self.mat.side_overlay
+                y = section_sliding - T + self.mat.overlay_setback
+                for d in range(door_count): doors.append(
+                    ResolvedDoor(start_x_door + d * (door_w + gap), y, door_Z, door_w, door_H, door_type))
+            elif door_type.is_sliding():
+                overlap = self.mat.sliding_overlap; side_extra = self.mat.sliding_side_extra
+                total_w = inner_w + 2 * side_extra
+                door_w = (total_w + (door_count - 1) * overlap) / door_count if door_count > 1 else total_w
+                track_step = door_w - overlap; start_x_door = start_x - side_extra
+                for d in range(door_count): doors.append(
+                    ResolvedDoor(start_x_door + d * track_step, 0, door_Z, door_w, door_H, door_type, d % 2))
+            else:
+                sc = self.mat.inset_side_clearance; gap = self.mat.door_side_gap
+                avail = inner_w - 2 * sc - (door_count - 1) * gap
+                door_w = avail / door_count if door_count > 1 else avail
+                start_x_door = start_x + sc; y = section_sliding + self.mat.clearance
+                for d in range(door_count): doors.append(
+                    ResolvedDoor(start_x_door + d * (door_w + gap), y, door_Z, door_w, door_H, door_type))
+
+        # --- Shelves ---
+        shelves = []
+        if layout_res.shelf_zone and sec.config.shelves > 0:
+            s_shelves = sec.config.shelves
+            usable_zone_h = layout_res.shelf_zone.height; zone_start_z = layout_res.shelf_zone.z_start
+            shelf_gap = (usable_zone_h - (s_shelves * T)) / (s_shelves + 1)
+            for sh in range(1, s_shelves + 1):
+                z_pos = zone_start_z + (shelf_gap * sh) + (T * (sh - 1))
+                shelves.append(ResolvedShelf(x=start_x + self.mat.shelf_side_gap, y=shelf_start_y, z=z_pos,
+                                             width=inner_w - (self.mat.clearance * 2) - (
+                                                         self.mat.shelf_side_gap * 2), depth=shelf_depth))
+
+        # --- Divider ---
+        div = None
+        if idx < sec_count - 1:
+            CLEARANCE = 1.0
+            div_depth = D - 20 - BT - section_sliding
+            div = ResolvedDivider(x=start_x + inner_w, y=section_sliding, z=base_H + T + CLEARANCE, width=T,
+                                  depth=div_depth,
+                                  height=params.height - base_H - 2 * T - 2 * CLEARANCE)
+
+        return ResolvedSection(
+            inner_x=start_x, inner_width=inner_w,
+            shelf_width=inner_w - (self.mat.clearance * 2) - (self.mat.shelf_side_gap * 2),
+            drawer_box_width=inner_w - (self.mat.drawer_slide_clearance * 2),
+            left_overlay=self.mat.side_overlay if idx == 0 else self.mat.center_overlay,
+            right_overlay=self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay,
+            door_x=start_x - (self.mat.side_overlay if idx == 0 else self.mat.center_overlay),
+            door_width=inner_w + (self.mat.side_overlay if idx == 0 else self.mat.center_overlay) + (
+                self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay),
+            drawer_face_x=start_x - (self.mat.side_overlay if idx == 0 else self.mat.center_overlay) + self.mat.drawer_reveal,
+            drawer_face_width=inner_w + (self.mat.side_overlay if idx == 0 else self.mat.center_overlay) + (
+                self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay) - (
+                                              self.mat.drawer_reveal * 2),
+            divider_x=start_x + inner_w, has_sliding_system=door_type.is_sliding(),
+            shelves=tuple(shelves), drawers=tuple(drawers), doors=tuple(doors), divider=div
+        )

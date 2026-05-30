@@ -1,0 +1,1 @@
+class DefaultWardrobePolicy: drawer_zone_ratio = 0.4

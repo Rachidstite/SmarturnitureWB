@@ -1,0 +1,105 @@
+import os
+from domain.anchors import HardwarePlacement, AnchorCoordinate, MountFace, EdgeRef
+import json
+from dataclasses import asdict
+from domain.builders import CabinetProject, SceneGraph, SceneNode, VirtualAnchor, Identity
+from domain.topology import CabinetTopologyManager, SectionTopology, BoundingBox, Transform3D
+from domain.assembly_graph import JoineryGraph, AssemblyEdge
+from domain.core_types import NodeRole, NodeCategory, JoineryType, MachiningOperation
+
+class DomainEncoder(json.JSONEncoder):
+    """مُشفر مخصص للتعامل مع الـ Enums والـ Dataclasses بأمان"""
+    def default(self, obj):
+        if hasattr(obj, 'value'): # Handle Enums
+            return obj.value
+        if hasattr(obj, '__dataclass_fields__'): # Handle Dataclasses
+            return asdict(obj)
+        return super().default(obj)
+
+class ProjectSerializer:
+    """محرك الحفظ والاسترجاع (Save/Load)"""
+    
+    @staticmethod
+    def save(project: CabinetProject, filepath: str):
+        # 1. تجميع البيانات الخام (Raw Data Mapping)
+        data = {
+            "schema_version": 1,
+            "topology": {
+                "w": project.topology.w, "h": project.topology.h, "d": project.topology.d, "t": project.topology.t,
+                "sections": {
+                    uid: asdict(sec) for uid, sec in project.topology.sections.items()
+                }
+            },
+            "graph": {
+                "nodes": [n.to_dict() for n in project.graph.nodes]
+            },
+            "joinery": {
+                "edges": [asdict(e) for e in project.joinery.edges]
+            },
+            "placements": [p.to_dict() for p in project.placements]
+        }
+        
+        # 2. الحفظ الفعلي
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, cls=DomainEncoder, indent=2)
+
+    @staticmethod
+    def load(filepath: str) -> CabinetProject:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        # 1. Rehydrate Topology
+        topo_data = data['topology']
+        topo = CabinetTopologyManager(topo_data['w'], topo_data['h'], topo_data['d'], thickness=topo_data.get('t', 18.0))
+        topo.sections.clear() 
+        
+        for uid, s_data in topo_data['sections'].items():
+            trans = Transform3D(**s_data['bounds']['transform'])
+            bounds = BoundingBox(trans, s_data['bounds']['width'], s_data['bounds']['depth'], s_data['bounds']['height'])
+            topo.sections[uid] = SectionTopology(uid, bounds)
+
+        # 2. Rehydrate Scene Graph
+        graph = SceneGraph()
+        for n_data in data['graph']['nodes']:
+            cat = NodeCategory(n_data['category'])
+            trans = Transform3D(**n_data['transform'])
+            identity = Identity(n_data['identity']['key'])
+            role = NodeRole(n_data['role'])
+            
+            if cat == NodeCategory.VIRTUAL:
+                node = VirtualAnchor(identity=identity, role=role, transform=trans, category=cat)
+                graph.add_node(node)
+            else:
+                node = SceneNode(
+                    identity=identity, role=role,
+                    width=n_data['width'], height=n_data['height'], thickness=n_data['thickness'],
+                    material=n_data['material'], edge_bands=n_data['edge_bands'], grain_direction=n_data['grain_direction'],
+                    transform=trans, category=cat
+                )
+                node.machining_ops = [MachiningOperation(**op) for op in n_data.get('machining_ops', [])]
+                graph.add_node(node)
+
+        # 3. Rehydrate Joinery Graph
+        joinery = JoineryGraph()
+        for e_data in data['joinery']['edges']:
+            joinery.add_connection(e_data['source_id'], e_data['target_id'], e_data['connector'], e_data.get('instruction', ''))
+
+        # 4. Rehydrate Placements
+        placements = []
+        for p_data in data.get('placements', []):
+            anchor = AnchorCoordinate(
+                face=MountFace(p_data['anchor']['face']),
+                edge=EdgeRef(p_data['anchor']['edge']),
+                offset_x=p_data['anchor']['offset_x'],
+                offset_y=p_data['anchor']['offset_y']
+            )
+            placements.append(HardwarePlacement(
+                host_node_id=p_data['host_node_id'],
+                target_node_id=p_data.get('target_node_id', ''),
+                hardware_intent=p_data.get('hardware_intent', p_data.get('target_node_id', '')),
+                anchor=anchor,
+                description=p_data.get('description', '')
+            ))
+            
+        return CabinetProject(graph=graph, joinery=joinery, topology=topo, placements=placements)
