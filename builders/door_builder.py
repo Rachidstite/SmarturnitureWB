@@ -1,4 +1,5 @@
 import FreeCAD as App, Part
+from domain.system32 import System32Engine
 class DoorBuilder:
     @staticmethod
     def build(doc, group, name, fw, fh, px, py, pz, mat, door_type_str,
@@ -45,7 +46,11 @@ class DoorBuilder:
 
             print(f"[HINGE DEBUG] {name} side={hinge_side} hx={hx}")
 
-            to = min(100, fh * 0.25)
+            hinge_positions = System32Engine.hinge_positions(fh)
 
-            hw_builder.add_hinge(f"{name}_Hinge_Top", (hx, hy, pz + fh - to), hw_group)
-            hw_builder.add_hinge(f"{name}_Hinge_Bot", (hx, hy, pz + to), hw_group)
+            for idx, pos in enumerate(hinge_positions, start=1):
+                hw_builder.add_hinge(
+                    f"{name}_Hinge_{idx}",
+                    (hx, hy, pz + pos),
+                    hw_group
+                )

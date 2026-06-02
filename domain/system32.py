@@ -1,46 +1,32 @@
 from dataclasses import dataclass
 
-SYSTEM32_PITCH = 32
-
-@dataclass(frozen=True)
-class System32Rule:
-    hinge_line: float = 37.0
-    shelf_pin_pitch: float = 32.0
-    shelf_pin_diameter: float = 5.0
-    minifix_offset: float = 37.0
-    minifix_diameter: float = 15.0
-    confirmat_offset: float = 37.0
+SYSTEM_PITCH = 32.0
+FRONT_SETBACK = 37.0
 
 class System32Engine:
 
     @staticmethod
-    def shelf_positions(height):
-        pos = []
-        y = 64
+    def hinge_positions(door_height):
 
-        while y < height - 64:
-            pos.append(y)
-            y += SYSTEM32_PITCH
+        if door_height <= 900:
+            return [100, door_height - 100]
 
-        return pos
+        elif door_height <= 1600:
+            return [100, door_height / 2, door_height - 100]
 
-    @staticmethod
-    def hinge_positions(height):
+        elif door_height <= 2400:
+            return [
+                100,
+                door_height * 0.33,
+                door_height * 0.66,
+                door_height - 100
+            ]
 
-        top = 100
-        bottom = height - 100
-
-        if height < 900:
-            return [top, bottom]
-
-        middle = height / 2
-
-        return [top, middle, bottom]
-
-    @staticmethod
-    def minifix_positions(length):
-
-        start = 37
-        end = length - 37
-
-        return [start, end]
+        else:
+            return [
+                100,
+                door_height * 0.25,
+                door_height * 0.50,
+                door_height * 0.75,
+                door_height - 100
+            ]
