@@ -1,19 +1,29 @@
-import uuid
 from engine.geometry_engine import GeometryEngine
 from core.material_manager import MaterialManager
 from scene_graph.node import SceneNode
 from scene_graph.scene_graph import SceneGraph
-from shared.identity import PanelIdentity, SemanticRole
+from shared.identity import PanelIdentity, SemanticRole, normalize_identity_part
 from shared.roles import NodeRole
 from manufacturing.edge_spec import EdgeBandRegistry
-from scene_graph.metadata import DoorMetadata, DrawerMetadata
+from scene_graph.metadata import BackPanelMetadata, DoorMetadata, DrawerMetadata
+from domain.back_panel_engine import BackPanelRule
 
 class SceneGraphBuilder:
-    def __init__(self, cabinet, mat: MaterialManager):
+    def __init__(self, cabinet, mat: MaterialManager, cabinet_id: str = None):
         self.cabinet = cabinet
         self.mat = mat
         self.graph = SceneGraph()
-        self.cabinet_id = str(uuid.uuid4())[:8]  # ديناميكي
+        self.cabinet_id = self._resolve_cabinet_id(cabinet_id)
+
+    def _resolve_cabinet_id(self, cabinet_id: str = None) -> str:
+        if cabinet_id:
+            return normalize_identity_part(cabinet_id)
+        params = self.cabinet.params
+        width = int(round(params.width))
+        height = int(round(params.height))
+        depth = int(round(params.depth))
+        sec_count = int(params.sec_count)
+        return normalize_identity_part(f"CAB-{width}x{height}x{depth}-S{sec_count}")
 
     def build(self, geo: GeometryEngine) -> SceneGraph:
         T = self.mat.mdf_thickness; base_H = self.cabinet.params.base_height
@@ -31,21 +41,43 @@ class SceneGraphBuilder:
         inner_W = W - 2 * T
         self._add(SceneNode(PanelIdentity(self.cabinet_id, "SEC-BOTTOM", SemanticRole.BOTTOM),
                             inner_W, D, T, T, 0, base_H, group="Carcass", role=NodeRole.BOTTOM_PANEL, thickness=T))
-        bp_w = inner_W + 2 * self.mat.groove_depth
-        bp_h = H - base_H - (2 * T) + (2 * self.mat.groove_depth)
-        self._add(SceneNode(PanelIdentity(self.cabinet_id, "SEC-BACK", SemanticRole.BACK),
-                            bp_w, self.mat.back_thickness, bp_h,
-                            T - self.mat.groove_depth, D - 20 - self.mat.back_thickness,
-                            base_H + T - self.mat.groove_depth, group="Carcass", role=NodeRole.BACK_PANEL, thickness=self.mat.back_thickness))
         if base_H > 0:
-            self._add(SceneNode(PanelIdentity(self.cabinet_id, "SEC-PLINTH", SemanticRole.PLINTH),
+            self._add(SceneNode(PanelIdentity(self.cabinet_id, "STRUCTURE", SemanticRole.PLINTH, 1),
                                 inner_W, T, base_H, T, 20, 0, group="Carcass", role=NodeRole.PLINTH, thickness=T))
-            self._add(SceneNode(PanelIdentity(self.cabinet_id, "SEC-PLINTH", SemanticRole.PLINTH),
+            self._add(SceneNode(PanelIdentity(self.cabinet_id, "STRUCTURE", SemanticRole.PLINTH, 2),
                                 inner_W, T, base_H, T, D - 20 - self.mat.back_thickness - T, 0,
                                 group="Carcass", role=NodeRole.PLINTH, thickness=T))
 
         # --- الأقسام ---
+        back_rule = BackPanelRule()
+        back_offset = 20
+        back_height = H - base_H - (2 * T) + (2 * back_rule.groove_depth)
         for i, r in enumerate(geo.resolved_sections):
+            back_meta = BackPanelMetadata(
+                section_index=i,
+                section_label=f"SEC-{i+1}",
+                is_section_back=True,
+                groove_depth=back_rule.groove_depth,
+                back_offset=back_offset,
+                extends_into_groove=True,
+                source_rule=back_rule.__class__.__name__
+            )
+            self._add(SceneNode(PanelIdentity(self.cabinet_id, f"SEC-{i+1}", SemanticRole.BACK, 1),
+                                r.inner_width,
+                                back_rule.thickness,
+                                back_height,
+                                r.inner_x - back_rule.groove_depth,
+                                D - back_offset - back_rule.thickness,
+                                base_H + T - back_rule.groove_depth,
+                                group="Carcass", role=NodeRole.BACK_PANEL,
+                                metadata=back_meta, thickness=back_rule.thickness))
+            print(
+                f"[SECTION {i+1}] "
+                f"shelves={len(r.shelves)} "
+                f"drawers={len(r.drawers)} "
+                f"doors={len(r.doors)}"
+            )
+
             for j, shelf in enumerate(r.shelves):
                 self._add(SceneNode(PanelIdentity.make_shelf(self.cabinet_id, i, j),
                                     shelf.width, shelf.depth, T, shelf.x, shelf.y, shelf.z,
@@ -77,6 +109,7 @@ class SceneGraphBuilder:
                                     r.divider.width, r.divider.depth, r.divider.height,
                                     r.divider.x, r.divider.y, r.divider.z,
                                     group="Dividers", role=NodeRole.DIVIDER, thickness=T))
+        self.graph.validate_integrity()
         return self.graph
 
     def _add(self, node):

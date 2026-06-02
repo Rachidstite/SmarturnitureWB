@@ -17,3 +17,6 @@ class SmartFurnitureWorkbench(FreeCADGui.Workbench):
     def GetClassName(self): return "Gui::PythonWorkbench"
 
 FreeCADGui.addWorkbench(SmartFurnitureWorkbench())
+
+print("### SMARTFURNITURE V1-1 LOADED ###")
+print("### V1-1 VERSION LOADED ###")

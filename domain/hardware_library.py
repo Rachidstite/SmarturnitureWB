@@ -66,3 +66,36 @@ class HardwareRegistry:
             host_holes=[HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, is_through_hole=False)],
             target_holes=[]
         )
+
+        self._catalog["DRAWER_SLIDE_SOFTCLOSE_450"] = HardwareSpec(
+            sku="DRAWER_SLIDE_SOFTCLOSE_450",
+            manufacturer="GENERIC",
+            model="SOFT_CLOSE_450",
+            revision="1.0",
+            category="DRAWER_SLIDES"
+        )
+
+        self._catalog["HANDLE_128_BLACK"] = HardwareSpec(
+            sku="HANDLE_128_BLACK",
+            manufacturer="GENERIC",
+            model="HANDLE_128_BLACK",
+            revision="1.0",
+            category="HANDLES"
+        )
+
+        self._catalog["CLOTHES_RAIL_1000"] = HardwareSpec(
+            sku="CLOTHES_RAIL_1000",
+            manufacturer="GENERIC",
+            model="OVAL_RAIL_1000",
+            revision="1.0",
+            category="WARDROBE_ACCESSORIES"
+        )
+
+        self._catalog["ADJUSTABLE_LEG_100"] = HardwareSpec(
+            sku="ADJUSTABLE_LEG_100",
+            manufacturer="GENERIC",
+            model="LEG_100MM",
+            revision="1.0",
+            category="LEGS"
+        )
+

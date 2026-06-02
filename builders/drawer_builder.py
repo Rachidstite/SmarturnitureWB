@@ -5,8 +5,15 @@ class DrawerBuilder:
         grp = doc.addObject("App::DocumentObjectGroup", name); parent_group.addObject(grp)
         face = doc.addObject("Part::Feature", f"{name}_Face")
         face.Shape = Part.makeBox(fw, mat.mdf_thickness, fh)
-        face.Placement = App.Placement(App.Vector(fx, fy, fz), App.Rotation()); face.ViewObject.ShapeColor = (
-        0.9, 0.8, 0.7); grp.addObject(face)
+        face.Placement = App.Placement(App.Vector(fx, fy, fz), App.Rotation())
+        face.ViewObject.ShapeColor = (0.9, 0.8, 0.7)
+
+        if not hasattr(face, "SmartUUID"):
+            face.addProperty("App::PropertyString", "SmartUUID")
+
+        face.SmartUUID = name
+
+        grp.addObject(face)
         box_t = mat.mdf_thickness
         def add_part(pname, pw, pd, ph, px, py, pz, color=(0.95, 0.95, 0.95)):
             p = doc.addObject("Part::Feature", pname); p.Shape = Part.makeBox(pw, pd, ph)

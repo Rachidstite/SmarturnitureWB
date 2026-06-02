@@ -1,6 +1,7 @@
 import math
 from shared.enums import DoorType
 from shared.contracts import SectionConfig
+from domain.front_layout import FrontLayoutEngine, OpeningContext
 from shared.resolved_types import *
 from core.material_manager import MaterialManager
 from layout.layout_engine import LayoutEngine, LayoutContext
@@ -61,10 +62,23 @@ class GeometryEngine:
                 face_w = inner_w - (self.mat.clearance * 2); face_x = start_x + self.mat.clearance
                 face_y = section_sliding + self.mat.drawer_reveal; box_start_y = section_sliding + T + 5
             else:
-                face_w = inner_w + (self.mat.side_overlay if idx == 0 else self.mat.center_overlay) + (
-                    self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay) - (
-                                    self.mat.drawer_reveal * 2)
-                face_x = start_x - (self.mat.side_overlay if idx == 0 else self.mat.center_overlay) + self.mat.drawer_reveal
+                left_overlay = self.mat.side_overlay if idx == 0 else self.mat.center_overlay
+                right_overlay = self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay
+                center_gap = self.mat.drawer_center_gap
+
+                face_w = inner_w + left_overlay + right_overlay - (self.mat.drawer_reveal * 2)
+
+                if idx > 0:
+                    face_w -= center_gap / 2
+
+                if idx < sec_count - 1:
+                    face_w -= center_gap / 2
+
+                face_x = start_x - left_overlay + self.mat.drawer_reveal
+
+                if idx > 0:
+                    face_x += center_gap / 2
+
                 face_y = section_sliding - T + self.mat.drawer_reveal; box_start_y = section_sliding + 5
             face_h = h - (self.mat.drawer_reveal * 2); face_z = zone.z_start + self.mat.drawer_reveal
             box_w = inner_w - (self.mat.drawer_slide_clearance * 2)
@@ -72,48 +86,135 @@ class GeometryEngine:
             box_d = ManufacturingResolver.resolve_drawer_box_depth(self.mat, max_drawer_depth, box_start_y)
             box_start_x = start_x + self.mat.drawer_slide_clearance
             box_start_z = zone.z_start + self.mat.drawer_bottom_clearance
-            drawers.append(ResolvedDrawer(face_x, face_y, face_z, face_w, face_h, box_start_x, box_start_y, box_start_z,
-                                          box_w, box_h, box_d, self.mat.drawer_bottom_thickness))
+            
+            print(
+                f"[DRAWER DEBUG] "
+                f"face_z={face_z} "
+                f"face_h={face_h} "
+                f"top={face_z + face_h}"
+            )
+
+            drawers.append(ResolvedDrawer(
+                face_x, face_y, face_z, face_w, face_h,
+                box_start_x, box_start_y, box_start_z,
+                box_w, box_h, box_d,
+                self.mat.drawer_bottom_thickness
+            ))
 
         # --- Doors ---
         doors = []
         if layout_res.door_zone:
             door_Z = layout_res.door_zone.z_start; door_H = layout_res.door_zone.height
-            door_count = getattr(sec.config, 'door_count', 2) or 1
+            door_count = getattr(sec.config, 'door_count', 2)
+            
+            # DOOR COUNT DEBUG
+
+            overlay_opening_x = start_x + (T if idx > 0 else 0)
+            overlay_opening_width = inner_w - (T if idx > 0 else 0)
+
+            opening = OpeningContext(
+                identity=f"SEC_{idx}",
+                width=overlay_opening_width,
+                height=door_H,
+                local_x=overlay_opening_x,
+                local_y=door_Z,
+
+                left_divider_thickness=T,
+                right_divider_thickness=T,
+
+                top_divider_thickness=18.0,
+                bottom_divider_thickness=18.0,
+                left_overlay=self.mat.side_overlay if idx == 0 else self.mat.center_overlay,
+                right_overlay=self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay
+            )
+
+            fronts = FrontLayoutEngine.generate_doors_for_opening(
+                opening,
+                door_count
+            )
+
+            # FRONT ENGINE DEBUG
+
             if door_type.is_overlay():
-                total_w = inner_w + self.mat.side_overlay * 2
-                gap = self.mat.door_side_gap
-                door_w = (total_w - (door_count - 1) * gap) / door_count if door_count > 1 else total_w
-                start_x_door = start_x - self.mat.side_overlay
+
                 y = section_sliding - T + self.mat.overlay_setback
-                for d in range(door_count): doors.append(
-                    ResolvedDoor(start_x_door + d * (door_w + gap), y, door_Z, door_w, door_H, door_type))
+
+                for front in fronts:
+
+                    print(
+                        f"[FRONT ENGINE] "
+                        f"{front.identity} "
+                        f"x={front.local_x} "
+                        f"w={front.width} "
+                        f"hinge={front.hinge_side}"
+                    )
+
+                    
+                    print(
+                        f"[CENTER TEST] "
+                        f"section={idx} "
+                        f"x={front.local_x} "
+                        f"w={front.width} "
+                        f"right={front.local_x + front.width}"
+                    )
+
+                    doors.append(
+
+                        ResolvedDoor(
+                            front.local_x,
+                            y,
+                            door_Z,
+                            front.width,
+                            front.height,
+                            door_type,
+                            front.hinge_side
+                        )
+                    )
             elif door_type.is_sliding():
                 overlap = self.mat.sliding_overlap; side_extra = self.mat.sliding_side_extra
                 total_w = inner_w + 2 * side_extra
                 door_w = (total_w + (door_count - 1) * overlap) / door_count if door_count > 1 else total_w
                 track_step = door_w - overlap; start_x_door = start_x - side_extra
                 for d in range(door_count): doors.append(
-                    ResolvedDoor(start_x_door + d * track_step, 0, door_Z, door_w, door_H, door_type, d % 2))
+                    ResolvedDoor(start_x_door + d * track_step, 0, door_Z, door_w, door_H, door_type, "LEFT", d % 2))
             else:
                 sc = self.mat.inset_side_clearance; gap = self.mat.door_side_gap
                 avail = inner_w - 2 * sc - (door_count - 1) * gap
                 door_w = avail / door_count if door_count > 1 else avail
                 start_x_door = start_x + sc; y = section_sliding + self.mat.clearance
                 for d in range(door_count): doors.append(
-                    ResolvedDoor(start_x_door + d * (door_w + gap), y, door_Z, door_w, door_H, door_type))
+                    ResolvedDoor(start_x_door + d * (door_w + gap), y, door_Z, door_w, door_H, door_type, "LEFT" if d == 0 else "RIGHT"))
 
         # --- Shelves ---
         shelves = []
+
+        print(
+            f"[SHELF DEBUG] "
+            f"section={idx+1} "
+            f"cfg={sec.config.shelves} "
+            f"zone={layout_res.shelf_zone is not None}"
+        )
+
         if layout_res.shelf_zone and sec.config.shelves > 0:
             s_shelves = sec.config.shelves
             usable_zone_h = layout_res.shelf_zone.height; zone_start_z = layout_res.shelf_zone.z_start
             shelf_gap = (usable_zone_h - (s_shelves * T)) / (s_shelves + 1)
             for sh in range(1, s_shelves + 1):
                 z_pos = zone_start_z + (shelf_gap * sh) + (T * (sh - 1))
-                shelves.append(ResolvedShelf(x=start_x + self.mat.shelf_side_gap, y=shelf_start_y, z=z_pos,
-                                             width=inner_w - (self.mat.clearance * 2) - (
-                                                         self.mat.shelf_side_gap * 2), depth=shelf_depth))
+                
+                print(
+                    f"[SHELF] start={start_x} "
+                    f"width={inner_w} "
+                    f"end={start_x + inner_w}"
+                )
+
+                print(
+                    f"[DIVIDER] x={start_x + inner_w}"
+                )
+
+                shelves.append(ResolvedShelf(
+x=start_x, y=shelf_start_y, z=z_pos,
+                                             width=inner_w, depth=shelf_depth))
 
         # --- Divider ---
         div = None
@@ -126,7 +227,7 @@ class GeometryEngine:
 
         return ResolvedSection(
             inner_x=start_x, inner_width=inner_w,
-            shelf_width=inner_w - (self.mat.clearance * 2) - (self.mat.shelf_side_gap * 2),
+            shelf_width=inner_w,
             drawer_box_width=inner_w - (self.mat.drawer_slide_clearance * 2),
             left_overlay=self.mat.side_overlay if idx == 0 else self.mat.center_overlay,
             right_overlay=self.mat.side_overlay if idx == sec_count - 1 else self.mat.center_overlay,

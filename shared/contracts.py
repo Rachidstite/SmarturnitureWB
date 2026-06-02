@@ -14,3 +14,7 @@ class CabinetParams:
     sec_data: Dict[int, SectionConfig] = field(default_factory=dict)
     cnc_mode: bool = False; hw_mode: bool = False
     back_thickness: float = 8.0; drawer_depth: float = 450.0; drawer_bottom_thickness: float = 8.0
+
+    hinge_sku: str = "HINGE_BLUM_110_V1"
+    slide_sku: str = "DRAWER_SLIDE_SOFTCLOSE_450"
+    handle_sku: str = "HANDLE_128_BLACK"

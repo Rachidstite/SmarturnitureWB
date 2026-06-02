@@ -5,7 +5,7 @@ class ResolvedShelf: x: float; y: float; z: float; width: float; depth: float
 @dataclass(frozen=True)
 class ResolvedDrawer: face_x: float; face_y: float; face_z: float; face_w: float; face_h: float; box_x: float; box_y: float; box_z: float; box_w: float; box_h: float; box_d: float; bottom_thickness: float
 @dataclass(frozen=True)
-class ResolvedDoor: x: float; y: float; z: float; width: float; height: float; door_type: DoorType; layer: int = 0
+class ResolvedDoor: x: float; y: float; z: float; width: float; height: float; door_type: DoorType; hinge_side: str = "LEFT"; layer: int = 0
 @dataclass(frozen=True)
 class ResolvedDivider: x: float; y: float; z: float; width: float; depth: float; height: float
 @dataclass(frozen=True)

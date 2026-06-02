@@ -15,6 +15,15 @@ class SceneRenderer:
         from scene_graph.registry import RendererRegistry
         RendererRegistry.render(node, self)
 
+    def render_graph(self, scene_graph):
+        nodes = scene_graph.all_nodes()
+
+        print("[TOTAL NODES]", len(nodes))
+
+        for node in nodes:
+            print("[NODE]", node.role, node.identity.key)
+            self.render(node)
+
     def _ensure_group(self, group_name):
         if group_name not in self.groups:
             self.groups[group_name] = self.doc.addObject("App::DocumentObjectGroup", group_name)
@@ -63,6 +72,14 @@ def _door_strategy(node, renderer):
         meta.layer
     )
 
+def _shelf_strategy(node, renderer):
+    renderer._render_simple_panel(node)
+
+def _divider_strategy(node, renderer):
+    renderer._render_simple_panel(node)
+
+RendererRegistry.register(NodeRole.SHELF, _shelf_strategy)
+RendererRegistry.register(NodeRole.DIVIDER, _divider_strategy)
 RendererRegistry.register(NodeRole.DRAWER_FACE, _drawer_strategy)
 RendererRegistry.register(NodeRole.DOOR_PANEL, _door_strategy)
 # باقي الأدوار تستخدم _render_simple_panel افتراضياً

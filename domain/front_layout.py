@@ -19,6 +19,10 @@ class OpeningContext:
     right_divider_thickness: float = 18.0
     top_divider_thickness: float = 18.0
     bottom_divider_thickness: float = 18.0
+    left_overlay: Optional[float] = None
+    right_overlay: Optional[float] = None
+    top_overlay: Optional[float] = None
+    bottom_overlay: Optional[float] = None
 
 @dataclass
 class FrontElement:
@@ -51,14 +55,28 @@ class FrontLayoutEngine:
         if door_count <= 0:
             return []
 
-        # حساب التغطية (Overlay) بناءً على سماكة القواطع
-        left_overlay = max(0, opening.left_divider_thickness - overlay_reduction)
-        right_overlay = max(0, opening.right_divider_thickness - overlay_reduction)
-        top_overlay = max(0, opening.top_divider_thickness - overlay_reduction)
-        bottom_overlay = max(0, opening.bottom_divider_thickness - overlay_reduction)
+        # حساب التغطية (Overlay) بناءً على سماكة القواطع، أو من قيم صناعية صريحة.
+        left_overlay = opening.left_overlay
+        if left_overlay is None:
+            left_overlay = max(0, opening.left_divider_thickness - overlay_reduction)
+
+        right_overlay = opening.right_overlay
+        if right_overlay is None:
+            right_overlay = max(0, opening.right_divider_thickness - overlay_reduction)
+
+        top_overlay = opening.top_overlay
+        if top_overlay is None:
+            top_overlay = max(0, opening.top_divider_thickness - overlay_reduction)
+
+        bottom_overlay = opening.bottom_overlay
+        if bottom_overlay is None:
+            bottom_overlay = max(0, opening.bottom_divider_thickness - overlay_reduction)
 
         # العرض الإجمالي المغطى = الفتحة + التغطية يميناً ويساراً
         total_covered_width = opening.width + left_overlay + right_overlay
+
+        if door_count == 1:
+            total_covered_width -= gap
         
         # مجموع الفراغات بين الأبواب (إذا كان هناك أكثر من باب)
         internal_gaps = (door_count - 1) * gap
@@ -67,11 +85,11 @@ class FrontLayoutEngine:
         single_door_width = (total_covered_width - internal_gaps) / door_count
         
         # ارتفاع الباب الصافي
-        door_height = opening.height + top_overlay + bottom_overlay
+        door_height = opening.height
 
         # نقطة البداية الحقيقية (طرح التغطية اليسرى من بداية الفتحة)
         start_x = opening.local_x - left_overlay
-        start_y = opening.local_y - bottom_overlay
+        start_y = opening.local_y
 
         fronts = []
         current_x = start_x

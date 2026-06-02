@@ -15,7 +15,7 @@ class CabinetBuilder:
     def __init__(self):
         self.mat = MaterialManager(); self.cnc = CNCBuilder(self.mat); self.hw = None
         self.groups = {}; self.drilling_z_positions = []; self._cabinet = None
-        self._doc = None; self.geo = None
+        self._doc = None; self.geo = None; self.scene_graph = None
 
     def build(self, cabinet: Cabinet):
         logger.debug("BUILD STARTED")
@@ -32,6 +32,9 @@ class CabinetBuilder:
 
         self.geo = GeometryEngine(cabinet, self.mat)
         self.geo.resolve_all()
+
+        sg_builder = SceneGraphBuilder(cabinet, self.mat)
+        self.scene_graph = sg_builder.build(self.geo)
         logger.debug(f"BUILDABLE: {self.geo.is_buildable}, Sections: {len(self.geo.resolved_sections)}")
         if not self.geo.is_buildable:
             logger.error("Build aborted: unbuildable.")
@@ -58,71 +61,42 @@ class CabinetBuilder:
         self._cabinet = cabinet; self._doc = doc; self.drilling_z_positions = []
         for i, sec in enumerate(cabinet.sections):
             r = self.geo.resolved_sections[i]
-            self._render_shelves(i, r)
-            self._render_drawers(i, r)
-            self._render_doors(i, r)
-            self._render_divider(i, r)
-        self._build_carcass()
-        self._build_back_panel()
-        self._build_base()
+        renderer = SceneRenderer(
+            self._doc,
+            self.mat,
+            self.hw,
+            self.groups,
+            self.cnc if self._cabinet.params.cnc_mode else None
+        )
+
+        print("[SCENE GRAPH] rendering all nodes")
+        renderer.render_graph(self.scene_graph)
+
         if self._cabinet.params.hw_mode: self._add_carcass_joinery()
 
+    
     def _render_shelves(self, sec_idx, r):
-        T = self.mat.mdf_thickness
-        for sh, shelf in enumerate(r.shelves):
-            label_idx = sh + 1
-            if sec_idx == 0: self.drilling_z_positions.append(shelf.z)
-            name = f"Sec{sec_idx+1}_Shelf_{label_idx}"
-            self._create_panel(self._doc, name, shelf.width, shelf.depth, T, (shelf.x, shelf.y, shelf.z), "Shelves")
+        from shared.roles import NodeRole
 
-    def _render_drawers(self, sec_idx, r):
-        p = self._cabinet.params; D, bp_offset, BT, T = p.depth, 20, self.mat.back_thickness, self.mat.mdf_thickness
-        sec_start_x = r.inner_x; sec_W = r.inner_width
-        s_drawer_type = self._cabinet.sections[sec_idx].config.drawer_type
-        s_drawers = self._cabinet.sections[sec_idx].config.drawers
-        drawer_heights = getattr(self._cabinet.sections[sec_idx].config, "drawer_heights", [])
-        if not drawer_heights or len(drawer_heights) != s_drawers: drawer_heights = [self.mat.default_drawer_height] * s_drawers
-        drawer_total_H = sum(drawer_heights) + (self.mat.clearance * s_drawers)
-        max_inner_d = D - bp_offset - BT - self._sliding_space() - 20
-        current_z = p.base_height + T
+        renderer = SceneRenderer(
+            self._doc,
+            self.mat,
+            self.hw,
+            self.groups
+        )
 
-        for dr, drawer in enumerate(r.drawers):
-            name = f"Sec{sec_idx+1}_Drawer_{dr+1}"
-            DrawerBuilder.build(self._doc, self.groups["Drawers"], name,
-                                drawer.face_w, drawer.face_h,
-                                drawer.face_x, drawer.face_y, drawer.face_z,
-                                drawer.box_w, drawer.box_h, drawer.box_d,
-                                drawer.box_x, drawer.box_y, drawer.box_z,
-                                self.mat, drawer.bottom_thickness)
-            current_z += drawer_heights[dr] + self.mat.clearance
+        section_id = f"SEC-{sec_idx+1}"
 
-        if s_drawers > 0:
-            total_inner_H = p.height - p.base_height - 2 * T
-            remaining_h = total_inner_H - drawer_total_H
-            if remaining_h > self.mat.mdf_thickness:
-                shelf_start_y = self._sliding_space() + ((T + 2) if "Inset" in self._cabinet.sections[sec_idx].config.doors else 2)
-                shelf_end_y = D - bp_offset - BT - self.mat.shelf_depth_margin
-                shelf_depth = max(shelf_end_y - shelf_start_y, 50)
-                cover_z = current_z
-                self._create_panel(self._doc, f"Sec{sec_idx+1}_DrawerCover", sec_W, shelf_depth, self.mat.mdf_thickness,
-                                   (sec_start_x, shelf_start_y, cover_z), "Shelves", color=(0.85, 0.75, 0.60))
+        for node in self.scene_graph.all_nodes():
+            print("[NODE]", node.role, getattr(node.identity, "section_id", "NO_SECTION"), node.identity.key)
+            if (
+                node.role == NodeRole.SHELF
+                and getattr(node.identity, "section_id", "") == section_id
+            ):
+                print("[RENDER SHELF]", node.identity.key)
+                renderer.render(node)
 
-    def _render_doors(self, sec_idx, r):
-        for d, door in enumerate(r.doors):
-            name = f"Sec{sec_idx+1}_Door_{d+1}"
-            cnc_eng = self.cnc if self._cabinet.params.cnc_mode else None
-            hw_b = self.hw if self._cabinet.params.hw_mode else None
-            DoorBuilder.build(self._doc, self.groups["Doors"], name,
-                              door.width, door.height,
-                              door.x, door.y, door.z,
-                              self.mat, door.door_type.name.replace("_", " ").title(),
-                              cnc_eng, hw_b, self.groups["Hardware"], door.layer)
-
-    def _render_divider(self, sec_idx, r):
-        if r.divider:
-            name = f"Divider_{sec_idx+1}"
-            self._create_panel(self._doc, name, r.divider.width, r.divider.depth, r.divider.height,
-                               (r.divider.x, r.divider.y, r.divider.z), "Dividers")
+    
 
     def _build_carcass(self):
         p = self._cabinet.params; T, D, H = self.mat.mdf_thickness, p.depth, p.height
@@ -160,14 +134,29 @@ class CabinetBuilder:
                            (self.geo.resolved_top.x, self.geo.resolved_top.y, self.geo.resolved_top.z), "Carcass",
                            custom_shape=top_shape)
 
+    
     def _build_back_panel(self):
-        p = self._cabinet.params; T, BT, G = self.mat.mdf_thickness, self.mat.back_thickness, self.mat.groove_depth
-        bp_offset = 20
-        inner_W = p.width - 2 * T
-        bp_w = inner_W + 2 * G
-        bp_h = (p.height - p.base_height - 2 * T) + 2 * G
-        self._create_panel(self._doc, "Back_Panel", bp_w, BT, bp_h,
-                           (T - G, p.depth - bp_offset - BT, p.base_height + T - G), "Carcass", color=(0.9, 0.9, 0.9))
+        back_nodes = [
+            node for node in self.scene_graph.all_nodes()
+            if getattr(getattr(node, "role", None), "name", "") == "BACK_PANEL"
+        ]
+        back_nodes.sort(key=lambda node: getattr(getattr(node, "metadata", None), "section_index", 0))
+
+        for index, node in enumerate(back_nodes):
+            metadata = getattr(node, "metadata", None)
+            section_index = getattr(metadata, "section_index", index)
+            self._create_panel(
+                self._doc,
+                f"Back_Section_{section_index + 1}",
+                node.width,
+                node.depth,
+                node.height,
+                (node.x, node.y, node.z),
+                node.group,
+                color=(0.9, 0.9, 0.9)
+            )
+
+
 
     def _build_base(self):
         p = self._cabinet.params; T = self.mat.mdf_thickness; bp_offset = 20; BT = self.mat.back_thickness

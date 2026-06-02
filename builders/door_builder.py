@@ -2,7 +2,7 @@ import FreeCAD as App, Part
 class DoorBuilder:
     @staticmethod
     def build(doc, group, name, fw, fh, px, py, pz, mat, door_type_str,
-              cnc_engine=None, hw_builder=None, hw_group=None, door_layer=0):
+              cnc_engine=None, hw_builder=None, hw_group=None, hinge_side="LEFT", door_layer=0):
         is_glass = "Glass" in door_type_str; base_type = "Inset"
         if "Overlay" in door_type_str: base_type = "Overlay"
         elif "Sliding" in door_type_str: base_type = "Sliding"
@@ -23,10 +23,29 @@ class DoorBuilder:
         else:
             door = doc.addObject("Part::Feature", name); shape = Part.makeBox(fw, mat.mdf_thickness, fh)
             if cnc_engine and base_type != "Sliding": shape = cnc_engine.drill_hinge_cup(shape, fh)
-            door.Shape = shape; door.Placement = App.Placement(App.Vector(px, py, pz), App.Rotation())
-            door.ViewObject.ShapeColor = (0.5, 0.5, 0.5) if base_type == "Sliding" else (0.6, 0.4, 0.2); group.addObject(
-                door)
+            door.Shape = shape
+            door.Placement = App.Placement(App.Vector(px, py, pz), App.Rotation())
+            door.ViewObject.ShapeColor = (0.5, 0.5, 0.5) if base_type == "Sliding" else (0.6, 0.4, 0.2)
+
+            if not hasattr(door, "SmartUUID"):
+                door.addProperty("App::PropertyString", "SmartUUID")
+
+            door.SmartUUID = name
+
+            group.addObject(door)
         if hw_builder and hw_group and base_type != "Sliding":
-            hy = py + mat.mdf_thickness; hx = px + 22.5; to = min(100, fh * 0.25)
+            
+            hy = py + mat.mdf_thickness
+
+            # HINGE DEBUG MOVED
+            if hinge_side == "LEFT":
+                hx = px + 22.5
+            else:
+                hx = px + fw - 22.5
+
+            print(f"[HINGE DEBUG] {name} side={hinge_side} hx={hx}")
+
+            to = min(100, fh * 0.25)
+
             hw_builder.add_hinge(f"{name}_Hinge_Top", (hx, hy, pz + fh - to), hw_group)
             hw_builder.add_hinge(f"{name}_Hinge_Bot", (hx, hy, pz + to), hw_group)

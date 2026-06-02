@@ -1,11 +1,18 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+import re
 
 class SemanticRole(Enum):
     LEFT_SIDE = auto(); RIGHT_SIDE = auto(); TOP = auto(); BOTTOM = auto()
     BACK = auto(); SHELF = auto(); DIVIDER = auto(); PLINTH = auto()
     DOOR = auto(); DRAWER_FACE = auto(); DRAWER_BOX_SIDE = auto()
     DRAWER_BOX_BACK = auto(); DRAWER_BOX_BOTTOM = auto(); GLASS = auto()
+
+def normalize_identity_part(value) -> str:
+    text = str(value or "").strip().upper()
+    text = re.sub(r"[^A-Z0-9_-]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-_")
+    return text or "UNSPECIFIED"
 
 @dataclass(frozen=True)
 class PanelIdentity:
@@ -17,7 +24,10 @@ class PanelIdentity:
     @property
     def key(self):
         # استبدال / بـ _ لتجنب مشاكل FreeCAD
-        return f"{self.cabinet_id}_{self.section_id}_{self.role.name}-{self.index}"
+        cabinet = normalize_identity_part(self.cabinet_id)
+        section = normalize_identity_part(self.section_id)
+        role = self.role.name if hasattr(self.role, "name") else normalize_identity_part(self.role)
+        return f"{cabinet}_{section}_{role}-{self.index}"
 
     @classmethod
     def make_shelf(cls, cabinet, sec_idx, shelf_idx):

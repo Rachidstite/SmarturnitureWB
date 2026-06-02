@@ -4,6 +4,7 @@ from shared.issues import ValidationState; from core.logging_config import logge
 from engine.cabinet import Cabinet; from engine.cabinet_builder import CabinetBuilder
 from services.validation_service import ValidationService; from ui.issue_presenter import IssuePresenter
 import csv
+from costing.cost_engine import CostEngine
 
 class UIManager(QtWidgets.QMainWindow):
     def __init__(self):
@@ -48,11 +49,31 @@ class UIManager(QtWidgets.QMainWindow):
         self.inp_door = QtWidgets.QComboBox(); self.inp_door.addItems(["None","Inset","Overlay","Sliding","Glass Inset","Glass Overlay","Glass Sliding"])
         self.inp_door_count = QtWidgets.QSpinBox(); self.inp_door_count.setRange(1,5); self.inp_door_count.setValue(2)
         self.cmb_drawer_layout = QtWidgets.QComboBox(); self.cmb_drawer_layout.addItem("Manual", DrawerLayoutMode.MANUAL); self.cmb_drawer_layout.addItem("Equal", DrawerLayoutMode.EQUAL)
-        for w in (self.inp_drw, self.inp_sh, self.inp_door, self.inp_door_count, self.inp_drw_type, self.cmb_drawer_layout):
+
+        self.cmb_hinge = QtWidgets.QComboBox()
+        self.cmb_hinge.addItem("BLUM CLIP TOP 110", "HINGE_BLUM_110_V1")
+
+        self.cmb_slide = QtWidgets.QComboBox()
+        self.cmb_slide.addItem("SOFT CLOSE 450", "DRAWER_SLIDE_SOFTCLOSE_450")
+
+        self.cmb_handle = QtWidgets.QComboBox()
+        self.cmb_handle.addItem("HANDLE 128 BLACK", "HANDLE_128_BLACK")
+        for w in (self.inp_drw, self.inp_sh, self.inp_door, self.inp_door_count, self.inp_drw_type, self.cmb_drawer_layout,
+                  self.cmb_hinge,
+                  self.cmb_slide,
+                  self.cmb_handle):
             if hasattr(w, 'valueChanged'): w.valueChanged.connect(self.save_current_section)
             elif hasattr(w, 'currentTextChanged'): w.currentTextChanged.connect(self.save_current_section)
             elif hasattr(w, 'currentIndexChanged'): w.currentIndexChanged.connect(self.save_current_section)
-        sec_form.addRow("Drawers:", self.inp_drw); sec_form.addRow("Drawer Type:", self.inp_drw_type); sec_form.addRow("Shelves:", self.inp_sh); sec_form.addRow("Door:", self.inp_door); sec_form.addRow("Door Count:", self.inp_door_count); sec_form.addRow("Layout:", self.cmb_drawer_layout)
+        sec_form.addRow("Drawers:", self.inp_drw)
+        sec_form.addRow("Drawer Type:", self.inp_drw_type)
+        sec_form.addRow("Shelves:", self.inp_sh)
+        sec_form.addRow("Door:", self.inp_door)
+        sec_form.addRow("Door Count:", self.inp_door_count)
+        sec_form.addRow("Layout:", self.cmb_drawer_layout)
+        sec_form.addRow("Hinge:", self.cmb_hinge)
+        sec_form.addRow("Slide:", self.cmb_slide)
+        sec_form.addRow("Handle:", self.cmb_handle)
         layout.addLayout(sec_form); layout.addStretch(); tabs.addTab(tab, "2. Sections")
 
     def on_sec_count_changed(self):
@@ -84,6 +105,10 @@ class UIManager(QtWidgets.QMainWindow):
         if self.is_updating_ui: return
         self.params.width = self.inp_w.value(); self.params.height = self.inp_h.value(); self.params.depth = self.inp_d.value(); self.params.base_height = self.inp_base.value(); self.params.back_thickness = self.inp_back_thickness.value(); self.params.drawer_depth = self.inp_drawer_depth.value(); self.params.drawer_bottom_thickness = self.inp_drawer_bottom.value()
         self.params.cnc_mode = self.chk_cnc.isChecked(); self.params.hw_mode = self.chk_hw.isChecked(); self.params.sec_count = self.inp_sec.value()
+
+        self.params.hinge_sku = self.cmb_hinge.currentData()
+        self.params.slide_sku = self.cmb_slide.currentData()
+        self.params.handle_sku = self.cmb_handle.currentData()
         self.build_timer.start(300)
 
     def _first_build(self): self.on_param_changed()
@@ -92,7 +117,13 @@ class UIManager(QtWidgets.QMainWindow):
         try:
             cabinet = Cabinet(self.params)
             validation_service = ValidationService(cabinet, self.builder.mat); self.val_state = validation_service.validate_only(); self.issue_presenter.display_issues(self.val_state.issues)
-            if self.val_state.has_errors: logger.error("Blocked by constraint errors."); return
+            
+            if self.val_state.has_errors:
+                for issue in self.val_state.issues:
+                    logger.error(f"[ISSUE] {issue}")
+                logger.error("Blocked by constraint errors.")
+                return
+
             self.builder.build(cabinet); logger.info("Build completed.")
         except Exception as e: logger.error(f"Failure: {e}")
 
@@ -104,5 +135,15 @@ class UIManager(QtWidgets.QMainWindow):
         if not path: return
         from exports.bom_engine import BOMEngine
         report = BOMEngine.generate(self.builder.scene_graph)
+
+        cost = CostEngine.generate(report)
+
         BOMEngine.export_csv(report, path)
+
+        logger.info(
+            f"Cost Report | "
+            f"Material={cost.material_cost:.0f} DH | "
+            f"Total={cost.total_cost:.0f} DH | "
+            f"Sell={cost.selling_price:.0f} DH"
+        )
         QtWidgets.QMessageBox.information(self, "BOM Exported", f"BOM saved to {path}")
