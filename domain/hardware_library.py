@@ -19,6 +19,7 @@ class HardwareSpec:
     model: str
     revision: str
     category: str
+    price: float = 0.0
     host_holes: List[HoleSpec] = field(default_factory=list)
     target_holes: List[HoleSpec] = field(default_factory=list)
 
@@ -37,7 +38,7 @@ class HardwareRegistry:
 
     def _seed_catalog(self):
         self._catalog["HINGE_BLUM_110_V1"] = HardwareSpec(
-            sku="HINGE_BLUM_110_V1", manufacturer="BLUM", model="CLIP_TOP_110", revision="1.0", category="HINGES",
+            sku="HINGE_BLUM_110_V1", manufacturer="BLUM", model="CLIP_TOP_110", revision="1.0", category="HINGES", price=6.0,
             host_holes=[
                 HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, offset_x=37, offset_y=16),
                 HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, offset_x=37, offset_y=-16)
@@ -72,7 +73,7 @@ class HardwareRegistry:
             manufacturer="GENERIC",
             model="SOFT_CLOSE_450",
             revision="1.0",
-            category="DRAWER_SLIDES"
+            category="DRAWER_SLIDES", price=20.0
         )
 
         self._catalog["HANDLE_128_BLACK"] = HardwareSpec(
@@ -80,7 +81,7 @@ class HardwareRegistry:
             manufacturer="GENERIC",
             model="HANDLE_128_BLACK",
             revision="1.0",
-            category="HANDLES"
+            category="HANDLES", price=6.0
         )
 
         self._catalog["CLOTHES_RAIL_1000"] = HardwareSpec(
