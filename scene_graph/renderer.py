@@ -29,6 +29,7 @@ class SceneRenderer:
             self.groups[group_name] = self.doc.addObject("App::DocumentObjectGroup", group_name)
 
     def _render_simple_panel(self, node: SceneNode):
+        print("[RENDER PANEL]", node.role, node.identity.key)
         """رسم افتراضي لأي لوح."""
         self._ensure_group(node.group)
         name = node.identity.key
@@ -62,7 +63,7 @@ def _door_strategy(node, renderer):
     renderer._ensure_group(node.group)
     door_type_str = meta.door_type.replace("_", " ").title()
     cnc = renderer.cnc_engine if meta.cnc_enabled else None
-    hw_b = renderer.hw if meta.cnc_enabled else None
+    hw_b = renderer.hw
     DoorBuilder.build(
         renderer.doc, renderer.groups[node.group], node.identity.key,
         node.width, node.height,
