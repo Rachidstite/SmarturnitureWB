@@ -10,12 +10,17 @@ from engine.cabinet import Cabinet
 from engine.geometry_engine import GeometryEngine
 from scene_graph.builder import SceneGraphBuilder
 from scene_graph.renderer import SceneRenderer
+from assembly.assembly_graph_builder import AssemblyGraphBuilder
+from domain.system32 import System32Engine
 
 class CabinetBuilder:
     def __init__(self):
         self.mat = MaterialManager(); self.cnc = CNCBuilder(self.mat); self.hw = None
         self.groups = {}; self.drilling_z_positions = []; self._cabinet = None
-        self._doc = None; self.geo = None; self.scene_graph = None
+        self._doc = None
+        self.geo = None
+        self.scene_graph = None
+        self.assembly_graph = None
 
     def build(self, cabinet: Cabinet):
         logger.debug("BUILD STARTED")
@@ -35,6 +40,15 @@ class CabinetBuilder:
 
         sg_builder = SceneGraphBuilder(cabinet, self.mat)
         self.scene_graph = sg_builder.build(self.geo)
+
+        self.assembly_graph = AssemblyGraphBuilder.build(
+            self.scene_graph
+        )
+
+        print(
+            "[ASSEMBLY JOINTS]",
+            len(self.assembly_graph.all_joints())
+        )
         logger.debug(f"BUILDABLE: {self.geo.is_buildable}, Sections: {len(self.geo.resolved_sections)}")
         if not self.geo.is_buildable:
             logger.error("Build aborted: unbuildable.")
@@ -170,7 +184,7 @@ class CabinetBuilder:
     def _add_carcass_joinery(self):
         p = self._cabinet.params; T = self.mat.mdf_thickness; D, H, W = p.depth, p.height, p.width
         base_H, bp_offset = p.base_height, 20; BT = self.mat.back_thickness; slide = self._sliding_space()
-        front_offset = 50.0; back_offset = 50.0
+        front_offset = 64.0; back_offset = 64.0
         y_front = slide + front_offset; y_back = D - bp_offset - BT - back_offset
 
         self.hw.add_minifix("Mfx_Left_Bot_F", (T, y_front, base_H + T / 2), self.groups["Hardware"])

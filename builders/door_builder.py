@@ -45,6 +45,8 @@ class DoorBuilder:
                 hx = px + fw - 22.5
 
             print(f"[HINGE DEBUG] {name} side={hinge_side} hx={hx}")
+            print(f"[HINGE SIDE] {name} hinge_side={hinge_side}")
+            print(f"[HINGE SIDE] {name} hinge_side={hinge_side}")
 
             hinge_positions = System32Engine.hinge_positions(fh)
 

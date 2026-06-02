@@ -70,6 +70,7 @@ def _door_strategy(node, renderer):
         node.x, node.y, node.z,
         renderer.mat, door_type_str,
         cnc, hw_b, renderer.groups.get("Hardware"),
+        meta.hinge_side,
         meta.layer
     )
 

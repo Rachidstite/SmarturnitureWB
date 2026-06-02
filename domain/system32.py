@@ -30,3 +30,32 @@ class System32Engine:
                 door_height * 0.75,
                 door_height - 100
             ]
+
+    @staticmethod
+    def minifix_positions(panel_length: float):
+
+        if panel_length < 300:
+            return [64]
+
+        if panel_length < 700:
+            return [64, panel_length - 64]
+
+        return [
+            64,
+            panel_length / 2,
+            panel_length - 64
+        ]
+
+    @staticmethod
+    def shelf_pin_positions(panel_height: float):
+
+        positions = []
+
+        z = 64
+
+        while z < panel_height - 64:
+            positions.append(z)
+            z += SYSTEM_PITCH
+
+        return positions
+

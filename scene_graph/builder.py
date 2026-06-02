@@ -97,6 +97,7 @@ class SceneGraphBuilder:
             for j, door in enumerate(r.doors):
                 meta = DoorMetadata(
                     door_type=door.door_type.name,
+                    hinge_side=door.hinge_side,
                     layer=door.layer,
                     cnc_enabled=self.cabinet.params.cnc_mode
                 )

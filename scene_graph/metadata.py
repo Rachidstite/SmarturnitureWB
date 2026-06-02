@@ -3,6 +3,7 @@ from dataclasses import dataclass
 @dataclass
 class DoorMetadata:
     door_type: str
+    hinge_side: str = "LEFT"
     layer: int = 0
     cnc_enabled: bool = False
 
