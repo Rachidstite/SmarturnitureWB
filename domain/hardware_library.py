@@ -50,7 +50,7 @@ class HardwareRegistry:
             ]
         )
         self._catalog["MINIFIX_15_V1"] = HardwareSpec(
-            sku="MINIFIX_15_V1", manufacturer="HAFELE", model="MINIFIX_15", revision="1.0", category="CONNECTORS",
+            sku="MINIFIX_15_V1", manufacturer="HAFELE", model="MINIFIX_15", revision="1.0", category="CONNECTORS", price=1.5,
             host_holes=[HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, offset_x=0, offset_y=0)],
             target_holes=[
                 HoleSpec(diameter=15, depth=14, face=MountFace.FRONT, offset_x=34, offset_y=0),
