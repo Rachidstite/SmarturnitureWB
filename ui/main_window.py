@@ -128,6 +128,7 @@ class UIManager(QtWidgets.QMainWindow):
         except Exception as e: logger.error(f"Failure: {e}")
 
     def export_cutlist(self):
+        print("[EXPORT CUTLIST STARTED]")
         if not self.builder.scene_graph:
             logger.warning("No scene graph to export.")
             return
