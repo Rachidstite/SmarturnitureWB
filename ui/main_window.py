@@ -23,6 +23,7 @@ class UIManager(QtWidgets.QMainWindow):
         btn_build = QtWidgets.QPushButton("🚀 FORCE GENERATE 3D MODEL"); btn_build.clicked.connect(self.trigger_build); layout.addWidget(btn_build)
         btn_export = QtWidgets.QPushButton("📋 EXPORT CUTLIST (CSV)"); btn_export.clicked.connect(self.export_cutlist); layout.addWidget(btn_export)
         btn_mfg = QtWidgets.QPushButton("🏭 MANUFACTURING REPORT"); btn_mfg.clicked.connect(self.export_manufacturing_report); layout.addWidget(btn_mfg)
+        btn_mfg_csv = QtWidgets.QPushButton("🏭 EXPORT MANUFACTURING CSV"); btn_mfg_csv.clicked.connect(self.export_manufacturing_csv); layout.addWidget(btn_mfg_csv)
 
     def setup_tab_general(self, tabs):
         tab = QtWidgets.QWidget(); form = QtWidgets.QFormLayout(tab)
@@ -163,7 +164,39 @@ class UIManager(QtWidgets.QMainWindow):
 
         for line in report.lines:
             print(line.part_id)
-            print("   ", line.operation)
+            print("   ", line.description)
 
         print("==========================================")
+
+    def export_manufacturing_csv(self):
+
+        if not self.builder.scene_graph:
+            return
+
+        from exports.manufacturing_report import ManufacturingReportEngine
+
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Manufacturing Report",
+            "Manufacturing.csv",
+            "CSV (*.csv)"
+        )
+
+        if not path:
+            return
+
+        report = ManufacturingReportEngine.generate(
+            self.builder.scene_graph
+        )
+
+        ManufacturingReportEngine.export_csv(
+            report,
+            path
+        )
+
+        QtWidgets.QMessageBox.information(
+            self,
+            "Manufacturing Exported",
+            f"Manufacturing report saved to\n{path}"
+        )
 
