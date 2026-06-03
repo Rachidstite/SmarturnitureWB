@@ -22,6 +22,7 @@ class UIManager(QtWidgets.QMainWindow):
         self.issue_presenter = IssuePresenter(); layout.addWidget(self.issue_presenter)
         btn_build = QtWidgets.QPushButton("🚀 FORCE GENERATE 3D MODEL"); btn_build.clicked.connect(self.trigger_build); layout.addWidget(btn_build)
         btn_export = QtWidgets.QPushButton("📋 EXPORT CUTLIST (CSV)"); btn_export.clicked.connect(self.export_cutlist); layout.addWidget(btn_export)
+        btn_mfg = QtWidgets.QPushButton("🏭 MANUFACTURING REPORT"); btn_mfg.clicked.connect(self.export_manufacturing_report); layout.addWidget(btn_mfg)
 
     def setup_tab_general(self, tabs):
         tab = QtWidgets.QWidget(); form = QtWidgets.QFormLayout(tab)
@@ -148,3 +149,21 @@ class UIManager(QtWidgets.QMainWindow):
             f"Sell={cost.selling_price:.0f} DH"
         )
         QtWidgets.QMessageBox.information(self, "BOM Exported", f"BOM saved to {path}")
+
+    def export_manufacturing_report(self):
+
+        from exports.manufacturing_report import ManufacturingReportEngine
+
+        report = ManufacturingReportEngine.generate(
+            self.builder.scene_graph
+        )
+
+        print()
+        print("========== MANUFACTURING REPORT ==========")
+
+        for line in report.lines:
+            print(line.part_id)
+            print("   ", line.operation)
+
+        print("==========================================")
+
