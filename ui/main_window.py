@@ -24,6 +24,7 @@ class UIManager(QtWidgets.QMainWindow):
         btn_export = QtWidgets.QPushButton("📋 EXPORT CUTLIST (CSV)"); btn_export.clicked.connect(self.export_cutlist); layout.addWidget(btn_export)
         btn_mfg = QtWidgets.QPushButton("🏭 MANUFACTURING REPORT"); btn_mfg.clicked.connect(self.export_manufacturing_report); layout.addWidget(btn_mfg)
         btn_mfg_csv = QtWidgets.QPushButton("🏭 EXPORT MANUFACTURING CSV"); btn_mfg_csv.clicked.connect(self.export_manufacturing_csv); layout.addWidget(btn_mfg_csv)
+        btn_hw = QtWidgets.QPushButton("🔩 HARDWARE REPORT"); btn_hw.clicked.connect(self.export_hardware_report); layout.addWidget(btn_hw)
 
     def setup_tab_general(self, tabs):
         tab = QtWidgets.QWidget(); form = QtWidgets.QFormLayout(tab)
@@ -139,7 +140,7 @@ class UIManager(QtWidgets.QMainWindow):
         from exports.bom_engine import BOMEngine
         report = BOMEngine.generate(self.builder.scene_graph)
 
-        cost = CostEngine.generate(report)
+        cost = CostEngine.generate(report, self.builder.scene_graph)
 
         BOMEngine.export_csv(report, path)
 
@@ -199,4 +200,36 @@ class UIManager(QtWidgets.QMainWindow):
             "Manufacturing Exported",
             f"Manufacturing report saved to\n{path}"
         )
+
+
+    def export_hardware_report(self):
+
+        from exports.hardware_report import (
+            HardwareReportEngine
+        )
+
+        report = HardwareReportEngine.generate(
+            self.builder.scene_graph
+        )
+
+        print()
+        print("===== HARDWARE REPORT =====")
+
+        print(
+            "MINIFIX =",
+            report.minifix_count
+        )
+
+        print(
+            "DOWEL =",
+            report.dowel_count
+        )
+
+        print(
+            "HARDWARE COST =",
+            report.hardware_cost,
+            "DH"
+        )
+
+        print("==========================")
 

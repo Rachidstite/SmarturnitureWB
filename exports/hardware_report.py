@@ -10,6 +10,7 @@ from domain.hardware_library import HardwareRegistry
 class HardwareReport:
     minifix_count: int = 0
     dowel_count: int = 0
+    hinge_count: int = 0
 
     hardware_items: Dict[str, int] = field(default_factory=dict)
 
@@ -36,6 +37,10 @@ class HardwareReportEngine:
 
         for joint in assembly.all_joints():
 
+            if joint.joint_type == "HINGE":
+                report.hinge_count += 4
+                continue
+
             rule = rules_by_type.get(
                 joint.joint_type
             )
@@ -48,15 +53,26 @@ class HardwareReportEngine:
 
         report.hardware_items["MINIFIX"] = report.minifix_count
         report.hardware_items["DOWEL"] = report.dowel_count
+        report.hardware_items["HINGE"] = report.hinge_count
 
         minifix = registry.get_hardware(
             "MINIFIX_15_V1"
+        )
+
+        hinge = registry.get_hardware(
+            "HINGE_BLUM_110_V1"
         )
 
         if minifix:
             report.hardware_cost += (
                 report.minifix_count *
                 minifix.price
+            )
+
+        if hinge:
+            report.hardware_cost += (
+                report.hinge_count *
+                hinge.price
             )
 
         return report

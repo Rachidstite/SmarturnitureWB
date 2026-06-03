@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from exports.hardware_report import HardwareReportEngine
 from exports.bom_engine import BOMReport
 
 MDF_SHEET_AREA = 2.8 * 2.1
@@ -21,6 +22,7 @@ class CostReport:
     pvc_cost: float = 0
 
     material_cost: float = 0
+    hardware_cost: float = 0
 
     labor_cost: float = 0
     overhead_cost: float = 0
@@ -35,12 +37,21 @@ class CostEngine:
     @staticmethod
     def generate(
         bom: BOMReport,
+        scene_graph,
         labor_cost: float = 500,
         overhead_cost: float = 200,
         profit_margin: float = 0.30
     ):
 
         report = CostReport()
+
+        hardware = HardwareReportEngine.generate(
+            scene_graph
+        )
+
+        report.hardware_cost = (
+            hardware.hardware_cost
+        )
 
         mdf_area = 0.0
         back_area = 0.0
@@ -72,7 +83,8 @@ class CostEngine:
         report.material_cost = (
             report.mdf_cost +
             report.back_cost +
-            report.pvc_cost
+            report.pvc_cost +
+            report.hardware_cost
         )
 
         report.labor_cost = labor_cost

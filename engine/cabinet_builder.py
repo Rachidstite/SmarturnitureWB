@@ -49,6 +49,11 @@ class CabinetBuilder:
             "[ASSEMBLY JOINTS]",
             len(self.assembly_graph.all_joints())
         )
+
+        print(
+            "[ASSEMBLY JOINTS]",
+            len(self.assembly_graph.all_joints())
+        )
         logger.debug(f"BUILDABLE: {self.geo.is_buildable}, Sections: {len(self.geo.resolved_sections)}")
         if not self.geo.is_buildable:
             logger.error("Build aborted: unbuildable.")

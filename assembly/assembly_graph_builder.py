@@ -30,6 +30,11 @@ class AssemblyGraphBuilder:
             if n.role == NodeRole.DIVIDER
         ]
 
+        doors = [
+            n for n in nodes
+            if n.role == NodeRole.DOOR_PANEL
+        ]
+
         for side in sides:
             for top in tops:
                 g.add_joint(
@@ -59,5 +64,12 @@ class AssemblyGraphBuilder:
                     bottom.identity.key,
                     "MINIFIX"
                 )
+
+        for door in doors:
+            g.add_joint(
+                door.identity.key,
+                "CABINET",
+                "HINGE"
+            )
 
         return g
