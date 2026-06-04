@@ -28,3 +28,74 @@ class TestPanelSpecValidator(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+from domain.manufacturing_ops import FaceDrill
+
+class TestPanelSpecValidatorCNC(unittest.TestCase):
+
+    def test_invalid_drill_parameters(self):
+
+        spec = PanelSpec(
+            identity="CNC_TEST",
+            role=NodeRole.SHELF,
+            width=500,
+            height=300,
+            thickness=18,
+            material="MDF",
+            cnc_operations=[
+                FaceDrill(
+                    x=50,
+                    y=50,
+                    diameter=0,
+                    depth=-5,
+                    face="TOP"
+                )
+            ]
+        )
+
+        issues = PanelSpecValidator().validate([spec])
+
+        codes = {i.code for i in issues}
+
+        self.assertIn(
+            "DRILL_DIAMETER_INVALID",
+            codes
+        )
+
+        self.assertIn(
+            "DRILL_DEPTH_INVALID",
+            codes
+        )
+
+from domain.manufacturing_ops import FaceDrill
+
+class TestPanelSpecValidatorBounds(unittest.TestCase):
+
+    def test_drill_out_of_bounds(self):
+
+        spec = PanelSpec(
+            identity="BOUNDARY_TEST",
+            role=NodeRole.SHELF,
+            width=500,
+            height=300,
+            thickness=18,
+            material="MDF",
+            cnc_operations=[
+                FaceDrill(
+                    x=9999,
+                    y=9999,
+                    diameter=15,
+                    depth=12,
+                    face="TOP"
+                )
+            ]
+        )
+
+        issues = PanelSpecValidator().validate([spec])
+
+        codes = {i.code for i in issues}
+
+        self.assertIn(
+            "DRILL_OUT_OF_BOUNDS",
+            codes
+        )
