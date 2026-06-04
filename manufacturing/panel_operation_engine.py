@@ -43,16 +43,15 @@ class PanelOperationEngine:
                 ops
             )
 
-        print(
-            "[PANEL OPS COUNT]",
+        logger.debug(
+            "[PANEL OPS COUNT] %s",
             len(panel_ops)
         )
 
         for k, v in panel_ops.items():
-            print(
-                "[PANEL]",
+            logger.debug(
+                "[PANEL] %s OPS=%s",
                 k,
-                "OPS=",
                 len(v)
             )
 

@@ -50,8 +50,8 @@ class ManufacturingExtractor:
             scene_graph
         )
 
-        print(
-            "[MANUFACTURING EXTRACTOR]",
+        logger.debug(
+            "[MANUFACTURING EXTRACTOR] %s",
             len(panel_operations)
         )
 
@@ -83,8 +83,8 @@ class ManufacturingExtractor:
             specs.append(spec)
 
             if spec.cnc_operations:
-                print(
-                    "[CNC OPS]",
+                logger.debug(
+                    "[CNC OPS] %s %s",
                     spec.identity,
                     len(spec.cnc_operations)
                 )
