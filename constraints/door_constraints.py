@@ -5,9 +5,6 @@ class DoorCollisionConstraint(BaseConstraint):
         issues = []
 
         for i, d in enumerate(section.doors):
-            print(
-                f"[DOOR DEBUG] door={d.width:.1f} opening={section.door_width:.1f}"
-            )
 
             if d.width > section.door_width + 40:
                 issues.append(

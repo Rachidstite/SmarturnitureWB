@@ -1,6 +1,5 @@
 import FreeCAD as App, Part
 from domain.system32 import System32Engine
-from core.logging_config import logger
 class DoorBuilder:
     @staticmethod
     def build(doc, group, name, fw, fh, px, py, pz, mat, door_type_str,

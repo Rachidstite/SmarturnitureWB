@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from enum import Enum
 
-from core.logging_config import logger
 class FrontType(Enum):
     DOOR = "DOOR"
     DRAWER = "DRAWER"

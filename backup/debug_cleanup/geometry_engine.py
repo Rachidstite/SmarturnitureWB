@@ -10,7 +10,6 @@ from manufacturing.resolver import ManufacturingResolver
 from constraints.constraint_engine import ConstraintEngine
 from shared.issues import GeometryIssue
 
-from core.logging_config import logger
 class GeometryEngine:
     def __init__(self, cabinet, mat: MaterialManager):
         self.cabinet = cabinet; self.mat = mat; self.resolved_sections = []; self.resolved_top = None; self.issues = []

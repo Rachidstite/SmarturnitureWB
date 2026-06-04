@@ -6,7 +6,6 @@ from builders.drawer_builder import DrawerBuilder
 from builders.hardware_builder import HardwareBuilder
 from core.material_manager import MaterialManager
 
-from core.logging_config import logger
 class SceneRenderer:
     def __init__(self, doc, mat: MaterialManager, hw: HardwareBuilder, groups: dict, cnc_engine=None):
         self.doc = doc; self.mat = mat; self.hw = hw; self.groups = groups; self.cnc_engine = cnc_engine

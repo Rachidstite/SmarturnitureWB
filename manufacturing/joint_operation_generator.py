@@ -3,7 +3,7 @@ from domain.manufacturing_ops import FaceDrill, EdgeDrill
 class JointOperationGenerator:
 
     @staticmethod
-    def minifix_joint():
+    def minifix_joint(parent_node, child_node):
 
         ops = []
 
@@ -22,7 +22,7 @@ class JointOperationGenerator:
         ops.append(
             EdgeDrill(
                 x=64,
-                z=9,
+                z=(parent_node.thickness / 2),
                 diameter=8,
                 depth=30,
                 edge="TOP"

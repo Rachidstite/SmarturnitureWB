@@ -1,0 +1,3522 @@
+=== SMARTFURNITUREWB AUDIT ===
+--- DIRECTORY STRUCTURE ---
+./assembly/assembly_graph_builder.py
+./assembly/assembly_graph_builder.py.bak
+./assembly/assembly_graph.py
+./assembly/joint_rules.py
+./builders/door_builder.py
+./builders/door_builder.py.before_hinge_system32
+./builders/door_builder.py.before_system32
+./builders/drawer_builder.py
+./builders/hardware_builder.py
+./builders/__init__.py
+./cnc/cnc_builder.py
+./cnc/__init__.py
+./commands/__init__.py
+./commands/workbench_commands.py
+./constraints/base_constraint.py
+./constraints/constraint_engine.py
+./constraints/door_constraints.py
+./constraints/drawer_constraints.py
+./constraints/__init__.py
+./constraints/shelf_constraints.py
+./core/__init__.py
+./core/logging_config.py
+./core/material_manager.py
+./core/qt_compat.py
+./costing/cost_engine.py
+./docs/adr/ADR-005-Drawer-Ownership.md
+./docs/Architecture.md
+./docs/ARCHITECTURE.md
+./docs/Changelog.md
+./docs/DomainModel.md
+./docs/Roadmap.md
+./docs/Vision.md
+./domain/anchors.py
+./domain/archive/builders.before_recovery
+./domain/archive/builders.broken
+./domain/archive/builders.corrupted
+./domain/archive/scenegraph.backup
+./domain/archive/scenegraph.broken
+./domain/assembly_graph.py
+./domain/back_panel_engine.py
+./domain/builders.pre_add_divider
+./domain/builders.py
+./domain/builders.STABLE_20260530
+./domain/constraint_engine.py
+./domain/core_types.py
+./domain/cost_engine.py
+./domain/diagnostics.py
+./domain/drill_map.py
+./domain/entities.py
+./domain/front_layout.py
+./domain/hardware_domain.py
+./domain/hardware_library.py
+./domain/__init__.py
+./domain/joinery_engine.py
+./domain/layout_engine.py
+./domain/manufacturing_compiler.py
+./domain/manufacturing_ops.py
+./domain/resolvers.py
+./domain/rules_engine.py
+./domain/scenegraph.py
+./domain/serialization.before_fix
+./domain/serialization.py
+./domain/spatial_queries.py
+./domain/system32.py
+./domain/topology.py
+./engine/base_renderer.py
+./engine/cabinet_builder.py
+./engine/cabinet_builder.py.bak
+./engine/cabinet_builder.py.before_carcass_test
+./engine/cabinet_builder.py.before_disable_dd
+./engine/cabinet_builder.py.before_remove_divider
+./engine/cabinet_builder.py.before_remove_drawer_door
+./engine/cabinet_builder.py.before_remove_shelves
+./engine/cabinet_builder.py.before_render_graph
+./engine/cabinet_builder.py.before_system32_minifix
+./engine/cabinet_builder.py.phase2a_backup
+./engine/cabinet_builder.py.pre_divider_migration
+./engine/cabinet_builder.py.pre_door_migration
+./engine/cabinet_builder.py.pre_drawer_migration
+./engine/cabinet_builder.py.pre_shelf_migration
+./engine/cabinet.py
+./engine/diff_engine.py
+./engine/geometry_engine.py
+./engine/geometry_engine.py.bak
+./engine/geometry_engine.py.before_gap_fix
+./engine/incremental_renderer.py
+./engine/__init__.py
+./engine/object_registry.py
+./engine/policies.py
+./engine/section.py
+./exports/assembly_exporter.py
+./exports/bom_engine.py
+./exports/bom_exporter.py
+./exports/cnc_exporter.py
+./exports/csv_exporter.py
+./exports/cutlist_engine.py
+./exports/hardware_report.py
+./exports/heuristics.py
+./exports/__init__.py
+./exports/manufacturing_report.py
+./exports/nesting_engine.py
+./exports/production_engine.py
+./exports/space_manager.py
+./exports/strategies.py
+./exports/svg_exporter.py
+./generate_audit.sh
+./.gitignore
+./gui/renderer.py
+./gui/renderer.py.bak
+./InitGui.py
+./__init__.py
+./Init.py
+./layout/base_layout.py
+./layout/equal_layout.py
+./layout/__init__.py
+./layout/layout_context.py
+./layout/layout_engine.py
+./layout/layout_result.py
+./layout/manual_layout.py
+./layout/normalizer.py
+./layout/policies.py
+./logs/placeholder.txt
+./logs/smartfurniture.log
+./manufacturing/drill_map_generator.py
+./manufacturing/edge_spec.py
+./manufacturing/extractor.py
+./manufacturing/extractor.py.pre_cutlist_fix
+./manufacturing/__init__.py
+./manufacturing/joint_operation_generator.py
+./manufacturing/joint_operation_generator.py.pre_v2
+./manufacturing/manufacturing_pipeline.py
+./manufacturing/manufacturing_pipeline.py.pre_v2
+./manufacturing/material_spec.py
+./manufacturing/operation_generator.py
+./manufacturing/panel_operation_engine.py
+./manufacturing/panel_operation_engine.py.pre_v2
+./manufacturing/panel_spec.py
+./manufacturing/resolver.py
+./patches/apply_patch.py
+./patches/__init__.py
+./patches/patch_001_init_fix.py
+./patches/patch_002_import_fix.py
+./project_audit.txt
+./render_demo.py
+./renderers/shelf_renderer.py
+./resources/icons/placeholder.txt
+./run_tests.py
+./scene_graph/builder.py
+./scene_graph/builder.py.pre_edges_fix
+./scene_graph/__init__.py
+./scene_graph/metadata.py
+./scene_graph/node.py
+./scene_graph/registry.py
+./scene_graph/renderer.py
+./scene_graph/renderer.py.before_hinge_fix
+./scene_graph/scene_graph.py
+./scene_graph/semantic_state.py
+./scene_graph/state_serializer.py
+./services/__init__.py
+./services/project_service.py
+./services/validation_service.py
+./shared/contracts.py
+./shared/enums.py
+./shared/identity.py
+./shared/__init__.py
+./shared/issues.py
+./shared/resolved_types.py
+./shared/roles.py
+./snapshots/phase1b_before_drawers.tar.gz
+./snapshots/pre_real_shelf_migration.tar.gz
+./snapshots/pre_renderer_integration.tar.gz
+./snapshots/pre_runtime_renderer_test.tar.gz
+./snapshots/pre_shelf_migration.tar.gz
+./snapshots/pre_shelf_migration_v1.tar.gz
+./test_cost_engine.py
+./test_hardware_live.py
+./test_hardware_report.py
+./test_renderer_probe.py
+./tests/golden_master_wardrobe.json
+./tests/test_builder.py
+./tests/test_cnc_export.py
+./tests/test_cnc_integrity.py
+./tests/test_coordinate_resolver.py
+./tests/test_golden_master.py
+./tests/test_manufacturing_pipeline.py
+./tests/test_manufacturing_pipeline.py.pre_v2
+./tests/test_pipeline_e2e.py
+./tests/test_scenegraph.py
+./tests/test_serialization.py
+./tests/test_topology.py
+./ui/__init__.py
+./ui/issue_presenter.py
+./ui/main_window.py
+./validation/geometry_validator.py
+./validation/__init__.py
+
+--- CORE FILES CONTENT (First 30 lines) ---
+
+>>> File: ./assembly/assembly_graph.py
+from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class AssemblyJoint:
+    parent: str
+    child: str
+    joint_type: str
+
+class AssemblyGraph:
+
+    def __init__(self):
+        self.joints: List[AssemblyJoint] = []
+
+    def add_joint(self, parent, child, joint_type):
+        self.joints.append(
+            AssemblyJoint(
+                parent=parent,
+                child=child,
+                joint_type=joint_type
+            )
+        )
+
+    def all_joints(self):
+        return self.joints
+<<<
+
+>>> File: ./assembly/joint_rules.py
+from dataclasses import dataclass
+
+@dataclass
+class JointRule:
+    parent_role: str
+    child_role: str
+    joint_type: str
+    minifix_count: int
+    dowel_count: int
+
+
+RULES = [
+
+    JointRule(
+        "SIDE_PANEL",
+        "TOP_PANEL",
+        "MINIFIX",
+        3,
+        2
+    ),
+
+    JointRule(
+        "SIDE_PANEL",
+        "BOTTOM_PANEL",
+        "MINIFIX",
+        3,
+        2
+    ),
+
+    JointRule(
+<<<
+
+>>> File: ./assembly/assembly_graph_builder.py
+from assembly.assembly_graph import AssemblyGraph
+from shared.roles import NodeRole
+
+class AssemblyGraphBuilder:
+
+    @staticmethod
+    def build(scene_graph):
+
+        g = AssemblyGraph()
+
+        nodes = scene_graph.all_nodes()
+
+        sides = [
+            n for n in nodes
+            if n.role == NodeRole.SIDE_PANEL
+        ]
+
+        tops = [
+            n for n in nodes
+            if n.role == NodeRole.TOP_PANEL
+        ]
+
+        bottoms = [
+            n for n in nodes
+            if n.role == NodeRole.BOTTOM_PANEL
+        ]
+
+        dividers = [
+            n for n in nodes
+            if n.role == NodeRole.DIVIDER
+<<<
+
+>>> File: ./services/validation_service.py
+from shared.issues import ValidationState; from engine.geometry_engine import GeometryEngine
+class ValidationService:
+    def __init__(self, cabinet, mat): self.geo = GeometryEngine(cabinet, mat)
+    def validate_only(self) -> ValidationState:
+        self.geo.resolve_all(); state = ValidationState(); state.issues = self.geo.issues; return state
+<<<
+
+>>> File: ./services/project_service.py
+import FreeCAD as App
+from core.logging_config import logger
+class ProjectService:
+    DOC_NAME = "Pro_Dressing_CNC"
+    @classmethod
+    def get_or_create_document(cls):
+        doc = App.ActiveDocument
+        if not doc or doc.Name != cls.DOC_NAME: doc = App.newDocument(cls.DOC_NAME)
+        return doc
+    @classmethod
+    def clear_all_panels(cls, doc):
+        keep = {"Carcass", "Dividers", "Shelves", "Drawers", "Doors", "Hardware"}
+        to_remove = [obj.Name for obj in doc.Objects if obj.TypeId == "Part::Feature" and obj.Name not in keep]
+        for name in reversed(to_remove):
+            try: doc.removeObject(name)
+            except Exception as e: logger.warning(f"Cannot remove {name}: {e}")
+<<<
+
+>>> File: ./services/__init__.py
+<<<
+
+>>> File: ./ui/issue_presenter.py
+from core.qt_compat import QtWidgets; from shared.enums import Domain
+class IssuePresenter(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__(); layout = QtWidgets.QVBoxLayout(self); layout.setContentsMargins(0,5,0,0)
+        self.text_edit = QtWidgets.QTextEdit(); self.text_edit.setReadOnly(True); self.text_edit.setMaximumHeight(200); self.text_edit.hide(); layout.addWidget(self.text_edit)
+    def display_issues(self, issues: list):
+        if not issues: self.text_edit.hide(); return
+        self.text_edit.show()
+        grouped = {}
+        for issue in issues:
+            domain = issue.domain if hasattr(issue, 'domain') else Domain.GENERAL; grouped.setdefault(domain, []).append(issue)
+        html = "<h4 style='margin-bottom:5px;'>Validation Results:</h4>"
+        for domain, items in grouped.items():
+            html += f"<p style='font-weight:bold;margin:8px 0 2px 0;'>=== {domain.value} ==="
+            html += "<ul style='margin-top:0;'>"
+            for issue in items:
+                color = "#D32F2F" if issue.level == "ERROR" else "#F57C00"; icon = "❌" if issue.level == "ERROR" else "⚠️"
+                html += f"<li style='color:{color};margin-bottom:3px;'>{icon} <b>[{issue.code}]</b> {issue.message}</li>"
+            html += "</ul>"
+        self.text_edit.setHtml(html)
+<<<
+
+>>> File: ./ui/main_window.py
+from core.qt_compat import QtWidgets, QtCore
+from shared.contracts import CabinetParams, SectionConfig; from shared.enums import DrawerLayoutMode
+from shared.issues import ValidationState; from core.logging_config import logger
+from engine.cabinet import Cabinet; from engine.cabinet_builder import CabinetBuilder
+from services.validation_service import ValidationService; from ui.issue_presenter import IssuePresenter
+import csv
+from costing.cost_engine import CostEngine
+
+class UIManager(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__(); self.params = CabinetParams(); self.builder = CabinetBuilder(); self.val_state = ValidationState()
+        self.is_updating_ui = False; self.build_timer = QtCore.QTimer(); self.build_timer.setSingleShot(True); self.build_timer.timeout.connect(self.trigger_build)
+        self.init_ui(); self._first_build()
+
+    def init_ui(self):
+        self.setWindowTitle("Pro Dressing CNC v17.1 – Production"); self.resize(480, 920)
+        central = QtWidgets.QWidget(); self.setCentralWidget(central); layout = QtWidgets.QVBoxLayout(central)
+        tabs = QtWidgets.QTabWidget(); self.setup_tab_general(tabs); self.setup_tab_sections(tabs); layout.addWidget(tabs)
+        self.chk_cnc = QtWidgets.QCheckBox("🔴 ENABLE CNC CUTS"); self.chk_cnc.stateChanged.connect(self.on_param_changed)
+        self.chk_hw = QtWidgets.QCheckBox("🔩 SHOW 3D HARDWARE"); self.chk_hw.stateChanged.connect(self.on_param_changed)
+        layout.addWidget(self.chk_cnc); layout.addWidget(self.chk_hw)
+        self.issue_presenter = IssuePresenter(); layout.addWidget(self.issue_presenter)
+        btn_build = QtWidgets.QPushButton("🚀 FORCE GENERATE 3D MODEL"); btn_build.clicked.connect(self.trigger_build); layout.addWidget(btn_build)
+        btn_export = QtWidgets.QPushButton("📋 EXPORT CUTLIST (CSV)"); btn_export.clicked.connect(self.export_cutlist); layout.addWidget(btn_export)
+        btn_mfg = QtWidgets.QPushButton("🏭 MANUFACTURING REPORT"); btn_mfg.clicked.connect(self.export_manufacturing_report); layout.addWidget(btn_mfg)
+        btn_mfg_csv = QtWidgets.QPushButton("🏭 EXPORT MANUFACTURING CSV"); btn_mfg_csv.clicked.connect(self.export_manufacturing_csv); layout.addWidget(btn_mfg_csv)
+        btn_hw = QtWidgets.QPushButton("🔩 HARDWARE REPORT"); btn_hw.clicked.connect(self.export_hardware_report); layout.addWidget(btn_hw)
+
+    def setup_tab_general(self, tabs):
+        tab = QtWidgets.QWidget(); form = QtWidgets.QFormLayout(tab)
+<<<
+
+>>> File: ./ui/__init__.py
+<<<
+
+>>> File: ./engine/incremental_renderer.py
+from engine.diff_engine import DiffResult
+from engine.object_registry import PersistentObjectRegistry
+from engine.policies import ShapeReplacePolicy, TransformOnlyPolicy, VisualOnlyPolicy
+
+class IncrementalRenderer:
+    """محرك التحديث الذي يوجه التغييرات الدلالية للسياسة المناسبة"""
+    def __init__(self, document, registry, object_registry: PersistentObjectRegistry):
+        self.doc = document
+        self.registry = registry
+        self.obj_registry = object_registry
+
+    def apply_diff(self, diff_result: DiffResult, new_graph):
+        if not diff_result.requires_update: return
+
+        for uid in diff_result.removed: 
+            self._delete_object(uid)
+        
+        for uid in diff_result.added:
+            node = new_graph.get_node(uid)
+            if node: self._create_object(node)
+
+        # ⚡ Policy Dispatcher Core (توزيع المهام بذكاء)
+        for uid, changes in diff_result.modified.items():
+            node = new_graph.get_node(uid)
+            if node: self._dispatch_update(node, changes)
+
+        self.doc.recompute()
+
+    def _dispatch_update(self, node, changes):
+        uid = node.identity.key if hasattr(node.identity, 'key') else str(node.identity)
+<<<
+
+>>> File: ./engine/diff_engine.py
+from dataclasses import dataclass, field
+from typing import List, Dict, Set
+from scene_graph.semantic_state import NodeFingerprints, SemanticStateBuilder
+
+@dataclass
+class ChangeClassification:
+    geometry_changed: bool = False
+    transform_changed: bool = False
+    visual_changed: bool = False
+    manufacturing_changed: bool = False
+
+    @property
+    def requires_rebuild(self) -> bool:
+        return self.geometry_changed or self.manufacturing_changed
+
+@dataclass
+class DiffResult:
+    added: List[str] = field(default_factory=list)
+    removed: List[str] = field(default_factory=list)
+    modified: Dict[str, ChangeClassification] = field(default_factory=dict)
+    unchanged: List[str] = field(default_factory=list)
+
+    @property
+    def requires_update(self) -> bool:
+        return bool(self.added or self.removed or self.modified)
+
+class SceneGraphDiffEngine:
+    @classmethod
+    def compute_diff(cls, old_graph, new_graph) -> DiffResult:
+        old_map = cls._build_state_map(old_graph)
+<<<
+
+>>> File: ./engine/section.py
+class Section:
+    def __init__(self, index, config):
+        self.index = index
+        self.config = config
+<<<
+
+>>> File: ./engine/policies.py
+class UpdatePolicy:
+    """العقد الأساسي لسياسات التحديث"""
+    @staticmethod
+    def apply_update(fc_obj, node, renderer_cls):
+        raise NotImplementedError
+
+class ShapeReplacePolicy(UpdatePolicy):
+    """
+    السياسة الافتراضية: Geometry is Disposable
+    تقوم بتحديث الـ Shape بالكامل + الموقع + المظهر.
+    تمنع مشاكل الـ Constraints عن طريق استبدال الهندسة بنظافة.
+    """
+    @staticmethod
+    def apply_update(fc_obj, node, renderer_cls):
+        # 1. Update Geometry (Disposable Shape)
+        new_shape = renderer_cls.build_shape(node)
+        if new_shape:
+            fc_obj.Shape = new_shape
+            
+        # 2. Update Transform
+        ShapeReplacePolicy.update_transform(fc_obj, node)
+        
+        # 3. Update Visuals
+        ShapeReplacePolicy.update_visuals(fc_obj, node)
+
+    @staticmethod
+    def update_transform(fc_obj, node):
+        import FreeCAD as App
+        transform = getattr(node, 'transform', None)
+        if transform and len(transform) >= 6:
+<<<
+
+>>> File: ./engine/object_registry.py
+import FreeCAD as App
+
+class PersistentObjectRegistry:
+    """
+    يعزل الـ Domain Identity عن تقلبات محرك FreeCAD.
+    يحفظ خريطة: Domain Identity -> FreeCAD Internal Name
+    """
+    def __init__(self):
+        self._map = {}  # Dict[str, str]
+
+    def register(self, identity: str, fc_object):
+        """تسجيل كائن جديد"""
+        if fc_object is not None:
+            self._map[identity] = fc_object.Name
+
+    def resolve(self, doc, identity: str):
+        """إرجاع الكائن الحقيقي بسرعة O(1) وبأمان"""
+        fc_name = self._map.get(identity)
+        if fc_name:
+            fc_obj = doc.getObject(fc_name)
+            if fc_obj:
+                return fc_obj
+            else:
+                # الكائن تم حذفه من قبل المستخدم أو المحرك
+                self.purge(identity)
+        return None
+
+    def purge(self, identity: str):
+        """إزالة المرجع"""
+        if identity in self._map:
+<<<
+
+>>> File: ./engine/cabinet_builder.py
+import FreeCAD as App, Part, FreeCADGui as Gui
+from core.material_manager import MaterialManager
+from core.logging_config import logger
+from cnc.cnc_builder import CNCBuilder
+from builders.door_builder import DoorBuilder
+from builders.drawer_builder import DrawerBuilder
+from builders.hardware_builder import HardwareBuilder
+from services.project_service import ProjectService
+from engine.cabinet import Cabinet
+from engine.geometry_engine import GeometryEngine
+from scene_graph.builder import SceneGraphBuilder
+from scene_graph.renderer import SceneRenderer
+from assembly.assembly_graph_builder import AssemblyGraphBuilder
+from domain.system32 import System32Engine
+
+class CabinetBuilder:
+    def __init__(self):
+        self.mat = MaterialManager(); self.cnc = CNCBuilder(self.mat); self.hw = None
+        self.groups = {}; self.drilling_z_positions = []; self._cabinet = None
+        self._doc = None
+        self.geo = None
+        self.scene_graph = None
+        self.assembly_graph = None
+
+    def build(self, cabinet: Cabinet):
+        logger.debug("BUILD STARTED")
+        self._cabinet = cabinet
+        if hasattr(cabinet.params, 'back_thickness'): self.mat.back_thickness = cabinet.params.back_thickness
+        if hasattr(cabinet.params, 'drawer_depth'): self.mat.drawer_depth = cabinet.params.drawer_depth
+        if hasattr(cabinet.params, 'drawer_bottom_thickness'): self.mat.drawer_bottom_thickness = cabinet.params.drawer_bottom_thickness
+<<<
+
+>>> File: ./engine/cabinet.py
+from shared.contracts import CabinetParams
+from core.material_manager import MaterialManager
+class Cabinet:
+    def __init__(self, params: CabinetParams = None): self.params = params or CabinetParams(); self.mat = MaterialManager(); self.sections = []
+<<<
+
+>>> File: ./engine/base_renderer.py
+from engine.policies import ShapeReplacePolicy
+
+class BaseRenderer:
+    """
+    الطبقة المجردة لكل المصيِّرات (Renderers).
+    تفصل بين سياسة التحديث (Policy) ومنطق بناء الشكل (Build Logic).
+    """
+    
+    # السياسة الافتراضية هي الاستبدال الكامل الذكي
+    update_policy = ShapeReplacePolicy
+
+    @classmethod
+    def create_new(cls, doc, node):
+        """إنشاء كائن جديد (Stateless Feature)"""
+        uid = node.identity.key if hasattr(node.identity, 'key') else str(node.identity)
+        
+        # نستخدم Part::Feature خفيف الوزن بدلاً من كائنات معقدة تسبب مشاكل Constraints
+        fc_obj = doc.addObject("Part::Feature", uid)
+        fc_obj.Label = uid
+        
+        # نستخدم السياسة لتطبيق البيانات على الكائن الفارغ
+        cls.update_policy.apply_update(fc_obj, node, cls)
+        return fc_obj
+
+    @classmethod
+    def update_existing(cls, fc_obj, node):
+        """تحديث كائن موجود مسبقاً بناءً على سياسته"""
+        cls.update_policy.apply_update(fc_obj, node, cls)
+
+    @classmethod
+<<<
+
+>>> File: ./engine/geometry_engine.py
+import math
+from shared.enums import DoorType
+from shared.contracts import SectionConfig
+from domain.front_layout import FrontLayoutEngine, OpeningContext
+from shared.resolved_types import *
+from core.material_manager import MaterialManager
+from layout.layout_engine import LayoutEngine, LayoutContext
+from validation.geometry_validator import GeometryValidator
+from manufacturing.resolver import ManufacturingResolver
+from constraints.constraint_engine import ConstraintEngine
+from shared.issues import GeometryIssue
+
+class GeometryEngine:
+    def __init__(self, cabinet, mat: MaterialManager):
+        self.cabinet = cabinet; self.mat = mat; self.resolved_sections = []; self.resolved_top = None; self.issues = []
+        self.layout_engine = LayoutEngine(); self.validator = GeometryValidator(); self.constraint_engine = ConstraintEngine(); self.is_buildable = True
+
+    def resolve_all(self):
+        self.resolved_sections.clear(); self.issues.clear(); self.is_buildable = True
+        params = self.cabinet.params; T = self.mat.mdf_thickness; sec_count = params.sec_count
+        self.cabinet.sections = []
+        for i in range(sec_count):
+            cfg = params.sec_data.get(i, SectionConfig())
+            from engine.section import Section
+            self.cabinet.sections.append(Section(i, cfg))
+        total_inner = params.width - 2 * T
+        section_opening = total_inner / sec_count
+        global_has_sliding = any(DoorType.from_string(s.config.doors).is_sliding() for s in self.cabinet.sections)
+        sliding_track = self.mat.sliding_track_depth if global_has_sliding else 0
+        current_x = T
+<<<
+
+>>> File: ./engine/__init__.py
+<<<
+
+>>> File: ./gui/renderer.py
+import FreeCAD as App
+import Part
+from FreeCAD import Placement, Vector, Rotation
+from domain.core_types import NodeRole
+
+try:
+    import FreeCADGui as Gui
+except ImportError:
+    Gui = None
+
+class GeometryRenderer:
+    @staticmethod
+    def render(project):
+        doc_name = "SmartCabinetPro_Preview"
+        
+        try:
+            doc = App.getDocument(doc_name)
+            for obj in doc.Objects:
+                doc.removeObject(obj.Name)
+        except NameError:
+            doc = App.newDocument(doc_name)
+
+        group = doc.addObject("App::DocumentObjectGroup", project.uid if hasattr(project, 'uid') else "Cabinet_Assembly")
+
+        # جلب العمق الكلي للخزانة ديناميكياً لعمل عملية المرآة البصرية
+        cabinet_depth = getattr(getattr(project, 'topology', None), 'd', 600.0)
+
+        for node in getattr(project.graph, 'physical_nodes', []):
+            dx, dy, dz = GeometryRenderer._get_dimensions(node)
+            box_shape = Part.makeBox(dx, dy, dz)
+<<<
+
+>>> File: ./renderers/shelf_renderer.py
+import Part
+from engine.base_renderer import BaseRenderer
+from engine.policies import ShapeReplacePolicy
+
+class ShelfRenderer(BaseRenderer):
+    """
+    تطبيق حقيقي لمصيّر (Renderer) الرفوف.
+    مسؤول حصرياً عن توليد الـ Geometry الخاص بالرف.
+    """
+    update_policy = ShapeReplacePolicy
+
+    @classmethod
+    def build_shape(cls, node):
+        # توليد الصندوق الأساسي (Disposable Geometry)
+        width = getattr(node, 'width', 0)
+        thickness = getattr(node, 'thickness', 0)
+        height = getattr(node, 'height', 0)
+        
+        box = Part.makeBox(width, thickness, height)
+        
+        # ⚡ هنا سيتم مستقبلاً إضافة عمليات الخصم (Boolean Cuts) لثقوب الـ CNC
+        # if hasattr(node, 'manufacturing_ops'):
+        #     box = apply_drilling_operations(box, node.manufacturing_ops)
+        
+        return box
+<<<
+
+>>> File: ./commands/workbench_commands.py
+import FreeCADGui
+class OpenConfiguratorCommand:
+    def GetResources(self): return {'Pixmap': '', 'MenuText': 'Configurator', 'ToolTip': 'Open Pro Dressing Configurator'}
+    def Activated(self):
+        from ui.main_window import UIManager
+        global dressing_app
+        try: dressing_app.close()
+        except: pass
+        dressing_app = UIManager(); dressing_app.show()
+    def IsActive(self): return True
+
+class CreateWardrobeCommand:
+    def GetResources(self):
+        return {
+            'Pixmap': '',
+            'MenuText': 'Create Wardrobe',
+            'ToolTip': 'Create demo wardrobe and render it'
+        }
+
+    def Activated(self):
+        from domain.builders import WardrobeBuilder
+        from gui.renderer import GeometryRenderer
+
+        cab = WardrobeBuilder(
+            uid="DEMO",
+            width=1200,
+            height=2400,
+            depth=600
+        )
+
+<<<
+
+>>> File: ./commands/__init__.py
+<<<
+
+>>> File: ./core/material_manager.py
+class MaterialManager:
+    def __init__(self):
+        self.mdf_thickness = 18.0; self.back_thickness = 8.0; self.groove_depth = 8.0; self.clearance = 2.0
+        self.door_side_gap = 2.0; self.door_top_gap = 3.0; self.door_bottom_gap = 3.0
+        self.overlay_cover = 0.5; self.overlay_setback = 0.5; self.inset_side_clearance = 2.0
+        self.drawer_reveal = 4.0; self.shelf_side_gap = 0.2
+        self.side_overlay = 16.0; self.center_overlay = 4.0
+        self.drawer_slide_clearance = 12.5; self.drawer_center_gap = 3.0; self.drawer_rear_clearance = 10.0; self.drawer_front_clearance = 5.0
+        self.drawer_top_clearance = 15.0; self.drawer_bottom_clearance = 15.0; self.default_drawer_height = 200.0
+        self.drawer_depth = 450.0; self.drawer_bottom_thickness = 8.0; self.drawer_bottom_inset = 6.0
+        self.sliding_overlap = 35.0; self.sliding_side_extra = 15.0; self.sliding_track_depth = 80.0
+        self.hinge_cup_dia = 35.0; self.hinge_cup_depth = 13.0; self.screw_dia = 7.0
+        self.minifix_pin_dia = 5.0; self.minifix_pin_depth = 12.0; self.glass_frame_width = 50.0; self.shelf_depth_margin = 5.0
+<<<
+
+>>> File: ./core/qt_compat.py
+import sys
+try:
+    from PySide6 import QtWidgets, QtCore, QtGui; QT_VERSION = 6
+except ImportError:
+    try:
+        from PySide2 import QtWidgets, QtCore, QtGui; QT_VERSION = 2
+    except ImportError:
+        from PyQt5 import QtWidgets, QtCore, QtGui; QT_VERSION = 5
+print(f"SmartFurnitureWB: Using Qt{QT_VERSION}")
+<<<
+
+>>> File: ./core/logging_config.py
+import logging, os
+LOG_DIR = os.path.join(os.path.dirname(__file__), '..', 'logs'); os.makedirs(LOG_DIR, exist_ok=True)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[logging.FileHandler(os.path.join(LOG_DIR, 'smartfurniture.log')), logging.StreamHandler()])
+logger = logging.getLogger('SmartFurniture')
+<<<
+
+>>> File: ./core/__init__.py
+<<<
+
+>>> File: ./cnc/cnc_builder.py
+import FreeCAD as App, Part
+class CNCBuilder:
+    def __init__(self, mat): self.mat = mat
+    def drill_hinge_cup(self, door_shape, door_h):
+        t = self.mat.mdf_thickness; r = self.mat.hinge_cup_dia / 2; depth = self.mat.hinge_cup_depth
+        c1 = Part.makeCylinder(r, depth + 1, App.Vector(22.5, t + 0.5, 100), App.Vector(0, -1, 0))
+        c2 = Part.makeCylinder(r, depth + 1, App.Vector(22.5, t + 0.5, door_h - 100), App.Vector(0, -1, 0))
+        return door_shape.cut(Part.makeCompound([c1, c2]))
+    def generate_side_screw_holes(self, side_shape, shelves_z, D, sliding_space=0, is_left=True):
+        t = self.mat.mdf_thickness; r = self.mat.minifix_pin_dia / 2; depth = self.mat.minifix_pin_depth
+        tools = []
+        for z in shelves_z:
+            y_f = sliding_space + 50; y_b = D - 70
+            if is_left:
+                tools.append(Part.makeCylinder(r, depth, App.Vector(t, y_f, z + t / 2), App.Vector(-1, 0, 0)))
+                tools.append(Part.makeCylinder(r, depth, App.Vector(t, y_b, z + t / 2), App.Vector(-1, 0, 0)))
+            else:
+                tools.append(Part.makeCylinder(r, depth, App.Vector(0, y_f, z + t / 2), App.Vector(1, 0, 0)))
+                tools.append(Part.makeCylinder(r, depth, App.Vector(0, y_b, z + t / 2), App.Vector(1, 0, 0)))
+        if not tools: return side_shape
+        return side_shape.cut(Part.makeCompound(tools))
+<<<
+
+>>> File: ./cnc/__init__.py
+<<<
+
+>>> File: ./test_cost_engine.py
+from exports.bom_engine import BOMEngine
+from costing.cost_engine import CostEngine
+
+# هنا استدعِ أي SceneGraph موجود لديك
+# أو نفس المسار الذي تستعمله لتوليد BOM
+
+bom = BOMEngine.generate(builder.scene_graph)
+
+report = CostEngine.generate(bom)
+
+print("\n===== COST REPORT =====")
+
+print("MDF Sheets :", round(report.mdf_sheets,2))
+print("MDF Cost   :", round(report.mdf_cost,2))
+
+print("Back Cost  :", round(report.back_cost,2))
+
+print("PVC Meters :", round(report.pvc_meters,2))
+print("PVC Cost   :", round(report.pvc_cost,2))
+
+print("Total Cost :", round(report.total_cost,2))
+print("Sell Price :", round(report.selling_price,2))
+print("Profit     :", round(report.profit,2))
+<<<
+
+>>> File: ./constraints/door_constraints.py
+from .base_constraint import BaseConstraint
+from shared.resolved_types import ResolvedSection; from shared.issues import ConstraintResult, GeometryIssue; from shared.enums import Domain
+class DoorCollisionConstraint(BaseConstraint):
+    def check(self, section: ResolvedSection, mat) -> ConstraintResult:
+        issues = []
+
+        for i, d in enumerate(section.doors):
+
+            if d.width > section.door_width + 40:
+                issues.append(
+                    GeometryIssue(
+                        "ERROR",
+                        "DOOR_COLLISION",
+                        f"Door {i+1}: width ({d.width:.1f}mm) exceeds opening ({section.door_width:.1f}mm).",
+                        domain=Domain.CONSTRAINT
+                    )
+                )
+        return ConstraintResult(valid=len(issues)==0, issues=issues)
+<<<
+
+>>> File: ./constraints/drawer_constraints.py
+from .base_constraint import BaseConstraint
+from shared.resolved_types import ResolvedSection; from shared.issues import ConstraintResult, GeometryIssue; from shared.enums import Domain
+class DrawerDepthConstraint(BaseConstraint):
+    def check(self, section: ResolvedSection, mat) -> ConstraintResult:
+        issues = [GeometryIssue("ERROR", "DRAWER_DEPTH_INVALID", f"Drawer {i+1}: box depth ({d.box_d:.1f}mm) < 100mm.", domain=Domain.CONSTRAINT) for i, d in enumerate(section.drawers) if d.box_d < 100]
+        return ConstraintResult(valid=len(issues)==0, issues=issues)
+class DrawerWidthConstraint(BaseConstraint):
+    def check(self, section: ResolvedSection, mat) -> ConstraintResult:
+        if section.drawers and section.drawer_box_width < 200: return ConstraintResult(valid=False, issues=[GeometryIssue("ERROR", "DRAWER_TOO_NARROW", f"Drawer box width ({section.drawer_box_width:.1f}mm) is very narrow.", domain=Domain.CONSTRAINT)])
+        return ConstraintResult(valid=True)
+<<<
+
+>>> File: ./constraints/base_constraint.py
+from abc import ABC, abstractmethod
+from shared.resolved_types import ResolvedSection; from shared.issues import ConstraintResult
+class BaseConstraint(ABC):
+    @abstractmethod
+    def check(self, section: ResolvedSection, mat) -> ConstraintResult: pass
+<<<
+
+>>> File: ./constraints/shelf_constraints.py
+from .base_constraint import BaseConstraint
+from shared.resolved_types import ResolvedSection; from shared.issues import ConstraintResult, GeometryIssue; from shared.enums import Domain
+class ShelfSaggingConstraint(BaseConstraint):
+    def check(self, section: ResolvedSection, mat) -> ConstraintResult:
+        issues = [GeometryIssue("WARNING", "SHELF_SAGGING", f"Shelf {i+1}: width ({s.width:.1f}mm) > 900mm.", domain=Domain.CONSTRAINT) for i, s in enumerate(section.shelves) if s.width > 900]
+        return ConstraintResult(valid=len(issues)==0, issues=issues)
+<<<
+
+>>> File: ./constraints/constraint_engine.py
+from shared.resolved_types import ResolvedSection; from shared.issues import GeometryIssue; from shared.enums import Domain
+from .drawer_constraints import DrawerDepthConstraint, DrawerWidthConstraint; from .door_constraints import DoorCollisionConstraint; from .shelf_constraints import ShelfSaggingConstraint
+class ConstraintEngine:
+    def __init__(self): self.constraints = [DrawerDepthConstraint(), DrawerWidthConstraint(), DoorCollisionConstraint(), ShelfSaggingConstraint()]
+    def validate(self, resolved_sections: list, mat) -> list:
+        issues = []
+        for i, section in enumerate(resolved_sections):
+            for constraint in self.constraints:
+                result = constraint.check(section, mat)
+                for issue in result.issues:
+                    if hasattr(issue, 'section_index'): issue = GeometryIssue(issue.level, issue.code, issue.message, i, domain=issue.domain)
+                    issues.append(issue)
+        return issues
+<<<
+
+>>> File: ./constraints/__init__.py
+<<<
+
+>>> File: ./test_renderer_probe.py
+from domain.builders import WardrobeBuilder
+
+cab = WardrobeBuilder(
+    uid="RENDER",
+    width=1200,
+    height=2400,
+    depth=600
+)
+
+cab.add_divider(600)
+
+project = cab.build()
+
+print("Nodes:", len(project.graph.physical_nodes))
+
+for n in project.graph.physical_nodes:
+    print(n.identity.key, n.role)
+<<<
+
+>>> File: ./InitGui.py
+import FreeCADGui
+from commands.workbench_commands import OpenConfiguratorCommand, CreateWardrobeCommand
+
+if "SmartFurniture_OpenConfigurator" not in FreeCADGui.listCommands():
+    FreeCADGui.addCommand("SmartFurniture_OpenConfigurator", OpenConfiguratorCommand())
+
+if "SmartFurniture_CreateWardrobe" not in FreeCADGui.listCommands():
+    FreeCADGui.addCommand("SmartFurniture_CreateWardrobe", CreateWardrobeCommand())
+
+class SmartFurnitureWorkbench(FreeCADGui.Workbench):
+    MenuText = "Smart Furniture"
+    ToolTip = "Professional MDF CNC Design Platform"
+    Icon = ""
+    def Initialize(self):
+        self.appendToolbar("SmartFurniture", ["SmartFurniture_OpenConfigurator", "SmartFurniture_CreateWardrobe"])
+        self.appendMenu("Smart Furniture", ["SmartFurniture_OpenConfigurator", "SmartFurniture_CreateWardrobe"])
+    def GetClassName(self): return "Gui::PythonWorkbench"
+
+FreeCADGui.addWorkbench(SmartFurnitureWorkbench())
+
+print("### SMARTFURNITURE V1-1 LOADED ###")
+print("### V1-1 VERSION LOADED ###")
+<<<
+
+>>> File: ./tests/test_cnc_export.py
+import unittest
+import os
+import csv
+import tempfile
+from domain.builders import WardrobeBuilder
+from domain.rules_engine import HardwarePlacementEngine, RuleContext
+from domain.manufacturing_compiler import ManufacturingCompiler
+from exports.cnc_exporter import CNCExporter
+
+class TestCNCExport(unittest.TestCase):
+    def test_neutral_format_and_axis_inclusion(self):
+        """يتحقق من وجود صيغة محايدة وعدم ضياع بيانات المحور (Axis)"""
+        cabinet = WardrobeBuilder(uid="TEST_CNC", width=800, height=800, depth=400)
+        project = cabinet.build()
+        
+        context = RuleContext()
+        HardwarePlacementEngine(context).process(project)
+        ManufacturingCompiler().compile(project, context)
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = os.path.join(tmpdir, "drilling_map.csv")
+            CNCExporter.export_master_drilling_map(project, csv_path)
+            
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                headers = reader.fieldnames
+                
+                # التأكد من وجود عمود Axis
+                self.assertIn("Axis", headers)
+                
+<<<
+
+>>> File: ./tests/test_manufacturing_pipeline.py
+from types import SimpleNamespace
+
+from assembly.assembly_graph import AssemblyGraph
+from manufacturing.joint_operation_generator import JointOperationGenerator
+
+g = AssemblyGraph()
+
+g.add_joint(
+    "SIDE_PANEL",
+    "TOP_PANEL",
+    "MINIFIX"
+)
+
+parent_node = SimpleNamespace(
+    thickness=18.0,
+    width=600,
+    depth=500,
+    height=720
+)
+
+child_node = SimpleNamespace(
+    thickness=18.0,
+    width=564,
+    depth=500,
+    height=18
+)
+
+for joint in g.all_joints():
+
+    if joint.joint_type == "MINIFIX":
+<<<
+
+>>> File: ./tests/test_pipeline_e2e.py
+import unittest
+import os
+import tempfile
+from domain.builders import WardrobeBuilder
+from domain.rules_engine import HardwarePlacementEngine, RuleContext
+from domain.manufacturing_compiler import ManufacturingCompiler
+from domain.constraint_engine import CabinetConstraintValidator
+from exports.cnc_exporter import CNCExporter
+from exports.bom_exporter import BOMExporter
+
+class TestEndToEndPipeline(unittest.TestCase):
+    def test_golden_master_kitchen_corner(self):
+        """اختبار E2E: يبني خزانة، يطبق القواعد، يولد الثقوب، يفحصها، ويستخرج CNC"""
+        
+        # 1. Build Geometry & Topology
+        cabinet = WardrobeBuilder(uid="E2E_TEST", width=1000, height=2000, depth=600)
+        left_id, right_id = cabinet.add_divider(500)
+        cabinet.add_shelves(count=2, section_id=left_id)
+        project = cabinet.build()
+
+        # 2. Hardware Rules Engine
+        context = RuleContext()
+        placement_engine = HardwarePlacementEngine(context)
+        placement_engine.process(project)
+
+        # 3. Manufacturing Compiler
+        compiler = ManufacturingCompiler()
+        compiler.compile(project, context)
+
+        # 4. Validation Shield
+<<<
+
+>>> File: ./tests/test_golden_master.py
+import unittest
+import os, json
+from domain.builders import WardrobeBuilder
+
+class TestGoldenMaster(unittest.TestCase):
+    GOLDEN_FILE = os.path.join(os.path.dirname(__file__), 'golden_master_wardrobe.json')
+
+    def _extract_geometric_snapshot(self, project) -> dict:
+        snapshot = {
+            "schema_version": 1, # Future-proofing
+            "total_nodes": len(project.graph.physical_nodes),
+            "total_joinery_edges": len(project.joinery.edges),
+            "parts": []
+        }
+        
+        for node in project.graph.physical_nodes:
+            snapshot["parts"].append({
+                "role": getattr(node, 'role', 'UNKNOWN'),
+                "w": round(node.width, 2),
+                "h": round(node.height, 2),
+                "t": round(node.thickness, 2),
+                "x": round(node.transform.x, 2),
+                "z": round(node.transform.z, 2)
+            })
+            
+        snapshot["parts"] = sorted(snapshot["parts"], key=lambda p: (p['role'], p['x'], p['z']))
+        return snapshot
+
+    def test_golden_master_math_drift(self):
+        cabinet = WardrobeBuilder(uid="GOLDEN", width=2000, height=2200, depth=600)
+<<<
+
+>>> File: ./tests/test_cnc_integrity.py
+import unittest
+from domain.builders import WardrobeBuilder
+from domain.rules_engine import HardwarePlacementEngine, RuleContext
+from domain.manufacturing_compiler import ManufacturingCompiler
+
+class TestCNCIntegrity(unittest.TestCase):
+    def setUp(self):
+        cabinet = WardrobeBuilder(uid="TEST_CNC", width=800, height=800, depth=400)
+        self.project = cabinet.build()
+        context = RuleContext()
+        HardwarePlacementEngine(context).process(self.project)
+        ManufacturingCompiler().compile(self.project, context)
+
+    def test_no_duplicate_operations(self):
+        """يضمن عدم وجود عمليات حفر مكررة تحرق البنطة"""
+        for node in self.project.graph.physical_nodes:
+            ops = getattr(node, 'machining_ops', [])
+            seen_ops = set()
+            for op in ops:
+                op_key = f"{op.face}_{op.local_x}_{op.local_y}_{op.diameter}"
+                self.assertNotIn(op_key, seen_ops, f"Duplicate MachiningOp found: {op_key} in node {node.identity.key}")
+                seen_ops.add(op_key)
+
+    def test_no_edge_boring_on_zero_x(self):
+        """يضمن أن ثقوب الحواف (Edge Boring) تقع في منتصف سمك اللوح وليس على الحافة (X=0)"""
+        for node in self.project.graph.physical_nodes:
+            for op in getattr(node, 'machining_ops', []):
+                # إذا كان الثقب الجانبي قطره 8مم (مثل المينيفكس)، يجب أن لا يكون X=0 أبداً
+                if op.axis in ['X', 'Y'] and op.diameter >= 8:
+                    safe_margin = op.diameter / 2.0
+<<<
+
+>>> File: ./tests/test_serialization.py
+import unittest
+import os, tempfile
+from domain.builders import WardrobeBuilder
+from domain.serialization import ProjectSerializer
+# إعادة استخدام مستخرج المعيار الذهبي للتأكد من التطابق التام
+from tests.test_golden_master import TestGoldenMaster
+
+class TestProjectSerialization(unittest.TestCase):
+    def test_lossless_round_trip(self):
+        """يبني خزانة، يحفظها في ملف، يعيد تحميلها، ويتأكد أن الهندسة متطابقة 100%"""
+        # 1. Build Original
+        cabinet = WardrobeBuilder(uid="SERIAL_TEST", width=1200, height=2000, depth=600)
+        left_id, right_id = cabinet.add_divider(600)
+        cabinet.add_shelves(count=3, section_id=left_id)
+        cabinet.add_doors(count=2)
+        original_project = cabinet.build()
+        
+        # 2. Save to Temp File
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            filepath = os.path.join(tmpdirname, "project.json")
+            ProjectSerializer.save(original_project, filepath)
+            self.assertTrue(os.path.exists(filepath), "Project file was not created!")
+            
+            # 3. Load into New Instance
+            loaded_project = ProjectSerializer.load(filepath)
+        
+        # 4. Extract Snapshots
+        golden_extractor = TestGoldenMaster()
+        original_snapshot = golden_extractor._extract_geometric_snapshot(original_project)
+        loaded_snapshot = golden_extractor._extract_geometric_snapshot(loaded_project)
+<<<
+
+>>> File: ./tests/test_topology.py
+import unittest
+from domain.topology import TopologyManager
+
+class TestCabinetTopology(unittest.TestCase):
+    def setUp(self):
+        self.topo = TopologyManager()
+        self.topo.seed_root(1000, 2000, 600)
+
+    def test_initial_state(self):
+        self.assertIn("ROOT", self.topo.sections)
+
+    def test_divider_split(self):
+        div_id, left_id, right_id = self.topo.add_vertical_divider(400, 18.0)
+        self.assertIn(left_id, self.topo.sections)
+        self.assertIn(right_id, self.topo.sections)
+        self.assertFalse(self.topo.sections["ROOT"].is_active)
+
+    def test_zero_width_allowed_for_diagnostics(self):
+        self.topo.add_vertical_divider(5, 18.0)
+        self.assertTrue(True)
+        
+    def test_out_of_bounds_protection(self):
+        self.topo.add_vertical_divider(2000, 18.0)
+        self.assertTrue(True)
+<<<
+
+>>> File: ./tests/test_scenegraph.py
+import unittest
+from domain.builders import SceneGraph, SceneNode, VirtualAnchor, Identity
+from domain.core_types import NodeRole, NodeCategory
+
+class TestSceneGraphIndexing(unittest.TestCase):
+    def setUp(self):
+        self.graph = SceneGraph()
+        
+        # إضافة 1000 قطعة وهمية لاختبار سرعة وثبات الفهرسة
+        for i in range(100):
+            self.graph.add_node(SceneNode(Identity(f"PHYS_{i}"), NodeRole.SHELF, 10, 10, 10, "MDF"))
+            self.graph.add_node(VirtualAnchor(Identity(f"VIRT_{i}")))
+
+    def test_o1_lookups(self):
+        """يجب أن يجد القطع فوراً عبر القواميس المفهرسة دون عمل حلقة (Loop)"""
+        # Test Get By ID
+        node = self.graph.get_node("PHYS_50")
+        self.assertIsNotNone(node)
+        self.assertEqual(node.role, NodeRole.SHELF)
+
+        # Test Category Index
+        self.assertEqual(len(self.graph.physical_nodes), 100)
+        self.assertEqual(len(self.graph.virtual_nodes), 100)
+        self.assertEqual(len(self.graph.hardware_nodes), 0)
+
+        # Test Role Index
+        shelves = self.graph._by_role[NodeRole.SHELF]
+        self.assertEqual(len(shelves), 100)
+<<<
+
+>>> File: ./tests/test_builder.py
+import unittest
+from domain.builders import WardrobeBuilder
+from domain.constraint_engine import CabinetConstraintValidator
+
+class TestWardrobeBuilder(unittest.TestCase):
+    def test_basic_carcass(self):
+        """التأكد من أن الهيكل الأساسي يحتوي على 4 قطع (جانبين، سقف، قاعدة)"""
+        cabinet = WardrobeBuilder(uid="TEST1", width=1000, height=1000, depth=500)
+        project = cabinet.build()
+        # ⚡ تم التحديث: نعد الألواح الفيزيائية فقط (نتجاهل VirtualAnchors)
+        self.assertEqual(len(project.graph.physical_nodes), 5)
+        
+    def test_divider_and_shelves(self):
+        """التأكد من توليد الرفوف وارتباطها بالتجميع"""
+        cabinet = WardrobeBuilder(uid="TEST2", width=1200, height=2000, depth=600)
+        left_id, right_id = cabinet.add_divider(600)
+        cabinet.add_shelves(count=3, section_id=left_id)
+        
+        project = cabinet.build()
+        # 4 carcass + 1 divider + 3 shelves = 8 physical nodes
+        self.assertEqual(len(project.graph.physical_nodes), 9)
+        
+        # التأكد من عدم ضياع Joinery
+        edges = project.joinery.edges
+        self.assertTrue(len(edges) > 4)
+
+    def test_math_validation(self):
+        """التأكد من أن الخزانة تمر من الفحص الهندسي بنجاح"""
+        cabinet = WardrobeBuilder(uid="TEST3", width=1200, height=2000, depth=600)
+        project = cabinet.build()
+<<<
+
+>>> File: ./tests/test_coordinate_resolver.py
+import unittest
+from domain.builders import SceneNode, Identity
+from domain.core_types import NodeRole
+from domain.anchors import AnchorCoordinate, MountFace, EdgeRef
+from domain.resolvers import CoordinateResolver
+
+class TestCoordinateResolver(unittest.TestCase):
+    def setUp(self):
+        # لوح قياسي 500x800x18
+        self.node = SceneNode(
+            identity=Identity("TEST_PANEL"),
+            role=NodeRole.SIDE_PANEL,
+            width=500.0,
+            height=800.0,
+            thickness=18.0,
+            material="MDF"
+        )
+
+    def test_left_bottom_anchor(self):
+        anchor = AnchorCoordinate(MountFace.FRONT, EdgeRef.LEFT, offset_x=37.0, offset_y=100.0)
+        # Assuming fallback for Y is BOTTOM if EdgeRef is LEFT
+        anchor.edge = EdgeRef.BOTTOM # Simplified for test context
+        
+        resolved = CoordinateResolver.resolve(self.node, anchor, hole_offset_x=0, hole_offset_y=0)
+        self.assertEqual(resolved.local_x, 37.0)
+        self.assertEqual(resolved.local_y, 100.0)
+
+    def test_right_top_anchor_associativity(self):
+        # قياس 50 ملم من اليمين، و 100 ملم من الأعلى
+        anchor = AnchorCoordinate(MountFace.FRONT, EdgeRef.RIGHT, offset_x=50.0, offset_y=100.0)
+<<<
+
+>>> File: ./exports/svg_exporter.py
+import os
+
+class SVGNestingExporter:
+    """
+    يولد خريطة قص صناعية (Shop-floor Cutting Map)
+    مبنية على الـ Cut Tree (Rip Cuts & Cross Cuts)
+    """
+    
+    @staticmethod
+    def export(nesting_results, output_path: str, sheet_w=2440.0, sheet_h=1220.0, trim=10.0):
+        scale = 0.4 
+        svg = "<html><body style='font-family: sans-serif; background: #eef2f3; padding: 20px;'>"
+        svg += "<h1>🏭 SMART CABINET PRO - Shop-Floor Cutting Map</h1>"
+        
+        for material, sheets in nesting_results.items():
+            svg += f"<h2 style='color: #2c3e50; border-bottom: 2px solid #bdc3c7;'>🪵 Material: {material}</h2>"
+            
+            for sheet in sheets:
+                yield_pct = (sheet.used_area / (sheet_w * sheet_h)) * 100
+                svg += f"<h3>Sheet {sheet.sheet_id} | Yield: {yield_pct:.1f}%</h3>"
+                
+                sw, sh = sheet_w * scale, sheet_h * scale
+                svg += f'<svg width="{sw}" height="{sh}" style="background: #fff; border: 2px solid #333; margin-bottom: 40px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">'
+                
+                # 1. رسم Trim Cuts (قص التنظيف - خطوط متقطعة رمادية)
+                t = trim * scale
+                svg += f'<rect x="{t}" y="{t}" width="{sw - 2*t}" height="{sh - 2*t}" fill="none" stroke="#95a5a6" stroke-width="1" stroke-dasharray="4,4" />'
+                svg += f'<text x="5" y="{t-2}" font-size="9" fill="#7f8c8d">Trim 10mm</text>'
+                
+                rip_counter = 1
+<<<
+
+>>> File: ./exports/cnc_exporter.py
+\
+import csv
+import os
+from domain.builders import CabinetProject
+
+class CNCExporter:
+    """محرك تصدير بيانات التصنيع إلى صيغة محايدة (Neutral Manufacturing Format)"""
+    
+    @staticmethod
+    def export_master_drilling_map(project: CabinetProject, filepath: str) -> str:
+        # الهيكلية الصارمة والمحايدة التي تمنع التقيد بأي ماكينة حالياً
+        headers = ['Panel_ID', 'Role', 'Face', 'X', 'Y', 'Diameter', 'Depth', 'Axis', 'Is_Through']
+        
+        rows = []
+        for node in project.graph.physical_nodes:
+            if hasattr(node, 'machining_ops') and node.machining_ops:
+                for op in node.machining_ops:
+                    role_str = node.role.value if hasattr(node.role, 'value') else str(node.role)
+                    rows.append([
+                        node.identity.key,
+                        role_str,
+                        op.face,
+                        round(op.local_x, 2),
+                        round(op.local_y, 2),
+                        round(op.diameter, 2),
+                        round(op.depth, 2),
+                        getattr(op, 'axis', 'Z'), # المحور الميكانيكي الحاسم
+                        int(getattr(op, 'is_through', False)) # 0 أو 1 لسهولة القراءة بالـ CAM
+                    ])
+        
+<<<
+
+>>> File: ./exports/cutlist_engine.py
+from dataclasses import dataclass
+from typing import List
+from manufacturing.panel_spec import PanelSpec
+from scene_graph.scene_graph import SceneGraph
+from manufacturing.extractor import ManufacturingExtractor
+
+@dataclass
+class CutListItem:
+    identity: str
+    width: float
+    height: float
+    thickness: float
+    material: str
+    group: str
+    role: str
+    edge_banding: str = ""
+    quantity: int = 1
+
+class CutListEngine:
+    @staticmethod
+    def extract(scene_graph: SceneGraph) -> List[CutListItem]:
+        """يستخرج قائمة القطع من PanelSpecs (طبقة تصنيعية خالصة)."""
+        specs = ManufacturingExtractor.extract(scene_graph)
+        items = []
+        for spec in specs:
+            items.append(CutListItem(
+                identity=spec.identity,
+                width=spec.width,
+                height=spec.height,
+                thickness=spec.thickness,
+<<<
+
+>>> File: ./exports/csv_exporter.py
+import os
+import csv
+from collections import defaultdict
+from exports.production_engine import CutlistItem
+
+class CSVExporter:
+    """
+    محرك تصدير بيانات القص إلى صيغة CSV متوافقة مع ورش الـ MDF
+    وبرامج التحسين (CutList Optimizer, MaxCut).
+    """
+    
+    @staticmethod
+    def export(cutlist, output_path: str):
+        # 1. تجميع القطع المتطابقة (Grouping)
+        grouped_items = defaultdict(lambda: {"qty": 0, "item": None})
+        
+        for item in cutlist:
+            # المفتاح يعتمد على المقاسات والمادة والحواف لتجميع القطع المتطابقة تماماً
+            # نتجاهل الـ Identity هنا لأننا نريد جمع "رفين" نفس المقاس في سطر واحد
+            key = (
+                item.material, 
+                round(item.cut_width, 1), 
+                round(item.cut_height, 1), 
+                item.grain_direction,
+                item.edge_bands.get("TOP"),
+                item.edge_bands.get("BOTTOM"),
+                item.edge_bands.get("LEFT"),
+                item.edge_bands.get("RIGHT")
+            )
+            grouped_items[key]["qty"] += 1
+<<<
+
+>>> File: ./exports/bom_exporter.py
+import csv
+import os
+from collections import defaultdict
+from domain.builders import CabinetProject
+from domain.rules_engine import RuleContext
+from domain.hardware_library import HardwareRegistry
+
+class BOMExporter:
+    """محرك تصدير فاتورة الإكسسوارات (Bill of Materials)"""
+    
+    @staticmethod
+    def export_hardware_bom(project: CabinetProject, context: RuleContext, filepath: str) -> str:
+        registry = HardwareRegistry()
+        bom_counts = defaultdict(int)
+        
+        # 1. تجميع الكميات بناءً على النوايا والسياق (RuleContext)
+        for placement in getattr(project, 'placements', []):
+            sku = context.hardware_profile.get(placement.hardware_intent)
+            if sku:
+                bom_counts[sku] += 1
+                
+
+        # 2. تجهيز البيانات للطباعة
+        rows = []
+        for sku, count in bom_counts.items():
+            spec = registry.get_hardware(sku)
+            # ⚡ المعمارية النظيفة: الاعتماد على الكيان نفسه لتعريف اسمه
+            item_name = spec.display_name if spec else "Unknown Hardware"
+            manufacturer = spec.manufacturer if spec else "Unknown"
+            rows.append([sku, item_name, manufacturer, count])
+<<<
+
+>>> File: ./exports/nesting_engine.py
+from typing import Dict, List
+from exports.strategies import PlacementStrategy, GuillotineStripStrategy, SheetResult
+from dataclasses import dataclass
+
+@dataclass
+class NestingPart:
+    semantic_name: str
+    width: float
+    height: float
+    can_rotate: bool
+
+class IndustrialNestingEngine:
+    """
+    محرك التعشيق الصناعي القائم على الاستراتيجيات (Strategy-based Engine).
+    """
+    def __init__(self, strategy: PlacementStrategy, sheet_width: float = 2440.0, sheet_height: float = 1220.0, saw_kerf: float = 4.0):
+        self.strategy = strategy
+        self.sheet_width = sheet_width
+        self.sheet_height = sheet_height
+        self.kerf = saw_kerf
+
+    def process(self, cutlist_items) -> Dict[str, List[SheetResult]]:
+        materials_baskets = {}
+        
+        for item in cutlist_items:
+            mat = item.material
+            if mat not in materials_baskets:
+                materials_baskets[mat] = []
+                
+            role = str(getattr(item, 'role', 'PART')).split('.')[-1]
+<<<
+
+>>> File: ./exports/manufacturing_report.py
+from dataclasses import dataclass, field
+from typing import List
+
+from manufacturing.extractor import ManufacturingExtractor
+
+
+@dataclass
+class ManufacturingLine:
+    part_id: str
+    operation_type: str
+    diameter: float
+    depth: float
+    face_or_edge: str
+    description: str
+
+
+@dataclass
+class ManufacturingReport:
+    lines: List[ManufacturingLine] = field(default_factory=list)
+
+
+class ManufacturingReportEngine:
+
+    @staticmethod
+    def generate(scene_graph):
+
+        specs = ManufacturingExtractor.extract(scene_graph)
+
+        report = ManufacturingReport()
+
+<<<
+
+>>> File: ./exports/space_manager.py
+from dataclasses import dataclass
+from typing import List, Optional
+from exports.heuristics import PlacementHeuristics
+
+@dataclass
+class FreeRect:
+    x: float
+    y: float
+    w: float
+    h: float
+    
+    @property
+    def area(self) -> float:
+        return self.w * self.h
+
+@dataclass
+class UsedRect:
+    x: float
+    y: float
+    w: float
+    h: float
+
+class SpaceManager:
+    def __init__(self, sheet_width: float, sheet_height: float):
+        self.free_rects: List[FreeRect] = [FreeRect(0, 0, sheet_width, sheet_height)]
+
+    def place_rect(self, used: UsedRect):
+        new_free_rects = []
+        for free in self.free_rects:
+            if self._intersect(free, used):
+<<<
+
+>>> File: ./exports/bom_engine.py
+from dataclasses import dataclass, field
+from typing import List, Dict
+from manufacturing.panel_spec import PanelSpec
+from manufacturing.extractor import ManufacturingExtractor
+from scene_graph.scene_graph import SceneGraph
+from manufacturing.edge_spec import EdgeSpec
+
+@dataclass
+class BOMItem:
+    identity: str
+    role: str
+    width: float
+    height: float
+    thickness: float
+    material: str
+    group: str
+    edge_top: str = ""
+    edge_bottom: str = ""
+    edge_left: str = ""
+    edge_right: str = ""
+    quantity: int = 1
+
+@dataclass
+class EdgeBandReport:
+    """تقرير منفصل لشريط اللصق."""
+    total_linear_meters: float = 0.0
+    by_type: Dict[str, float] = field(default_factory=dict)  # "ABS_1MM" → متر طولي
+    details: List[str] = field(default_factory=list)
+
+@dataclass
+<<<
+
+>>> File: ./exports/hardware_report.py
+from dataclasses import dataclass, field
+from typing import Dict
+
+from assembly.joint_rules import RULES
+from assembly.assembly_graph_builder import AssemblyGraphBuilder
+from domain.hardware_library import HardwareRegistry
+
+
+@dataclass
+class HardwareReport:
+    minifix_count: int = 0
+    dowel_count: int = 0
+    hinge_count: int = 0
+
+    hardware_items: Dict[str, int] = field(default_factory=dict)
+
+    hardware_cost: float = 0.0
+
+
+class HardwareReportEngine:
+
+    @staticmethod
+    def generate(scene_graph):
+
+        report = HardwareReport()
+
+        registry = HardwareRegistry()
+
+        assembly = AssemblyGraphBuilder.build(
+            scene_graph
+<<<
+
+>>> File: ./exports/production_engine.py
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
+
+@dataclass
+class CutlistItem:
+    identity: str
+    material: str
+    finished_width: float
+    finished_height: float
+    thickness: float
+    edge_bands: Dict[str, str]
+    cut_width: float = 0.0
+    cut_height: float = 0.0
+    grain_direction: str = "NONE"
+
+@dataclass
+class CNCProgram:
+    identity: str
+    material: str
+    thickness: float
+    dimensions: tuple  # (X, Y)
+    face_drills: List[Any] = field(default_factory=list)
+    edge_drills: List[Any] = field(default_factory=list)
+    grooves: List[Any] = field(default_factory=list)
+
+class ProductionEngine:
+    """
+    جسر العبور من الـ CAD إلى أرض المصنع.
+    """
+    
+<<<
+
+>>> File: ./exports/assembly_exporter.py
+import os
+from domain.assembly_graph import JoineryGraph, PartLabeler
+
+class AssemblyManualExporter:
+    """
+    يولد دليل التجميع بصيغة HTML جاهز للطباعة للورشة.
+    يعتمد بالكامل على الـ SceneGraph والـ JoineryGraph.
+    """
+    @staticmethod
+    def export(scene_graph, joinery_graph: JoineryGraph, output_path: str):
+        labeler = PartLabeler()
+        nodes_dict = {}
+        
+        for node in getattr(scene_graph, 'physical_nodes', []):
+            uid = node.identity.key if hasattr(node.identity, 'key') else str(node.identity)
+            nodes_dict[uid] = node
+            # تعيين الأكواد لكل قطعة
+            labeler.assign_label(node)
+
+        sequence = joinery_graph.get_assembly_sequence(list(nodes_dict.keys()))
+
+        html = "<html><body style='font-family: sans-serif; background: #fff; color: #333; padding: 20px; max-width: 800px; margin: 0 auto;'>"
+        html += "<h1 style='border-bottom: 3px solid #2980b9; color: #2c3e50;'>🛠️ Assembly Manual (Cabinet Vision Lite)</h1>"
+        
+        # 1. قائمة القطع (Bill of Materials - Simple)
+        html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 30px; border: 1px solid #ddd;'>"
+        html += "<h2>📦 Part Identification (Labels)</h2>"
+        html += "<table style='width: 100%; border-collapse: collapse;'>"
+        html += "<tr style='background: #e9ecef; border-bottom: 2px solid #ccc;'><th style='padding: 8px; text-align: left;'>Label</th><th style='padding: 8px; text-align: left;'>Part Name</th><th style='padding: 8px; text-align: left;'>Dimensions (mm)</th></tr>"
+        
+<<<
+
+>>> File: ./exports/__init__.py
+<<<
+
+>>> File: ./exports/heuristics.py
+import math
+from typing import Optional, Tuple
+from exports.space_manager import FreeRect
+
+class PlacementHeuristics:
+    """
+    محرك الاستدلال لاختيار أفضل فراغ متاح.
+    يرجع (أفضل فراغ، النتيجة/Score). كلما كانت النتيجة أقل، كان الاختيار أفضل.
+    """
+    
+    @staticmethod
+    def best_area_fit(free_rects: list, w: float, h: float) -> Tuple[Optional[FreeRect], float]:
+        """BAF: يبحث عن الفراغ الذي مساحته أقرب ما يمكن لمساحة القطعة (تقليل الهدر المباشر)"""
+        best_node = None
+        best_area_fit = float('inf')
+        best_short_side_fit = float('inf')
+        
+        part_area = w * h
+        
+        for free in free_rects:
+            if free.w >= w and free.h >= h:
+                area_fit = free.area - part_area
+                short_side_fit = min(free.w - w, free.h - h)
+                
+                # نستخدم short_side كعامل كسر تعادل (Tie-breaker)
+                if area_fit < best_area_fit or (area_fit == best_area_fit and short_side_fit < best_short_side_fit):
+                    best_node = free
+                    best_area_fit = area_fit
+                    best_short_side_fit = short_side_fit
+                    
+<<<
+
+>>> File: ./exports/strategies.py
+from typing import List
+from dataclasses import dataclass, field
+
+@dataclass
+class PlacedPart:
+    part: any
+    x: float
+    y: float
+    placed_width: float
+    placed_height: float
+    rotated: bool
+    cross_cut_x: float = 0.0  # إحداثي القص العرضي للقطعة
+
+@dataclass
+class StripNode:
+    y_start: float
+    height: float
+    rip_cut_y: float = 0.0    # إحداثي القص الطولي للشريحة
+    parts: List[PlacedPart] = field(default_factory=list)
+
+@dataclass
+class SheetResult:
+    sheet_id: int
+    used_area: float = 0.0
+    placed_parts: List[PlacedPart] = field(default_factory=list)
+    strips: List[StripNode] = field(default_factory=list)
+
+class PlacementStrategy:
+    def pack(self, parts: list, sheet_w: float, sheet_h: float, kerf: float) -> List[SheetResult]:
+        raise NotImplementedError
+<<<
+
+>>> File: ./builders/drawer_builder.py
+import FreeCAD as App, Part
+class DrawerBuilder:
+    @staticmethod
+    def build(doc, parent_group, name, fw, fh, fx, fy, fz, bw, bh, bd, bpx, bpy, bpz, mat, bottom_t):
+        grp = doc.addObject("App::DocumentObjectGroup", name); parent_group.addObject(grp)
+        face = doc.addObject("Part::Feature", f"{name}_Face")
+        face.Shape = Part.makeBox(fw, mat.mdf_thickness, fh)
+        face.Placement = App.Placement(App.Vector(fx, fy, fz), App.Rotation())
+        face.ViewObject.ShapeColor = (0.9, 0.8, 0.7)
+
+        if not hasattr(face, "SmartUUID"):
+            face.addProperty("App::PropertyString", "SmartUUID")
+
+        face.SmartUUID = name
+
+        grp.addObject(face)
+        box_t = mat.mdf_thickness
+        def add_part(pname, pw, pd, ph, px, py, pz, color=(0.95, 0.95, 0.95)):
+            p = doc.addObject("Part::Feature", pname); p.Shape = Part.makeBox(pw, pd, ph)
+            p.Placement = App.Placement(App.Vector(px, py, pz), App.Rotation()); p.ViewObject.ShapeColor = color; grp.addObject(p)
+        add_part(f"{name}_Side_L", box_t, bd, bh, bpx, bpy, bpz)
+        add_part(f"{name}_Side_R", box_t, bd, bh, bpx + bw - box_t, bpy, bpz)
+        iw = bw - 2 * box_t
+        add_part(f"{name}_Box_Front", iw, box_t, bh, bpx + box_t, bpy, bpz)
+        add_part(f"{name}_Box_Back", iw, box_t, bh, bpx + box_t, bpy + bd - box_t, bpz)
+        btw = bw - 2 * box_t; btd = bd - 2 * box_t
+        add_part(f"{name}_Bottom", btw, btd, bottom_t, bpx + box_t, bpy + box_t, bpz + mat.drawer_bottom_inset,
+                 (0.8, 0.8, 0.8))
+<<<
+
+>>> File: ./builders/hardware_builder.py
+import FreeCAD as App, Part
+class HardwareBuilder:
+    def __init__(self, doc): self.doc = doc
+    def add_minifix(self, name, pos, group):
+        cam = self.doc.addObject("Part::Feature", name); cam.Shape = Part.makeCylinder(7.5, 12)
+        cam.Placement = App.Placement(App.Vector(pos[0], pos[1], pos[2] - 0.5), App.Rotation()); cam.ViewObject.ShapeColor = (0.95, 0.95, 0.95); group.addObject(cam)
+    def add_hinge(self, name, pos, group):
+        hinge = self.doc.addObject("Part::Feature", name); hinge.Shape = Part.makeCylinder(17.5, 13)
+        hinge.Placement = App.Placement(App.Vector(*pos), App.Rotation(App.Vector(1, 0, 0), -90)); hinge.ViewObject.ShapeColor = (0.95, 0.95, 0.95); group.addObject(hinge)
+<<<
+
+>>> File: ./builders/door_builder.py
+import FreeCAD as App, Part
+from domain.system32 import System32Engine
+class DoorBuilder:
+    @staticmethod
+    def build(doc, group, name, fw, fh, px, py, pz, mat, door_type_str,
+              cnc_engine=None, hw_builder=None, hw_group=None, hinge_side="LEFT", door_layer=0):
+        is_glass = "Glass" in door_type_str; base_type = "Inset"
+        if "Overlay" in door_type_str: base_type = "Overlay"
+        elif "Sliding" in door_type_str: base_type = "Sliding"
+        if is_glass:
+            subgroup = doc.addObject("App::DocumentObjectGroup", name); group.addObject(subgroup)
+            fw2 = mat.glass_frame_width; frame = doc.addObject("Part::Feature", f"{name}_Frame")
+            outer = Part.makeBox(fw, mat.mdf_thickness, fh)
+            inner = Part.makeBox(fw - 2 * fw2, mat.mdf_thickness, fh - 2 * fw2)
+            inner.Placement = App.Placement(App.Vector(fw2, 0, fw2), App.Rotation()); shape = outer.cut(inner)
+            if cnc_engine and base_type != "Sliding": shape = cnc_engine.drill_hinge_cup(shape, fh)
+            frame.Shape = shape; frame.Placement = App.Placement(App.Vector(px, py, pz), App.Rotation())
+            frame.ViewObject.ShapeColor = (0.2, 0.2, 0.25); subgroup.addObject(frame)
+            glass = doc.addObject("Part::Feature", f"{name}_Glass")
+            glass.Shape = Part.makeBox(fw - 2 * fw2, 4, fh - 2 * fw2)
+            glass.Placement = App.Placement(App.Vector(px + fw2, py + (mat.mdf_thickness - 4) / 2, pz + fw2),
+                                            App.Rotation())
+            glass.ViewObject.ShapeColor = (0.6, 0.8, 0.95); glass.ViewObject.Transparency = 65; subgroup.addObject(glass)
+        else:
+            door = doc.addObject("Part::Feature", name); shape = Part.makeBox(fw, mat.mdf_thickness, fh)
+            if cnc_engine and base_type != "Sliding": shape = cnc_engine.drill_hinge_cup(shape, fh)
+            door.Shape = shape
+            door.Placement = App.Placement(App.Vector(px, py, pz), App.Rotation())
+            door.ViewObject.ShapeColor = (0.5, 0.5, 0.5) if base_type == "Sliding" else (0.6, 0.4, 0.2)
+
+<<<
+
+>>> File: ./builders/__init__.py
+<<<
+
+>>> File: ./Init.py
+try:
+    from . import InitGui
+except ImportError:
+    import InitGui
+<<<
+
+>>> File: ./shared/roles.py
+from enum import Enum, auto
+
+class NodeRole(Enum):
+    """الأدوار التصنيعية لكل عقدة في المشهد."""
+    SIDE_PANEL = auto()      # LEFT_SIDE, RIGHT_SIDE
+    TOP_PANEL = auto()
+    BOTTOM_PANEL = auto()
+    BACK_PANEL = auto()
+    SHELF = auto()
+    DIVIDER = auto()
+    PLINTH = auto()
+    DRAWER_FACE = auto()
+    DOOR_PANEL = auto()
+    DOOR_GLASS = auto()
+    DRAWER_BOX_SIDE = auto()
+    DRAWER_BOX_BACK = auto()
+    DRAWER_BOX_BOTTOM = auto()
+    HINGE = auto()
+    MINIFIX = auto()
+<<<
+
+>>> File: ./shared/contracts.py
+from dataclasses import dataclass, field
+from typing import Dict, List
+from .enums import DrawerLayoutMode
+@dataclass
+class SectionConfig:
+    drawers: int = 0; shelves: int = 0; doors: str = "None"
+    door_count: int = 2; drawer_type: str = "Inset"
+    drawer_heights: List[float] = field(default_factory=list)
+    drawer_layout_mode: DrawerLayoutMode = DrawerLayoutMode.MANUAL
+@dataclass
+class CabinetParams:
+    width: float = 1800.0; height: float = 2200.0; depth: float = 600.0
+    base_height: float = 80.0; sec_count: int = 3
+    sec_data: Dict[int, SectionConfig] = field(default_factory=dict)
+    cnc_mode: bool = False; hw_mode: bool = False
+    back_thickness: float = 8.0; drawer_depth: float = 450.0; drawer_bottom_thickness: float = 8.0
+
+    hinge_sku: str = "HINGE_BLUM_110_V1"
+    slide_sku: str = "DRAWER_SLIDE_SOFTCLOSE_450"
+    handle_sku: str = "HANDLE_128_BLACK"
+<<<
+
+>>> File: ./shared/identity.py
+from dataclasses import dataclass
+from enum import Enum, auto
+import re
+
+class SemanticRole(Enum):
+    LEFT_SIDE = auto(); RIGHT_SIDE = auto(); TOP = auto(); BOTTOM = auto()
+    BACK = auto(); SHELF = auto(); DIVIDER = auto(); PLINTH = auto()
+    DOOR = auto(); DRAWER_FACE = auto(); DRAWER_BOX_SIDE = auto()
+    DRAWER_BOX_BACK = auto(); DRAWER_BOX_BOTTOM = auto(); GLASS = auto()
+
+def normalize_identity_part(value) -> str:
+    text = str(value or "").strip().upper()
+    text = re.sub(r"[^A-Z0-9_-]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-_")
+    return text or "UNSPECIFIED"
+
+@dataclass(frozen=True)
+class PanelIdentity:
+    cabinet_id: str        # "CAB-001"
+    section_id: str        # "SEC-1", "SEC-LEFT", "STRUCTURE"
+    role: SemanticRole
+    index: int = 0
+
+    @property
+    def key(self):
+        # استبدال / بـ _ لتجنب مشاكل FreeCAD
+        cabinet = normalize_identity_part(self.cabinet_id)
+        section = normalize_identity_part(self.section_id)
+        role = self.role.name if hasattr(self.role, "name") else normalize_identity_part(self.role)
+        return f"{cabinet}_{section}_{role}-{self.index}"
+<<<
+
+>>> File: ./shared/resolved_types.py
+from dataclasses import dataclass
+from .enums import DoorType
+@dataclass(frozen=True)
+class ResolvedShelf: x: float; y: float; z: float; width: float; depth: float
+@dataclass(frozen=True)
+class ResolvedDrawer: face_x: float; face_y: float; face_z: float; face_w: float; face_h: float; box_x: float; box_y: float; box_z: float; box_w: float; box_h: float; box_d: float; bottom_thickness: float
+@dataclass(frozen=True)
+class ResolvedDoor: x: float; y: float; z: float; width: float; height: float; door_type: DoorType; hinge_side: str = "LEFT"; layer: int = 0
+@dataclass(frozen=True)
+class ResolvedDivider: x: float; y: float; z: float; width: float; depth: float; height: float
+@dataclass(frozen=True)
+class ResolvedTopPanel: width: float; depth: float; thickness: float; x: float; y: float; z: float
+@dataclass(frozen=True)
+class ResolvedSection:
+    inner_x: float; inner_width: float; shelf_width: float; drawer_box_width: float
+    left_overlay: float; right_overlay: float; door_x: float; door_width: float
+    drawer_face_x: float; drawer_face_width: float; divider_x: float; has_sliding_system: bool
+    shelves: tuple = (); drawers: tuple = (); doors: tuple = (); divider: ResolvedDivider = None
+<<<
+
+>>> File: ./shared/enums.py
+from enum import Enum, auto
+class DoorType(Enum):
+    NONE = 0; INSET = auto(); OVERLAY = auto(); SLIDING = auto()
+    GLASS_INSET = auto(); GLASS_OVERLAY = auto(); GLASS_SLIDING = auto()
+    @classmethod
+    def from_string(cls, s: str):
+        mapping = {"None": cls.NONE, "Inset": cls.INSET, "Overlay": cls.OVERLAY, "Sliding": cls.SLIDING,
+                   "Glass Inset": cls.GLASS_INSET, "Glass Overlay": cls.GLASS_OVERLAY, "Glass Sliding": cls.GLASS_SLIDING}
+        return mapping.get(s, cls.NONE)
+    def is_glass(self): return self in (DoorType.GLASS_INSET, DoorType.GLASS_OVERLAY, DoorType.GLASS_SLIDING)
+    def is_overlay(self): return self in (DoorType.OVERLAY, DoorType.GLASS_OVERLAY)
+    def is_sliding(self): return self in (DoorType.SLIDING, DoorType.GLASS_SLIDING)
+    def is_inset(self): return self in (DoorType.INSET, DoorType.GLASS_INSET)
+class DrawerLayoutMode(Enum): MANUAL = auto(); EQUAL = auto()
+class Domain(Enum): GENERAL = "GENERAL"; GEOMETRY = "GEOMETRY"; HARDWARE = "HARDWARE"; CNC = "CNC"; MANUFACTURING = "MANUFACTURING"; CONSTRAINT = "CONSTRAINT"
+<<<
+
+>>> File: ./shared/__init__.py
+<<<
+
+>>> File: ./shared/issues.py
+from dataclasses import dataclass, field
+from .enums import Domain
+@dataclass(frozen=True)
+class ConstraintResult: valid: bool; issues: list = field(default_factory=list); warnings: list = field(default_factory=list); metadata: dict = field(default_factory=dict)
+@dataclass(frozen=True)
+class GeometryIssue: level: str; code: str; message: str; section_index: int = -1; component: str = ""; domain: Domain = Domain.GENERAL
+@dataclass
+class ValidationState:
+    issues: list = field(default_factory=list)
+    @property
+    def has_errors(self): return any(i.level == "ERROR" for i in self.issues)
+    @property
+    def has_warnings(self): return any(i.level == "WARNING" for i in self.issues)
+    def by_domain(self, domain: Domain): return [i for i in self.issues if i.domain == domain]
+<<<
+
+>>> File: ./scene_graph/scene_graph.py
+import math
+from typing import List, Dict, Optional
+from scene_graph.node import SceneNode
+from scene_graph.metadata import BackPanelMetadata
+
+class SceneGraph:
+    """
+    شجرة التصميم مع محرك بحث O(1) للأداء الصناعي
+    """
+    def __init__(self):
+        self.nodes: List[SceneNode] = []
+        self._identity_map: Dict[str, SceneNode] = {}
+
+    def _node_key(self, node: SceneNode) -> str:
+        identity = getattr(node, "identity", None)
+        key = identity.key if hasattr(identity, "key") else str(identity or "")
+        key = key.strip()
+        if not key:
+            raise ValueError("SceneGraph node identity is required.")
+        return key
+
+    def add_node(self, node: SceneNode):
+        uid = self._node_key(node)
+        if uid in self._identity_map:
+            raise ValueError(f"Duplicate SceneGraph identity: {uid}")
+        self.nodes.append(node)
+        self._identity_map[uid] = node
+
+    def get_node(self, identity: str) -> Optional[SceneNode]:
+        """بحث سريع O(1) يمنع عنق الزجاجة O(n^2)"""
+<<<
+
+>>> File: ./scene_graph/semantic_state.py
+import hashlib
+import json
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class NodeFingerprints:
+    geometry: str
+    transform: str
+    visual: str
+    manufacturing: str
+
+class SemanticStateBuilder:
+    """
+    Explicit Fingerprint Builders:
+    يبني بصمات مستقلة لكل قناة دلالية لتجنب التحديث الأعمى.
+    """
+    @classmethod
+    def build(cls, node) -> NodeFingerprints:
+        return NodeFingerprints(
+            geometry=cls._hash_geom(node),
+            transform=cls._hash_transform(node),
+            visual=cls._hash_visual(node),
+            manufacturing=cls._hash_mfg(node)
+        )
+
+    @staticmethod
+    def _hash_obj(data_dict: dict) -> str:
+        state_json = json.dumps(data_dict, sort_keys=True, default=str) # default=str لحماية json
+        return hashlib.sha256(state_json.encode('utf-8')).hexdigest()
+
+<<<
+
+>>> File: ./scene_graph/renderer.py
+import FreeCAD as App, Part
+from scene_graph.node import SceneNode
+from shared.roles import NodeRole
+from builders.door_builder import DoorBuilder
+from builders.drawer_builder import DrawerBuilder
+from builders.hardware_builder import HardwareBuilder
+from core.material_manager import MaterialManager
+
+class SceneRenderer:
+    def __init__(self, doc, mat: MaterialManager, hw: HardwareBuilder, groups: dict, cnc_engine=None):
+        self.doc = doc; self.mat = mat; self.hw = hw; self.groups = groups; self.cnc_engine = cnc_engine
+
+    def render(self, node: SceneNode):
+        # استخدام الـ Registry
+        from scene_graph.registry import RendererRegistry
+        RendererRegistry.render(node, self)
+
+    def render_graph(self, scene_graph):
+        nodes = scene_graph.all_nodes()
+
+        print("[TOTAL NODES]", len(nodes))
+
+        for node in nodes:
+            print("[NODE]", node.role, node.identity.key)
+            self.render(node)
+
+    def _ensure_group(self, group_name):
+        if group_name not in self.groups:
+            self.groups[group_name] = self.doc.addObject("App::DocumentObjectGroup", group_name)
+
+<<<
+
+>>> File: ./scene_graph/builder.py
+from engine.geometry_engine import GeometryEngine
+from core.material_manager import MaterialManager
+from scene_graph.node import SceneNode
+from scene_graph.scene_graph import SceneGraph
+from shared.identity import PanelIdentity, SemanticRole, normalize_identity_part
+from shared.roles import NodeRole
+from manufacturing.edge_spec import EdgeBandRegistry
+from scene_graph.metadata import BackPanelMetadata, DoorMetadata, DrawerMetadata
+from domain.back_panel_engine import BackPanelRule
+
+class SceneGraphBuilder:
+    def __init__(self, cabinet, mat: MaterialManager, cabinet_id: str = None):
+        self.cabinet = cabinet
+        self.mat = mat
+        self.graph = SceneGraph()
+        self.cabinet_id = self._resolve_cabinet_id(cabinet_id)
+
+    def _resolve_cabinet_id(self, cabinet_id: str = None) -> str:
+        if cabinet_id:
+            return normalize_identity_part(cabinet_id)
+        params = self.cabinet.params
+        width = int(round(params.width))
+        height = int(round(params.height))
+        depth = int(round(params.depth))
+        sec_count = int(params.sec_count)
+        return normalize_identity_part(f"CAB-{width}x{height}x{depth}-S{sec_count}")
+
+    def build(self, geo: GeometryEngine) -> SceneGraph:
+        T = self.mat.mdf_thickness; base_H = self.cabinet.params.base_height
+        W = self.cabinet.params.width; D = self.cabinet.params.depth; H = self.cabinet.params.height
+<<<
+
+>>> File: ./scene_graph/registry.py
+from scene_graph.node import SceneNode
+from scene_graph.renderer import SceneRenderer
+
+class RendererRegistry:
+    """يُسجل استراتيجيات الرسم حسب الدور."""
+    _renderers = {}
+
+    @classmethod
+    def register(cls, role: str, renderer_func):
+        cls._renderers[role] = renderer_func
+
+    @classmethod
+    def render(cls, node: SceneNode, renderer: SceneRenderer):
+        func = cls._renderers.get(node.role)
+        if func:
+            func(node, renderer)
+        else:
+            # الرسم الافتراضي للألواح البسيطة
+            renderer._render_simple_panel(node)
+<<<
+
+>>> File: ./scene_graph/node.py
+from domain.manufacturing_ops import ManufacturingOperation
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
+from shared.identity import PanelIdentity
+from shared.roles import NodeRole
+from manufacturing.edge_spec import EdgeSpec
+
+@dataclass
+class SceneNode:
+    identity: PanelIdentity
+    width: float
+    depth: float
+    height: float
+    x: float
+    y: float
+    z: float
+    thickness: float = 0.0  # السماكة التصنيعية الصريحة
+    material: str = "MDF_18MM"
+    edge_bandings: str = ""
+    group: str = "Carcass"
+    edge_spec: EdgeSpec = None  # ✅ نظام الحواف           # تنظيم المجموعات
+    role: NodeRole = NodeRole.SHELF  # افتراضي                   # DRAWER_FACE, DOOR, SHELF, ...
+    metadata: Dict[str, Any] = field(default_factory=dict)  # بيانات تصنيع إضافية
+<<<
+
+>>> File: ./scene_graph/metadata.py
+from dataclasses import dataclass
+
+@dataclass
+class DoorMetadata:
+    door_type: str
+    hinge_side: str = "LEFT"
+    layer: int = 0
+    cnc_enabled: bool = False
+
+@dataclass
+class DrawerMetadata:
+    drawer_type: str
+    box_w: float; box_h: float; box_d: float
+    box_x: float; box_y: float; box_z: float
+    bottom_thickness: float
+
+@dataclass
+class BackPanelMetadata:
+    section_index: int
+    section_label: str
+    is_section_back: bool
+    groove_depth: float
+    back_offset: float
+    extends_into_groove: bool
+    source_rule: str
+<<<
+
+>>> File: ./scene_graph/__init__.py
+<<<
+
+>>> File: ./scene_graph/state_serializer.py
+import hashlib
+import json
+from dataclasses import is_dataclass, asdict
+from enum import Enum
+
+class NodeStateSerializer:
+    """
+    يحول الخصائص الصناعية للـ SceneNode إلى بصمة (Hash) 
+    باستخدام Explicit Registry لضمان الاستقرار ومنع أخطاء str(obj).
+    """
+    @staticmethod
+    def serialize(node) -> str:
+        state_dict = {
+            "role": str(getattr(node, 'role', '')),
+            "width": getattr(node, 'width', 0),
+            "height": getattr(node, 'height', 0),
+            "thickness": getattr(node, 'thickness', 0),
+            "material": getattr(node, 'material', ''),
+            "edge_bands": getattr(node, 'edge_bands', {}),
+            "group": getattr(node, 'group', ''),
+        }
+
+        def custom_encoder(obj):
+            if isinstance(obj, Enum): 
+                return {"__type__": "Enum", "value": obj.name}
+            if is_dataclass(obj): 
+                return {"__type__": type(obj).__name__, "value": asdict(obj)}
+            if hasattr(obj, 'to_dict'):
+                return {"__type__": type(obj).__name__, "value": obj.to_dict()}
+            
+<<<
+
+>>> File: ./run_tests.py
+#!/usr/bin/env python3
+import unittest
+import os, sys
+
+HOME = os.path.expanduser("~")
+PROJECT = os.path.join(HOME, ".local", "share", "FreeCAD", "v1-1", "Mod", "SmartFurnitureWB")
+if not os.path.isdir(PROJECT):
+    PROJECT = os.path.join(HOME, ".FreeCAD", "Mod", "SmartFurnitureWB")
+sys.path.append(PROJECT)
+
+print("🛡️  Starting SMART CABINET PRO Automated Test Suite...\n")
+
+loader = unittest.TestLoader()
+suite = loader.discover(os.path.join(PROJECT, 'tests'))
+runner = unittest.TextTestRunner(verbosity=2)
+result = runner.run(suite)
+
+if result.wasSuccessful():
+    print("\n✅ SUCCESS: Kernel is stable. Safe to proceed to next features.")
+else:
+    print("\n❌ FAILURE: Regressions detected! Do not deploy.")
+    sys.exit(1)
+<<<
+
+>>> File: ./render_demo.py
+from domain.builders import WardrobeBuilder
+from gui.renderer import GeometryRenderer
+
+cab = WardrobeBuilder(
+    uid="DEMO",
+    width=1200,
+    height=2400,
+    depth=600
+)
+
+cab.add_divider(600)
+
+project = cab.build()
+
+GeometryRenderer.render(project)
+
+print("RENDER COMPLETE")
+<<<
+
+>>> File: ./__init__.py
+__version__ = '17.1.0'
+<<<
+
+>>> File: ./test_hardware_report.py
+from exports.hardware_report import HardwareReportEngine
+
+class DummyGraph:
+    def all_nodes(self):
+        return []
+
+try:
+    report = HardwareReportEngine.generate(DummyGraph())
+
+    print("MINIFIX =", report.minifix_count)
+    print("DOWEL   =", report.dowel_count)
+    print("COST    =", report.hardware_cost)
+
+except Exception as e:
+    print("ERROR:", e)
+<<<
+
+>>> File: ./patches/patch_002_import_fix.py
+import os
+def apply(project_path):
+    geom_path = os.path.join(project_path, "engine", "geometry_engine.py")
+    with open(geom_path, "r") as f:
+        content = f.read()
+    if "from manufacturing.resolver import ManufacturingResolver" not in content:
+        content = content.replace(
+            "from validation.geometry_validator import GeometryValidator",
+            "from validation.geometry_validator import GeometryValidator\nfrom manufacturing.resolver import ManufacturingResolver"
+        )
+        with open(geom_path, "w") as f:
+            f.write(content)
+<<<
+
+>>> File: ./patches/__init__.py
+# SmartFurnitureWB Patches
+<<<
+
+>>> File: ./patches/apply_patch.py
+"""تطبيق جميع التصحيحات دفعة واحدة."""
+import os, sys, importlib
+
+PATCH_DIR = os.path.dirname(__file__)
+PROJECT = os.path.abspath(os.path.join(PATCH_DIR, ".."))
+
+def apply_all():
+    patches = sorted([f for f in os.listdir(PATCH_DIR) if f.startswith("patch_") and f.endswith(".py")])
+    for p in patches:
+        mod = importlib.import_module(f"patches.{p[:-3]}")
+        if hasattr(mod, "apply"):
+            print(f"Applying {p}...")
+            mod.apply(PROJECT)
+<<<
+
+>>> File: ./patches/patch_001_init_fix.py
+import os
+def apply(project_path):
+    init_py = os.path.join(project_path, "Init.py")
+    with open(init_py, "w") as f:
+        f.write("try:\n    from . import InitGui\nexcept ImportError:\n    import InitGui\n")
+<<<
+
+>>> File: ./test_hardware_live.py
+from exports.hardware_report import HardwareReportEngine
+
+report = HardwareReportEngine.generate(builder.scene_graph)
+
+print()
+print("===== HARDWARE REPORT =====")
+print("MINIFIX =", report.minifix_count)
+print("DOWEL   =", report.dowel_count)
+print("COST    =", report.hardware_cost)
+print("===========================")
+<<<
+
+>>> File: ./validation/geometry_validator.py
+from shared.issues import GeometryIssue; from shared.enums import Domain
+class GeometryValidator:
+    def validate(self, resolved_sections, mat) -> list:
+        issues = []
+        for i, r in enumerate(resolved_sections):
+            if r.drawer_box_width < 100: issues.append(GeometryIssue("WARNING", "DRAWER_TOO_NARROW", f"Section {i+1}: Drawer box width ({r.drawer_box_width:.1f}mm) is very narrow.", i, domain=Domain.GEOMETRY))
+            for shelf in r.shelves:
+                if shelf.depth < 50: issues.append(GeometryIssue("WARNING", "SHELF_TOO_SHALLOW", f"Section {i+1}: Shelf depth ({shelf.depth:.1f}mm) is below minimum.", i, domain=Domain.GEOMETRY))
+        return issues
+<<<
+
+>>> File: ./validation/__init__.py
+<<<
+
+>>> File: ./layout/policies.py
+class DefaultWardrobePolicy: drawer_zone_ratio = 0.4<<<
+
+>>> File: ./layout/normalizer.py
+import math
+from enum import Enum, auto
+class NormalizationMode(Enum): FLOOR = auto(); CEIL = auto(); NEAREST = auto()
+class DimensionNormalizer:
+    @staticmethod
+    def round_to_increment(value: float, increment: float, mode: NormalizationMode = NormalizationMode.NEAREST) -> float:
+        if mode == NormalizationMode.FLOOR: return math.floor(value / increment) * increment
+        elif mode == NormalizationMode.CEIL: return math.ceil(value / increment) * increment
+        else: return round(value / increment) * increment
+<<<
+
+>>> File: ./layout/equal_layout.py
+import math
+from .base_layout import DrawerLayoutStrategy; from .layout_context import LayoutContext; from .layout_result import LayoutResult, DrawerZone, LayoutDiagnostics; from .normalizer import DimensionNormalizer, NormalizationMode
+class EqualLayoutStrategy(DrawerLayoutStrategy):
+    def resolve(self, context: LayoutContext) -> LayoutResult:
+        n = context.section_config.drawers
+        if n <= 0: return LayoutResult()
+        total_gaps = context.mat.clearance * (n - 1); available = context.available_height - total_gaps
+        if available <= 0: return LayoutResult(diagnostics=LayoutDiagnostics(warnings=["Drawer zone too small"]))
+        raw_h = available / n; normalized_h = DimensionNormalizer.round_to_increment(raw_h, 5.0, NormalizationMode.FLOOR)
+        heights = [normalized_h] * n; total_normalized = sum(heights) + total_gaps; diff = context.available_height - total_normalized
+        if diff > 0:
+            fraction = diff / n; extra = 0.0
+            for i in range(n):
+                extra += fraction
+                if extra >= 1.0: heights[i] += int(extra); extra -= int(extra)
+        zones = []; current_z = context.base_z
+        for i, h in enumerate(heights): zones.append(DrawerZone(height=h, z_start=current_z, index=i)); current_z += h + context.mat.clearance
+        remaining = context.available_height - (current_z - context.base_z)
+        return LayoutResult(drawer_zones=zones, diagnostics=LayoutDiagnostics(consumed_height=sum(heights)+total_gaps, remaining_height=remaining, normalization_loss=abs(raw_h*n - sum(heights))))
+<<<
+
+>>> File: ./layout/layout_context.py
+from dataclasses import dataclass
+from shared.enums import DoorType; from core.material_manager import MaterialManager
+@dataclass(frozen=True)
+class LayoutContext:
+    params: any; section_config: any; mat: MaterialManager
+    available_height: float; base_z: float; door_type: DoorType; has_sliding: bool; sliding_track: float
+<<<
+
+>>> File: ./layout/base_layout.py
+from abc import ABC, abstractmethod
+from .layout_context import LayoutContext; from .layout_result import LayoutResult
+class DrawerLayoutStrategy(ABC):
+    @abstractmethod
+    def resolve(self, context: LayoutContext) -> LayoutResult: pass
+<<<
+
+>>> File: ./layout/layout_engine.py
+from .equal_layout import EqualLayoutStrategy; from .manual_layout import ManualLayoutStrategy
+from shared.enums import DrawerLayoutMode, DoorType; from .layout_context import LayoutContext; from .layout_result import LayoutResult, DoorZone, ShelfZone, LayoutDiagnostics; from .policies import DefaultWardrobePolicy
+LAYOUT_REGISTRY = {DrawerLayoutMode.MANUAL: ManualLayoutStrategy, DrawerLayoutMode.EQUAL: EqualLayoutStrategy}
+class LayoutEngine:
+    def __init__(self, registry=None, policy=None): self.registry = registry or LAYOUT_REGISTRY; self.policy = policy or DefaultWardrobePolicy()
+    def resolve_zones(self, context: LayoutContext) -> LayoutResult:
+        n = context.section_config.drawers; door_type = context.door_type; mat = context.mat; drawer_result = LayoutResult()
+        if n > 0:
+            drawer_zone_height = context.available_height * self.policy.drawer_zone_ratio if door_type != DoorType.NONE else context.available_height
+            drawer_context = LayoutContext(params=context.params, section_config=context.section_config, mat=context.mat,
+                                           available_height=drawer_zone_height, base_z=context.base_z,
+                                           door_type=context.door_type, has_sliding=context.has_sliding,
+                                           sliding_track=context.sliding_track)
+            mode = context.section_config.drawer_layout_mode; strategy = self.registry.get(mode, ManualLayoutStrategy)()
+            drawer_result = strategy.resolve(drawer_context)
+        door_zone = None
+        if door_type != DoorType.NONE:
+            consumed = drawer_result.diagnostics.consumed_height if drawer_result.diagnostics else 0.0
+            door_start = context.base_z + consumed
+            door_height = context.available_height - consumed - mat.door_top_gap - mat.door_bottom_gap
+            if door_height > 0: door_zone = DoorZone(height=door_height, z_start=door_start + mat.door_bottom_gap)
+        shelf_zone = None
+        if context.section_config.shelves > 0 and door_zone: shelf_zone = ShelfZone(height=door_zone.height,
+                                                                                     z_start=door_zone.z_start)
+        diagnostics = LayoutDiagnostics(
+            consumed_height=drawer_result.diagnostics.consumed_height if drawer_result.diagnostics else 0.0,
+            remaining_height=context.available_height - (
+                drawer_result.diagnostics.consumed_height if drawer_result.diagnostics else 0.0),
+            normalization_loss=drawer_result.diagnostics.normalization_loss if drawer_result.diagnostics else 0.0,
+            warnings=drawer_result.diagnostics.warnings if drawer_result.diagnostics else [])
+<<<
+
+>>> File: ./layout/__init__.py
+<<<
+
+>>> File: ./layout/layout_result.py
+from dataclasses import dataclass, field
+from typing import List, Optional
+@dataclass(frozen=True)
+class DrawerZone: height: float; z_start: float; index: int
+@dataclass(frozen=True)
+class DoorZone: height: float; z_start: float
+@dataclass(frozen=True)
+class ShelfZone: height: float; z_start: float
+@dataclass(frozen=True)
+class LayoutDiagnostics: consumed_height: float = 0.0; remaining_height: float = 0.0; normalization_loss: float = 0.0; warnings: List[str] = field(default_factory=list)
+@dataclass(frozen=True)
+class LayoutResult: drawer_zones: List[DrawerZone] = field(default_factory=list); door_zone: Optional[DoorZone] = None; shelf_zone: Optional[ShelfZone] = None; diagnostics: LayoutDiagnostics = field(default_factory=LayoutDiagnostics)
+<<<
+
+>>> File: ./layout/manual_layout.py
+from .base_layout import DrawerLayoutStrategy; from .layout_context import LayoutContext; from .layout_result import LayoutResult, DrawerZone, LayoutDiagnostics
+class ManualLayoutStrategy(DrawerLayoutStrategy):
+    def resolve(self, context: LayoutContext) -> LayoutResult:
+        heights = getattr(context.section_config, "drawer_heights", []) or []
+        n = context.section_config.drawers
+        if n <= 0: return LayoutResult()
+        if len(heights) != n: heights = [context.mat.default_drawer_height] * n
+        zones = []; current_z = context.base_z
+        for i, h in enumerate(heights): zones.append(DrawerZone(height=h, z_start=current_z, index=i)); current_z += h + context.mat.clearance
+        remaining = context.available_height - (current_z - context.base_z)
+        return LayoutResult(drawer_zones=zones, diagnostics=LayoutDiagnostics(consumed_height=current_z-context.base_z, remaining_height=remaining))
+<<<
+
+>>> File: ./costing/cost_engine.py
+from dataclasses import dataclass
+from exports.hardware_report import HardwareReportEngine
+from exports.bom_engine import BOMReport
+
+MDF_SHEET_AREA = 2.8 * 2.1
+MDF_SHEET_PRICE = 800.0
+
+BACK_SHEET_AREA = 2.8 * 2.1
+BACK_SHEET_PRICE = 300.0
+
+PVC_PRICE_PER_METER = 5.0
+
+@dataclass
+class CostReport:
+    mdf_sheets: float = 0
+    mdf_cost: float = 0
+
+    back_sheets: float = 0
+    back_cost: float = 0
+
+    pvc_meters: float = 0
+    pvc_cost: float = 0
+
+    material_cost: float = 0
+    hardware_cost: float = 0
+
+    labor_cost: float = 0
+    overhead_cost: float = 0
+
+    total_cost: float = 0
+<<<
+
+>>> File: ./manufacturing/edge_spec.py
+from dataclasses import dataclass, field
+from typing import Optional, Dict
+from shared.roles import NodeRole
+
+@dataclass
+class EdgeSpec:
+    """مواصفات شريط اللصق لكل حافة."""
+    top: Optional[str] = None      # "ABS_1MM", "PVC_2MM", None
+    bottom: Optional[str] = None
+    left: Optional[str] = None
+    right: Optional[str] = None
+
+    def all_banded(self) -> Dict[str, str]:
+        """يرجع قائمة الحواف التي تحتاج شريط لصق."""
+        result = {}
+        if self.top: result["TOP"] = self.top
+        if self.bottom: result["BOTTOM"] = self.bottom
+        if self.left: result["LEFT"] = self.left
+        if self.right: result["RIGHT"] = self.right
+        return result
+
+    def linear_meters(self, width: float, height: float) -> float:
+        """يحسب الأمتار الطولية لشريط اللصق."""
+        total = 0.0
+        if self.top: total += width / 1000.0
+        if self.bottom: total += width / 1000.0
+        if self.left: total += height / 1000.0
+        if self.right: total += height / 1000.0
+        return round(total, 3)
+
+<<<
+
+>>> File: ./manufacturing/manufacturing_pipeline.py
+from assembly.assembly_graph_builder import AssemblyGraphBuilder
+from manufacturing.joint_operation_generator import JointOperationGenerator
+
+class ManufacturingPipeline:
+
+    @staticmethod
+    def generate(scene_graph):
+
+        assembly = AssemblyGraphBuilder.build(scene_graph)
+
+        operations = []
+
+        for joint in assembly.all_joints():
+
+            if joint.joint_type != "MINIFIX":
+                continue
+
+            parent_node = scene_graph.get_node(
+                joint.parent
+            )
+
+            child_node = scene_graph.get_node(
+                joint.child
+            )
+
+            if not parent_node or not child_node:
+                continue
+
+            operations.extend(
+                JointOperationGenerator.minifix_joint(
+<<<
+
+>>> File: ./manufacturing/drill_map_generator.py
+from collections import defaultdict
+
+class DrillMapGenerator:
+
+    @staticmethod
+    def generate(panel_specs):
+
+        drill_map = defaultdict(list)
+
+        for panel in panel_specs:
+
+            if not panel.cnc_operations:
+                continue
+
+            for op in panel.cnc_operations:
+                drill_map[panel.identity].append(op)
+
+        return dict(drill_map)
+<<<
+
+>>> File: ./manufacturing/panel_operation_engine.py
+from assembly.assembly_graph_builder import AssemblyGraphBuilder
+from manufacturing.joint_operation_generator import JointOperationGenerator
+
+class PanelOperationEngine:
+
+    @staticmethod
+    def generate(scene_graph):
+
+        panel_ops = {}
+
+        assembly = AssemblyGraphBuilder.build(
+            scene_graph
+        )
+
+        for joint in assembly.all_joints():
+
+            if joint.joint_type != "MINIFIX":
+                continue
+
+            parent_node = scene_graph.get_node(
+                joint.parent
+            )
+
+            child_node = scene_graph.get_node(
+                joint.child
+            )
+
+            if not parent_node or not child_node:
+                continue
+
+<<<
+
+>>> File: ./manufacturing/operation_generator.py
+from domain.manufacturing_ops import ManufacturingOperation
+from assembly.joint_rules import RULES
+
+class OperationGenerator:
+
+    @staticmethod
+    def generate(assembly_graph):
+
+        ops = []
+
+        for joint in assembly_graph.all_joints():
+
+            for rule in RULES:
+
+                if (
+                    rule.parent_role in joint.parent
+                    or rule.child_role in joint.child
+                ):
+
+                    ops.append(
+                        ManufacturingOperation(
+                            operation_type="DRILL_MINIFIX"
+                        )
+                    )
+
+        return ops
+<<<
+
+>>> File: ./manufacturing/extractor.py
+from typing import List
+from scene_graph.scene_graph import SceneGraph
+from manufacturing.panel_spec import PanelSpec
+from manufacturing.panel_operation_engine import PanelOperationEngine
+from shared.roles import NodeRole
+
+
+class ManufacturingExtractor:
+    """تحويل SceneGraph الهندسي إلى PanelSpecs تصنيعية."""
+
+    @staticmethod
+    def _resolve_cut_dimensions(node):
+        """
+        تحويل أبعاد XYZ إلى أبعاد تصنيع حقيقية
+        حسب نوع القطعة.
+        """
+
+        role = node.role
+
+        if role in (
+            NodeRole.SIDE_PANEL,
+            NodeRole.DIVIDER,
+        ):
+            return node.depth, node.height
+
+        if role in (
+            NodeRole.TOP_PANEL,
+            NodeRole.BOTTOM_PANEL,
+            NodeRole.SHELF,
+        ):
+<<<
+
+>>> File: ./manufacturing/material_spec.py
+from dataclasses import dataclass
+
+@dataclass
+class MaterialSpec:
+    """مواصفات خامة تصنيعية."""
+    name: str               # "MDF_MR_18MM", "HDF_3MM", "MELAMINE_WHITE_18MM"
+    thickness: float        # السماكة الاسمية (mm)
+    density: float = 750.0  # kg/m³
+    sheet_width: float = 1830.0   # عرض اللوح الخام (mm)
+    sheet_height: float = 3660.0  # طول اللوح الخام (mm)
+    edge_band_default: str = "ABS_1MM"  # شريط اللصق الافتراضي
+    price_per_m2: float = 0.0   # سعر المتر المربع
+
+# مكتبة خامات أساسية
+MATERIAL_LIBRARY = {
+    "MDF_18MM": MaterialSpec("MDF_MR_18MM", 18.0, 750, 1830, 3660, "ABS_1MM"),
+    "MDF_8MM": MaterialSpec("MDF_MR_8MM", 8.0, 750, 1830, 3660, "ABS_1MM"),
+    "HDF_3MM": MaterialSpec("HDF_3MM", 3.0, 900, 1830, 3660, "NONE"),
+    "MELAMINE_WHITE_18MM": MaterialSpec("Melamine White", 18.0, 680, 1830, 3660, "ABS_1MM"),
+}
+<<<
+
+>>> File: ./manufacturing/joint_operation_generator.py
+from domain.manufacturing_ops import FaceDrill, EdgeDrill
+
+class JointOperationGenerator:
+
+    @staticmethod
+    def minifix_joint(parent_node, child_node):
+
+        ops = []
+
+        # Cam 15mm
+        ops.append(
+            FaceDrill(
+                x=34,
+                y=64,
+                diameter=15,
+                depth=12,
+                face="TOP"
+            )
+        )
+
+        # Dowel hole
+        ops.append(
+            EdgeDrill(
+                x=64,
+                z=(parent_node.thickness / 2),
+                diameter=8,
+                depth=30,
+                edge="TOP"
+            )
+        )
+<<<
+
+>>> File: ./manufacturing/__init__.py
+<<<
+
+>>> File: ./manufacturing/resolver.py
+import math
+from core.material_manager import MaterialManager
+class ManufacturingResolver:
+    @staticmethod
+    def resolve_drawer_box_depth(mat: MaterialManager, max_inner_d: float, box_start_y: float) -> float:
+        usable = max_inner_d - box_start_y - mat.drawer_rear_clearance; return math.floor(usable / 50.0) * 50.0
+    @staticmethod
+    def resolve_drawer_box_height(mat: MaterialManager, drawer_h: float) -> float: return drawer_h - mat.drawer_top_clearance - mat.drawer_bottom_clearance
+<<<
+
+>>> File: ./manufacturing/panel_spec.py
+from dataclasses import dataclass, field
+from typing import List
+from shared.roles import NodeRole
+from manufacturing.edge_spec import EdgeSpec
+
+@dataclass
+class PanelSpec:
+    """مواصفات تصنيعية مجردة – لا تعتمد على محاور XYZ."""
+    identity: str
+    role: NodeRole
+    width: float
+    height: float
+    thickness: float
+    material: str
+    grain_direction: str = "NONE"
+    edge_spec: EdgeSpec = field(default_factory=EdgeSpec)  # ✅ نظام الحواف الجديد
+    quantity: int = 1
+    group: str = ""
+    cnc_operations: List[str] = field(default_factory=list)
+<<<
+
+>>> File: ./domain/back_panel_engine.py
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class BackPanelRule:
+    thickness: float = 8.0
+    groove_depth: float = 8.0
+    groove_offset: float = 10.0
+    groove_clearance: float = 0.2
+
+class BackPanelEngine:
+
+    @staticmethod
+    def groove_width(rule: BackPanelRule):
+        return rule.thickness + rule.groove_clearance
+
+    @staticmethod
+    def insertion_depth(rule: BackPanelRule):
+        return rule.groove_depth
+
+    @staticmethod
+    def offset(rule: BackPanelRule):
+        return rule.groove_offset
+<<<
+
+>>> File: ./domain/anchors.py
+from dataclasses import dataclass
+from enum import Enum
+
+class MountFace(str, Enum):
+    """الوجه المادي للوح الذي سيتم التثبيت أو التخريم عليه"""
+    FRONT = "FRONT"
+    BACK = "BACK"
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+    TOP = "TOP"
+    BOTTOM = "BOTTOM"
+
+class EdgeRef(str, Enum):
+    """الحافة المرجعية التي سيتم القياس منها (أساس الـ Associative CAD)"""
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+    TOP = "TOP"
+    BOTTOM = "BOTTOM"
+    FRONT = "FRONT"   # ⚡ تمت الإضافة: الحافة الأمامية
+    BACK = "BACK"     # ⚡ تمت الإضافة: الحافة الخلفية
+    CENTER = "CENTER"
+
+@dataclass
+class AnchorCoordinate:
+    """إحداثيات دلالية: القياس بالنسبة لحافة معينة على وجه معين"""
+    face: MountFace
+    edge: EdgeRef
+    offset_x: float
+    offset_y: float
+
+<<<
+
+>>> File: ./domain/hardware_domain.py
+from dataclasses import dataclass, field
+from domain.core_types import NodeCategory, NodeRole
+from domain.topology import Transform3D
+from typing import List
+
+@dataclass
+class MachiningOperation:
+    """وحدة التعليمات لآلات الـ CNC (تخريم، تفريز)"""
+    op_type: str  # "DRILL", "ROUTING"
+    diameter: float
+    depth: float
+    transform: Transform3D # إحداثيات العملية بالنسبة للقطعة الأم
+
+@dataclass
+class HardwareNode:
+    """كيان الإكسسوارات (مفصلة، مينيفكس، برغي)"""
+    identity: any
+    role: NodeRole
+    category: NodeCategory = NodeCategory.HARDWARE
+    transform: Transform3D = field(default_factory=Transform3D)
+    operations: List[MachiningOperation] = field(default_factory=list)
+
+    def to_dict(self):
+        return {
+            "identity": {"key": self.identity.key},
+            "role": self.role.value,
+            "category": self.category.value,
+            "transform": self.transform.__dict__,
+            "ops": [op.__dict__ for op in self.operations]
+        }
+<<<
+
+>>> File: ./domain/spatial_queries.py
+from domain.core_types import NodeCategory
+from domain.topology import Transform3D, BoundingBox
+
+class SpatialQueryEngine:
+    """محرك الاستعلام المكاني AABB (Axis-Aligned Bounding Box)"""
+    def __init__(self, nodes):
+        self.nodes = [n for n in nodes if getattr(n, 'category', None) == NodeCategory.PHYSICAL]
+
+    def find_collisions(self) -> list:
+        """يستخرج جميع القطع المتداخلة في الفضاء 3D (مهم للـ Assembly Validation)"""
+        collisions = []
+        for i, n1 in enumerate(self.nodes):
+            for j, n2 in enumerate(self.nodes):
+                if i >= j: continue
+                
+                # إعداد الـ Bounds محلياً للاستعلام
+                b1_min = (n1.transform.x, n1.transform.y, n1.transform.z)
+                b1_max = (n1.transform.x + n1.width, n1.transform.y + n1.depth if hasattr(n1, 'depth') else n1.transform.y + n1.thickness, n1.transform.z + n1.height)
+                
+                b2_min = (n2.transform.x, n2.transform.y, n2.transform.z)
+                b2_max = (n2.transform.x + n2.width, n2.transform.y + n2.depth if hasattr(n2, 'depth') else n2.transform.y + n2.thickness, n2.transform.z + n2.height)
+
+                if (b1_min[0] < b2_max[0] and b1_max[0] > b2_min[0] and
+                    b1_min[1] < b2_max[1] and b1_max[1] > b2_min[1] and
+                    b1_min[2] < b2_max[2] and b1_max[2] > b2_min[2]):
+                    collisions.append((n1.identity.key, n2.identity.key))
+        return collisions
+
+    def get_nodes_at(self, x: float, y: float, z: float, tolerance: float = 1.0) -> list:
+        """استعلام نقطي: ما هي القطع الموجودة في هذا الإحداثي؟ (مهم للـ CNC Drilling)"""
+<<<
+
+>>> File: ./domain/joinery_engine.py
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Connector:
+    kind: str
+    x: float
+    y: float
+    z: float
+
+class JoineryEngine:
+
+    @staticmethod
+    def minifix_for_panel(width, depth):
+
+        return [
+            Connector("MINIFIX", 37, depth/2, 0),
+            Connector("MINIFIX", width-37, depth/2, 0)
+        ]
+
+    @staticmethod
+    def confirmat_for_panel(width, depth):
+
+        return [
+            Connector("CONFIRMAT", 37, depth/2, 0),
+            Connector("CONFIRMAT", width-37, depth/2, 0)
+        ]
+<<<
+
+>>> File: ./domain/scenegraph.py
+from typing import Optional, List, Dict
+from domain.entities import SceneNode
+from domain.core_types import NodeRole, NodeCategory
+
+class SceneGraph:
+    """
+    Indexed Scene Graph
+    Compatible with:
+    - rules_engine
+    - serialization
+    - constraint_engine
+    - manufacturing_compiler
+    """
+
+    def __init__(self):
+        self.nodes: List[SceneNode] = []
+
+        self._by_id: Dict[str, SceneNode] = {}
+
+        self._by_role: Dict[NodeRole, List[SceneNode]] = {
+            role: [] for role in NodeRole
+        }
+
+    def add_node(self, node: SceneNode):
+
+        if node.identity.key in self._by_id:
+            raise ValueError(
+                f"CRITICAL: Duplicate Node Identity detected: "
+                f"{node.identity.key}"
+            )
+<<<
+
+>>> File: ./domain/diagnostics.py
+from dataclasses import dataclass, field
+from typing import List, Optional
+from enum import Enum
+
+class Severity(Enum):
+    INFO = 1
+    WARNING = 2
+    ERROR = 3
+    FATAL = 4
+
+@dataclass
+class ConstraintViolation:
+    """يمثل خرقاً لقيد صناعي أو هندسي (بيانات مهيكلة بدلاً من نصوص)"""
+    code: str
+    message: str
+    severity: Severity = Severity.ERROR
+    
+    node_id: Optional[str] = None
+    
+    current_value: Optional[float] = None
+    required_value: Optional[float] = None
+    
+    suggestion: str = ""
+
+class ValidationReport:
+    """حاوية تجمع كل التقارير وتوفر واجهة استعلام سهلة للـ UI والـ Pipeline"""
+    def __init__(self):
+        self.violations: List[ConstraintViolation] = []
+
+    def add(self, violation: ConstraintViolation):
+<<<
+
+>>> File: ./domain/assembly_graph.py
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+@dataclass
+class AssemblyEdge:
+    """يمثل وصلة التجميع بين لوحين"""
+    source_id: str      # اللوح الأساسي (مثلاً الجانب)
+    target_id: str      # اللوح الفرعي (مثلاً الرف)
+    connector: str      # نوع الوصلة (MINIFIX_15, CONFIRMAT_50, DOWEL_8x30)
+    instruction: str = "" # تعليق إضافي للنجار
+
+class PartLabeler:
+    """يولد أكواد صناعية قصيرة للقطع لتسهيل قراءتها على الملصقات"""
+    PREFIX_MAP = {
+        "SIDE_PANEL": "S",
+        "BOTTOM_PANEL": "B",
+        "TOP_PANEL": "T",
+        "SHELF": "SH",
+        "BACK_PANEL": "BK",
+        "DOOR_PANEL": "D",
+        "DRAWER_FRONT": "DF",
+        "DRAWER_SIDE": "DS",
+        "DRAWER_BOTTOM": "DB",
+        "DIVIDER": "DV",
+        "PLINTH": "P"
+    }
+
+    def __init__(self):
+        self.counters = {prefix: 1 for prefix in self.PREFIX_MAP.values()}
+        self.counters["MISC"] = 1
+<<<
+
+>>> File: ./domain/serialization.py
+import os
+from domain.anchors import HardwarePlacement, AnchorCoordinate, MountFace, EdgeRef
+import json
+from dataclasses import asdict
+from domain.builders import CabinetProject, SceneGraph, SceneNode, VirtualAnchor, Identity
+from domain.topology import CabinetTopologyManager, SectionTopology, BoundingBox, Transform3D
+from domain.assembly_graph import JoineryGraph, AssemblyEdge
+from domain.core_types import NodeRole, NodeCategory, JoineryType, MachiningOperation
+
+class DomainEncoder(json.JSONEncoder):
+    """مُشفر مخصص للتعامل مع الـ Enums والـ Dataclasses بأمان"""
+    def default(self, obj):
+        if hasattr(obj, 'value'): # Handle Enums
+            return obj.value
+        if hasattr(obj, '__dataclass_fields__'): # Handle Dataclasses
+            return asdict(obj)
+        return super().default(obj)
+
+class ProjectSerializer:
+    """محرك الحفظ والاسترجاع (Save/Load)"""
+    
+    @staticmethod
+    def save(project: CabinetProject, filepath: str):
+        # 1. تجميع البيانات الخام (Raw Data Mapping)
+        data = {
+            "schema_version": 1,
+            "topology": {
+                "w": project.topology.w, "h": project.topology.h, "d": project.topology.d, "t": project.topology.t,
+                "sections": {
+                    uid: asdict(sec) for uid, sec in project.topology.sections.items()
+<<<
+
+>>> File: ./domain/rules_engine.py
+from dataclasses import dataclass, field
+from typing import List, Dict
+from domain.builders import CabinetProject
+from domain.core_types import NodeRole, JoineryType
+from domain.anchors import HardwarePlacement, AnchorCoordinate, MountFace, EdgeRef
+
+@dataclass
+class RuleContext:
+    """السياق الصناعي الذي يحدد طبيعة عمل القواعد"""
+    market_region: str = "MOROCCO"
+    preferred_connector: JoineryType = JoineryType.CONFIRMAT_50
+    cnc_capabilities: str = "3_AXIS"
+    material_thickness: float = 18.0
+    # Hardware Profile Mapping
+    hardware_profile: Dict[str, str] = field(default_factory=lambda: {
+        "INTENT_HINGE": "HINGE_BLUM_110_V1",
+        "INTENT_MINIFIX_15": "MINIFIX_15_V1",
+        "INTENT_CONFIRMAT_50": "CONFIRMAT_50_V1",
+        "INTENT_SHELF_PIN": "SHELF_PIN_5MM"
+    })
+
+class HardwareRule:
+    """الفئة الأساسية لأي قاعدة تصنيعية"""
+    def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
+        raise NotImplementedError
+
+class HingeRule(HardwareRule):
+    """قاعدة توزيع المفصلات بناءً على ارتفاع الباب"""
+    def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
+        placements = []
+<<<
+
+>>> File: ./domain/builders.py
+from dataclasses import dataclass, field, asdict
+from typing import List, Optional, Tuple, Dict
+from domain.topology import CabinetTopologyManager, Transform3D
+from domain.core_types import NodeRole, JoineryType, NodeCategory
+
+@dataclass
+class Identity:
+    key: str
+
+@dataclass
+class SceneNode:
+    identity: Identity
+    role: NodeRole
+    width: float
+    height: float
+    thickness: float
+    material: str
+    edge_bands: dict = field(default_factory=dict)
+    grain_direction: str = "VERTICAL"
+    transform: Transform3D = field(default_factory=Transform3D)
+    category: NodeCategory = NodeCategory.PHYSICAL
+    machining_ops: list = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "identity": {"key": self.identity.key},
+            "role": self.role.value if hasattr(self.role, 'value') else self.role,
+            "width": self.width,
+            "height": self.height,
+            "thickness": self.thickness,
+<<<
+
+>>> File: ./domain/topology.py
+from dataclasses import dataclass, field
+from typing import Dict, Tuple
+
+@dataclass
+class Transform3D:
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+    rot_x: float = 0.0
+    rot_y: float = 0.0
+    rot_z: float = 0.0
+
+# ⚡ تمت استعادة الـ BoundingBox من أجل محرك الاصطدامات
+@dataclass
+class BoundingBox:
+    x_min: float = 0.0
+    y_min: float = 0.0
+    z_min: float = 0.0
+    x_max: float = 0.0
+    y_max: float = 0.0
+    z_max: float = 0.0
+
+@dataclass
+class Section:
+    id: str
+    origin_x: float
+    origin_y: float
+    origin_z: float
+    width: float
+    height: float
+<<<
+
+>>> File: ./domain/manufacturing_ops.py
+from dataclasses import dataclass
+
+class ManufacturingOperation:
+    """الفئة الأساسية لكل العمليات التصنيعية"""
+    pass
+
+@dataclass(frozen=True)
+class FaceDrill(ManufacturingOperation):
+    x: float
+    y: float
+    diameter: float
+    depth: float
+    face: str  # "TOP", "BOTTOM", "FRONT", "BACK", "LEFT", "RIGHT"
+
+@dataclass(frozen=True)
+class EdgeDrill(ManufacturingOperation):
+    x: float
+    z: float
+    diameter: float
+    depth: float
+    edge: str  # "LEFT", "RIGHT", "TOP", "BOTTOM"
+
+@dataclass(frozen=True)
+class Groove(ManufacturingOperation):
+    start_x: float
+    start_y: float
+    width: float
+    depth: float
+    length: float
+    face: str
+<<<
+
+>>> File: ./domain/hardware_library.py
+from dataclasses import dataclass, field
+from typing import List, Dict
+from domain.anchors import MountFace
+
+@dataclass
+class HoleSpec:
+    diameter: float
+    depth: float
+    face: MountFace = MountFace.FRONT
+    axis: str = "Z"                   # CNC Machining Axis
+    offset_x: float = 0.0
+    offset_y: float = 0.0
+    is_through_hole: bool = False
+
+@dataclass
+class HardwareSpec:
+    sku: str
+    manufacturer: str
+    model: str
+    revision: str
+    category: str
+    price: float = 0.0
+    host_holes: List[HoleSpec] = field(default_factory=list)
+    target_holes: List[HoleSpec] = field(default_factory=list)
+
+    @property
+    def display_name(self) -> str:
+        """The single source of truth for UI and BOM naming"""
+        return f"{self.manufacturer} {self.model}"
+
+<<<
+
+>>> File: ./domain/entities.py
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+from domain.core_types import NodeRole, MachiningOperation
+from domain.topology import Transform3D
+
+@dataclass
+class Identity:
+    key: str
+
+@dataclass
+class SceneNode:
+    identity: Identity
+    role: NodeRole
+    width: float
+    height: float
+    thickness: float
+    material: str
+    edge_bands: Dict[str, str]
+    category: str = "PANEL"
+    transform: Transform3D = field(default_factory=Transform3D)
+    machining_ops: List[MachiningOperation] = field(default_factory=list)
+<<<
+
+>>> File: ./domain/front_layout.py
+from dataclasses import dataclass, field
+from typing import List, Optional
+from enum import Enum
+
+class FrontType(Enum):
+    DOOR = "DOOR"
+    DRAWER = "DRAWER"
+    FAKE = "FAKE"
+
+@dataclass
+class OpeningContext:
+    """يمثل الفراغ المتاح داخل الخزانة الذي سيتم تغطيته"""
+    identity: str
+    width: float
+    height: float
+    local_x: float  # X position of the opening bottom-left
+    local_y: float  # Y position (vertical) of the opening bottom-left
+    left_divider_thickness: float = 18.0
+    right_divider_thickness: float = 18.0
+    top_divider_thickness: float = 18.0
+    bottom_divider_thickness: float = 18.0
+    left_overlay: Optional[float] = None
+    right_overlay: Optional[float] = None
+    top_overlay: Optional[float] = None
+    bottom_overlay: Optional[float] = None
+
+@dataclass
+class FrontElement:
+    """يمثل القطعة النهائية التي ستغطي الواجهة"""
+    identity: str
+<<<
+
+>>> File: ./domain/core_types.py
+from enum import Enum
+from dataclasses import dataclass
+
+class NodeCategory(str, Enum):
+    PHYSICAL = "PHYSICAL"
+    VIRTUAL = "VIRTUAL"
+    HARDWARE = "HARDWARE"
+    REFERENCE = "REFERENCE"
+
+class NodeRole(str, Enum):
+    SIDE_PANEL = "SIDE_PANEL"
+    TOP_PANEL = "TOP_PANEL"
+    BOTTOM_PANEL = "BOTTOM_PANEL"
+    BACK_PANEL = "BACK_PANEL"
+    DIVIDER = "DIVIDER"
+    SHELF = "SHELF"
+    DOOR_PANEL = "DOOR_PANEL"
+    DRAWER_FRONT = "DRAWER_FRONT"
+    VIRTUAL_ANCHOR = "VIRTUAL_ANCHOR"
+    UNKNOWN = "UNKNOWN"
+
+class JoineryType(str, Enum):
+    MINIFIX_15 = "MINIFIX_15"
+    CONFIRMAT_50 = "CONFIRMAT_50"
+    SHELF_PIN_5MM = "SHELF_PIN_5MM"
+    HINGE_HALF_OVERLAY = "HINGE_HALF_OVERLAY"
+    VIRTUAL_LINK = "VIRTUAL_LINK"
+
+@dataclass
+class MachiningOperation:
+<<<
+
+>>> File: ./domain/manufacturing_compiler.py
+from domain.builders import CabinetProject
+from domain.hardware_library import HardwareRegistry
+from domain.core_types import MachiningOperation
+from domain.resolvers import CoordinateResolver
+from domain.rules_engine import RuleContext
+
+class ManufacturingCompiler:
+    """يحول نوايا التثبيت (Placements) إلى عمليات ثقب فعلية (MachiningOps)"""
+    
+    def __init__(self):
+        self.registry = HardwareRegistry()
+
+    def compile(self, project: CabinetProject, context: RuleContext):
+        for placement in getattr(project, 'placements', []):
+            # Dynamic Profile Mapping
+            sku = context.hardware_profile.get(placement.hardware_intent)
+            if not sku: 
+                continue
+            
+            hardware_spec = self.registry.get_hardware(sku)
+            if not hardware_spec: 
+                continue
+            
+            # Host Processing (مثال: جانب الخزانة)
+            host_node = project.graph.get_node(placement.host_node_id)
+            if host_node and hardware_spec.host_holes:
+                self._inject_operations(host_node, placement.anchor, hardware_spec.host_holes)
+                
+            # Target Processing (مثال: الرف)
+            target_node_id = getattr(placement, 'target_node_id', None)
+<<<
+
+>>> File: ./domain/drill_map.py
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class DrillPoint:
+    x: float
+    y: float
+    z: float
+
+    diameter: float
+    depth: float
+
+    operation: str
+
+class DrillMap:
+
+    def __init__(self):
+        self.points = []
+
+    def add(self, point):
+        self.points.append(point)
+
+    def all_points(self):
+        return list(self.points)
+
+    def count(self):
+        return len(self.points)
+<<<
+
+>>> File: ./domain/cost_engine.py
+from dataclasses import dataclass
+import math
+
+@dataclass
+class CostReport:
+    mdf_sheets: float
+    mdf_cost: float
+    back_cost: float
+    total_cost: float
+
+class CostEngine:
+
+    MDF_SHEET_AREA = 2.80 * 2.10
+    MDF_SHEET_PRICE = 800
+
+    BACK_PANEL_PRICE = 300
+
+    @classmethod
+    def calculate(cls, total_panel_area_m2: float, back_count: int = 1):
+
+        sheets = math.ceil(total_panel_area_m2 / cls.MDF_SHEET_AREA)
+
+        mdf_cost = sheets * cls.MDF_SHEET_PRICE
+
+        back_cost = back_count * cls.BACK_PANEL_PRICE
+
+        return CostReport(
+            mdf_sheets=sheets,
+            mdf_cost=mdf_cost,
+            back_cost=back_cost,
+<<<
+
+>>> File: ./domain/constraint_engine.py
+from domain.diagnostics import ValidationReport, ConstraintViolation, Severity
+from domain.spatial_queries import SpatialQueryEngine
+
+class CabinetConstraintValidator:
+    def __init__(self, project):
+        self.project = project
+        self.report = ValidationReport()
+        self.spatial_engine = SpatialQueryEngine(getattr(self.project.graph, 'physical_nodes', []))
+
+    def _check_section_widths(self):
+        if not hasattr(self.project, 'topology'): return
+        for uid, sec in self.project.topology.sections.items():
+            if sec.width < 100:
+                sev = Severity.FATAL if sec.width <= 0 else Severity.ERROR
+                self.report.add(ConstraintViolation(
+                    code="SECTION_TOO_SMALL", message="Section width is too small.",
+                    severity=sev, node_id=uid, current_value=sec.width, required_value=100.0
+                ))
+
+    def _check_shelf_deflection(self):
+        for node in getattr(self.project.graph, 'physical_nodes', []):
+            if getattr(node, 'role', '') == "SHELF" and node.width > 900:
+                self.report.add(ConstraintViolation(
+                    code="EXCESSIVE_SHELF_SPAN", message="Shelf span exceeds limits.",
+                    severity=Severity.WARNING, node_id=node.identity.key, current_value=node.width, required_value=900.0
+                ))
+
+    def _check_collisions(self):
+        collisions = self.spatial_engine.find_collisions()
+        for id1, id2 in collisions:
+<<<
+
+>>> File: ./domain/layout_engine.py
+from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class DoorSpec:
+    width: float
+    x_position: float
+    hinge_side: str  # "LEFT" or "RIGHT"
+
+class DoorClusterEngine:
+    """
+    محرك التوزيع الشامل للأبواب.
+    يعالج الواجهة ككتلة واحدة لمنع تداخل الأبواب الوسطية.
+    """
+    @staticmethod
+    def compute_layout(total_opening_width: float, door_count: int, gap: float = 2.0) -> List[DoorSpec]:
+        """
+        يحسب عرض وموقع كل باب مع ضمان وجود فراغات (Gaps) صحيحة.
+        المعادلة: العرض الصافي = العرض الكلي - (عدد الفراغات * حجم الفراغ)
+        """
+        if door_count <= 0:
+            return []
+
+        # عدد الفراغات دائماً أكبر من عدد الأبواب بواحد (يمين، يسار، وبين الأبواب)
+        total_gaps_width = (door_count + 1) * gap
+        
+        # العرض الصافي للباب الواحد
+        single_door_width = (total_opening_width - total_gaps_width) / door_count
+        
+        doors = []
+<<<
+
+>>> File: ./domain/__init__.py
+<<<
+
+>>> File: ./domain/resolvers.py
+from dataclasses import dataclass
+from domain.anchors import AnchorCoordinate, EdgeRef, MountFace
+
+@dataclass
+class ResolvedAnchor:
+    face: str
+    local_x: float
+    local_y: float
+
+class CoordinateResolver:
+    @staticmethod
+    def resolve(node, anchor: AnchorCoordinate, hole_offset_x: float = 0.0, hole_offset_y: float = 0.0) -> ResolvedAnchor:
+        is_edge_boring = anchor.face in [MountFace.LEFT, MountFace.RIGHT, MountFace.TOP, MountFace.BOTTOM]
+        
+        # ⚡ Safe Property Extraction (Duck-Typing Resilience)
+        width = getattr(node, 'width', 0.0)
+        height = getattr(node, 'height', 0.0)
+        thickness = getattr(node, 'thickness', 18.0)
+        
+        # 1. Resolve X Coordinate
+        if anchor.edge == EdgeRef.LEFT:
+            local_x = anchor.offset_x + hole_offset_x
+        elif anchor.edge == EdgeRef.RIGHT:
+            local_x = width - anchor.offset_x + hole_offset_x
+        elif anchor.edge == EdgeRef.CENTER:
+            local_x = (width / 2.0) + anchor.offset_x + hole_offset_x
+        elif anchor.edge == EdgeRef.FRONT and is_edge_boring:
+            local_x = (thickness / 2.0) + hole_offset_x 
+        elif anchor.edge == EdgeRef.BACK and is_edge_boring:
+             local_x = (thickness / 2.0) + hole_offset_x
+<<<
+
+>>> File: ./domain/system32.py
+from dataclasses import dataclass
+
+SYSTEM_PITCH = 32.0
+FRONT_SETBACK = 37.0
+
+class System32Engine:
+
+    @staticmethod
+    def hinge_positions(door_height):
+
+        if door_height <= 900:
+            return [100, door_height - 100]
+
+        elif door_height <= 1600:
+            return [100, door_height / 2, door_height - 100]
+
+        elif door_height <= 2400:
+            return [
+                100,
+                door_height * 0.33,
+                door_height * 0.66,
+                door_height - 100
+            ]
+
+        else:
+            return [
+                100,
+                door_height * 0.25,
+                door_height * 0.50,
+                door_height * 0.75,
+<<<

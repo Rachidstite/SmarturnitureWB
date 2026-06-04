@@ -1,7 +1,6 @@
 from assembly.assembly_graph_builder import AssemblyGraphBuilder
 from manufacturing.joint_operation_generator import JointOperationGenerator
 
-from core.logging_config import logger
 class PanelOperationEngine:
 
     @staticmethod

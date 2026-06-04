@@ -5,7 +5,6 @@ from manufacturing.panel_operation_engine import PanelOperationEngine
 from shared.roles import NodeRole
 
 
-from core.logging_config import logger
 class ManufacturingExtractor:
     """تحويل SceneGraph الهندسي إلى PanelSpecs تصنيعية."""
 

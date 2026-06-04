@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List
+from domain.manufacturing_ops import ManufacturingOperation
 from shared.roles import NodeRole
 from manufacturing.edge_spec import EdgeSpec
 
@@ -16,4 +17,4 @@ class PanelSpec:
     edge_spec: EdgeSpec = field(default_factory=EdgeSpec)  # ✅ نظام الحواف الجديد
     quantity: int = 1
     group: str = ""
-    cnc_operations: List[str] = field(default_factory=list)
+    cnc_operations: List[ManufacturingOperation] = field(default_factory=list)
