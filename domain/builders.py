@@ -21,6 +21,14 @@ class SceneNode:
     category: NodeCategory = NodeCategory.PHYSICAL
     machining_ops: list = field(default_factory=list)
 
+    @property
+    def group(self):
+        return getattr(self.role, "value", str(self.role))
+
+    @property
+    def edge_spec(self):
+        return None
+
     def to_dict(self) -> dict:
         return {
             "identity": {"key": self.identity.key},
@@ -77,6 +85,9 @@ class SceneGraph:
     def virtual_nodes(self): return self._by_category[NodeCategory.VIRTUAL]
     @property
     def hardware_nodes(self): return self._by_category[NodeCategory.HARDWARE]
+
+    def all_nodes(self):
+        return self.nodes
 
 @dataclass
 class CabinetProject:

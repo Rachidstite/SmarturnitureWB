@@ -55,7 +55,7 @@ class ManufacturingExtractor:
             len(panel_operations)
         )
 
-        for node in scene_graph.all_nodes():
+        for node in getattr(scene_graph, 'physical_nodes', scene_graph.all_nodes()):
 
             cut_width, cut_height = (
                 ManufacturingExtractor._resolve_cut_dimensions(

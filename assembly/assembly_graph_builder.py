@@ -12,27 +12,27 @@ class AssemblyGraphBuilder:
 
         sides = [
             n for n in nodes
-            if n.role == NodeRole.SIDE_PANEL
+            if getattr(n.role, "name", str(n.role).split(".")[-1]) == "SIDE_PANEL"
         ]
 
         tops = [
             n for n in nodes
-            if n.role == NodeRole.TOP_PANEL
+            if getattr(n.role, "name", str(n.role).split(".")[-1]) == "TOP_PANEL"
         ]
 
         bottoms = [
             n for n in nodes
-            if n.role == NodeRole.BOTTOM_PANEL
+            if getattr(n.role, "name", str(n.role).split(".")[-1]) == "BOTTOM_PANEL"
         ]
 
         dividers = [
             n for n in nodes
-            if n.role == NodeRole.DIVIDER
+            if getattr(n.role, "name", str(n.role).split(".")[-1]) == "DIVIDER"
         ]
 
         doors = [
             n for n in nodes
-            if n.role == NodeRole.DOOR_PANEL
+            if getattr(n.role, "name", str(n.role).split(".")[-1]) == "DOOR_PANEL"
         ]
 
         for side in sides:

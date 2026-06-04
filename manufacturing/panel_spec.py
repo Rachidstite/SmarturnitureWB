@@ -18,3 +18,7 @@ class PanelSpec:
     quantity: int = 1
     group: str = ""
     cnc_operations: List[ManufacturingOperation] = field(default_factory=list)
+
+    @property
+    def edge_banding(self):
+        return self.edge_spec
