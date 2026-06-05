@@ -1,7 +1,7 @@
 from shared.issues import ValidationState
 from manufacturing.extractor import ManufacturingExtractor
-from validation.panel_spec_validator import PanelSpecValidator
-from validation.manufacturing_feasibility_validator import ManufacturingFeasibilityValidator
+from validation.validator_registry import VALIDATORS
+
 
 class ManufacturingValidationService:
 
@@ -14,16 +14,10 @@ class ManufacturingValidationService:
 
         state = ValidationState()
 
-        state.issues.extend(
-            PanelSpecValidator().validate(
-                specs
-            )
-        )
+        for validator in VALIDATORS:
 
-        state.issues.extend(
-            ManufacturingFeasibilityValidator().validate(
-                specs
+            state.issues.extend(
+                validator.validate(specs)
             )
-        )
 
         return state
