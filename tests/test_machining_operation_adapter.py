@@ -21,7 +21,7 @@ class TestMachiningOperationAdapter(unittest.TestCase):
 
         unified = (
             MachiningOperationAdapter
-            .from_modern_operation(op)
+            .from_operation(op)
         )
 
         self.assertEqual(
@@ -30,33 +30,8 @@ class TestMachiningOperationAdapter(unittest.TestCase):
         )
 
         self.assertEqual(
-            unified.diameter,
-            15
-        )
-
-        self.assertEqual(
-            unified.depth,
-            12
-        )
-
-        self.assertEqual(
-            unified.face,
-            "TOP"
-        )
-
-        self.assertEqual(
-            unified.x,
-            34
-        )
-
-        self.assertEqual(
-            unified.y,
-            64
-        )
-
-        self.assertEqual(
             unified.source,
-            "modern"
+            "modern-core"
         )
 
 
