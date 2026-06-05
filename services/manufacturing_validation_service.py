@@ -1,5 +1,9 @@
 from shared.issues import ValidationState
-from manufacturing.extractor import ManufacturingExtractor
+
+from manufacturing.hybrid_extractor import (
+    HybridManufacturingExtractor
+)
+
 from validation.validator_registry import VALIDATORS
 
 
@@ -8,8 +12,10 @@ class ManufacturingValidationService:
     @staticmethod
     def validate(scene_graph):
 
-        specs = ManufacturingExtractor.extract(
-            scene_graph
+        specs = (
+            HybridManufacturingExtractor.extract(
+                scene_graph
+            )
         )
 
         state = ValidationState()
