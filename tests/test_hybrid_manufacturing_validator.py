@@ -82,6 +82,25 @@ class TestHybridManufacturingValidator(unittest.TestCase):
 
         self.assertEqual(len(issues), 5)
 
+    def test_unsupported_operation_type(self):
+
+        op = UnifiedManufacturingOperation(
+            operation_type="BANANA",
+            source="modern-core"
+        )
+
+        issues = (
+            HybridManufacturingValidator()
+            .validate([op])
+        )
+
+        self.assertTrue(
+            any(
+                i.code == "UNSUPPORTED_OPERATION_TYPE"
+                for i in issues
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
