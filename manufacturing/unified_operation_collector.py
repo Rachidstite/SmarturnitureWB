@@ -54,3 +54,15 @@ class UnifiedOperationCollector:
                 )
 
         return operations
+
+
+    @staticmethod
+    def collect_hybrid(scene_graph):
+
+        return (
+            UnifiedOperationCollector
+            .collect_legacy(scene_graph)
+            +
+            UnifiedOperationCollector
+            .collect_modern(scene_graph)
+        )
