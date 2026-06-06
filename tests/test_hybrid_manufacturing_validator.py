@@ -82,7 +82,45 @@ class TestHybridManufacturingValidator(unittest.TestCase):
 
         self.assertEqual(len(issues), 5)
 
+    def test_invalid_axis(self):
 
+        op = UnifiedManufacturingOperation(
+            operation_type="DRILL",
+            source="modern-core",
+            axis="BANANA"
+        )
+
+        issues = (
+            HybridManufacturingValidator()
+            .validate([op])
+        )
+
+        self.assertTrue(
+            any(
+                i.code == "INVALID_OPERATION_AXIS"
+                for i in issues
+            )
+        )
+
+    def test_invalid_face(self):
+
+        op = UnifiedManufacturingOperation(
+            operation_type="DRILL",
+            source="modern-core",
+            face="BANANA"
+        )
+
+        issues = (
+            HybridManufacturingValidator()
+            .validate([op])
+        )
+
+        self.assertTrue(
+            any(
+                i.code == "INVALID_OPERATION_FACE"
+                for i in issues
+            )
+        )
 
 
 if __name__ == "__main__":

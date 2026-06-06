@@ -8,6 +8,21 @@ class HybridManufacturingValidator:
 
         issues = []
 
+        SUPPORTED_AXES = {
+            "X",
+            "Y",
+            "Z",
+        }
+
+        SUPPORTED_FACES = {
+            "TOP",
+            "BOTTOM",
+            "LEFT",
+            "RIGHT",
+            "FRONT",
+            "BACK",
+        }
+
         for op in operations:
 
             if not op.operation_type:
@@ -26,6 +41,26 @@ class HybridManufacturingValidator:
                         "ERROR",
                         "OPERATION_SOURCE_MISSING",
                         "operation source missing",
+                        domain=Domain.MANUFACTURING
+                    )
+                )
+
+            if op.axis not in SUPPORTED_AXES:
+                issues.append(
+                    GeometryIssue(
+                        "ERROR",
+                        "INVALID_OPERATION_AXIS",
+                        f"invalid axis: {op.axis}",
+                        domain=Domain.MANUFACTURING
+                    )
+                )
+
+            if op.face and op.face not in SUPPORTED_FACES:
+                issues.append(
+                    GeometryIssue(
+                        "ERROR",
+                        "INVALID_OPERATION_FACE",
+                        f"invalid face: {op.face}",
                         domain=Domain.MANUFACTURING
                     )
                 )
