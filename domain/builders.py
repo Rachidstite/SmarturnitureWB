@@ -71,6 +71,9 @@ class SceneGraph:
     def get_node(self, uid: str):
         return self._by_id.get(uid)
 
+    def all_nodes(self):
+        return self.nodes
+
     @property
     def physical_nodes(self): return self._by_category[NodeCategory.PHYSICAL]
     @property
