@@ -1,8 +1,8 @@
 import inspect
 import unittest
 
-from manufacturing.unified_operation_collector import (
-    UnifiedOperationCollector,
+from manufacturing.canonical_operation_collector import (
+    CanonicalOperationCollector,
 )
 
 
@@ -10,14 +10,19 @@ class TestCanonicalArchitectureGuard(
     unittest.TestCase
 ):
 
-    def test_collect_canonical_uses_only_modern_path(self):
+    def test_collector_has_no_legacy_dependencies(self):
 
         source = inspect.getsource(
-            UnifiedOperationCollector.collect_canonical
+            CanonicalOperationCollector
         )
 
-        self.assertIn(
-            "collect_modern",
+        self.assertNotIn(
+            "LegacyOperationAdapter",
+            source
+        )
+
+        self.assertNotIn(
+            "PanelOperationEngine",
             source
         )
 
