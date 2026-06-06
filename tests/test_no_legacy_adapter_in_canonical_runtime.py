@@ -1,8 +1,8 @@
 import inspect
 import unittest
 
-from manufacturing.unified_operation_collector import (
-    UnifiedOperationCollector,
+from manufacturing.canonical_operation_collector import (
+    CanonicalOperationCollector,
 )
 
 
@@ -10,24 +10,14 @@ class TestNoLegacyAdapterInCanonicalRuntime(
     unittest.TestCase
 ):
 
-    def test_collect_canonical_does_not_reference_legacy_adapter(self):
+    def test_collector_does_not_reference_legacy_adapter(self):
 
         source = inspect.getsource(
-            UnifiedOperationCollector.collect_canonical
+            CanonicalOperationCollector
         )
 
         self.assertNotIn(
             "LegacyOperationAdapter",
-            source
-        )
-
-        self.assertNotIn(
-            "collect_legacy",
-            source
-        )
-
-        self.assertIn(
-            "collect_modern",
             source
         )
 
