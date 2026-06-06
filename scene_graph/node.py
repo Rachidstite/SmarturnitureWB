@@ -1,4 +1,3 @@
-from domain.manufacturing_ops import ManufacturingOperation
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 from shared.identity import PanelIdentity
