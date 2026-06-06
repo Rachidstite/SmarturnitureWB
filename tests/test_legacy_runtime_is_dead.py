@@ -1,8 +1,8 @@
 import inspect
 import unittest
 
-from manufacturing.unified_operation_collector import (
-    UnifiedOperationCollector,
+from manufacturing.canonical_operation_collector import (
+    CanonicalOperationCollector,
 )
 
 
@@ -10,10 +10,15 @@ class TestLegacyRuntimeIsDead(
     unittest.TestCase
 ):
 
-    def test_collect_canonical_uses_modern_only(self):
+    def test_canonical_collector_is_independent(self):
 
         source = inspect.getsource(
-            UnifiedOperationCollector.collect_canonical
+            CanonicalOperationCollector
+        )
+
+        self.assertNotIn(
+            "LegacyOperationAdapter",
+            source
         )
 
         self.assertNotIn(
@@ -22,23 +27,7 @@ class TestLegacyRuntimeIsDead(
         )
 
         self.assertNotIn(
-            "collect_hybrid",
-            source
-        )
-
-    def test_legacy_methods_exist_but_are_unused(self):
-
-        source = inspect.getsource(
-            UnifiedOperationCollector
-        )
-
-        self.assertIn(
-            "def collect_legacy",
-            source
-        )
-
-        self.assertIn(
-            "def collect_hybrid",
+            "PanelOperationEngine",
             source
         )
 
