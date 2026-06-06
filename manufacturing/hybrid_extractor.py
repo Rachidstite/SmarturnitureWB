@@ -50,6 +50,7 @@ class HybridManufacturingExtractor:
                         operation_type=op.operation_type,
                         diameter=op.diameter,
                         depth=op.depth,
+                        is_through=op.is_through,
                         x=op.x,
                         y=op.y,
                         z=op.z,
