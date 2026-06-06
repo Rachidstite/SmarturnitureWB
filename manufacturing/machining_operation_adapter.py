@@ -5,7 +5,9 @@ from manufacturing.unified_manufacturing_operation import \
 class MachiningOperationAdapter:
 
     @staticmethod
-    def from_operation(op):
+    def from_operation(op, metadata=None):
+
+        metadata = metadata or {}
 
         if hasattr(op, "local_x"):
             return UnifiedManufacturingOperation(
@@ -17,7 +19,7 @@ class MachiningOperationAdapter:
                 y=getattr(op, "local_y", 0.0),
                 axis=getattr(op, "axis", "Z"),
                 source="modern-core",
-                metadata={}
+                metadata=metadata
             )
 
         if hasattr(op, "transform"):
@@ -31,7 +33,7 @@ class MachiningOperationAdapter:
                 y=getattr(transform, "y", 0.0),
                 z=getattr(transform, "z", 0.0),
                 source="modern-hardware",
-                metadata={}
+                metadata=metadata
             )
 
         raise TypeError(

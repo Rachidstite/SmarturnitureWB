@@ -140,6 +140,22 @@ class HybridManufacturingValidator:
                     )
                 )
 
+            panel_thickness = op.metadata.get("panel_thickness")
+
+            if (
+                op.operation_type == "FACE_DRILL"
+                and panel_thickness is not None
+                and op.depth > panel_thickness
+            ):
+                issues.append(
+                    GeometryIssue(
+                        "ERROR",
+                        "DRILL_DEPTH_EXCEEDS_PANEL_THICKNESS",
+                        f"depth {op.depth} exceeds panel thickness {panel_thickness}",
+                        domain=Domain.MANUFACTURING
+                    )
+                )
+
             if op.z < 0:
                 issues.append(
                     GeometryIssue(

@@ -28,8 +28,14 @@ class UnifiedOperationCollector:
             ):
 
                 operations.append(
-                    MachiningOperationAdapter
-                    .from_operation(op)
+                    MachiningOperationAdapter.from_operation(
+                        op,
+                        metadata={
+                            "panel_id": node.identity.key,
+                            "panel_role": str(node.role),
+                            "panel_thickness": node.thickness,
+                        }
+                    )
                 )
 
         return operations
@@ -40,29 +46,55 @@ class UnifiedOperationCollector:
         operations = []
 
         panel_ops = (
-            PanelOperationEngine
-            .generate(scene_graph)
+            PanelOperationEngine.generate(scene_graph)
         )
 
-        for op_list in panel_ops.values():
+        for panel_id, op_list in panel_ops.items():
+
+            node = scene_graph.get_node(panel_id)
 
             for op in op_list:
 
-                operations.append(
+                unified = (
                     LegacyOperationAdapter
                     .from_operation(op)
                 )
 
-        return operations
+                md = dict(unified.metadata)
 
+                md.update({
+                    "panel_id": panel_id,
+                    "panel_role": str(node.role) if node else "",
+                    "panel_thickness":
+                        getattr(node, "thickness", None)
+                })
+
+                operations.append(
+                    unified.__class__(
+                        operation_type=unified.operation_type,
+                        diameter=unified.diameter,
+                        depth=unified.depth,
+                        x=unified.x,
+                        y=unified.y,
+                        z=unified.z,
+                        face=unified.face,
+                        axis=unified.axis,
+                        source=unified.source,
+                        metadata=md
+                    )
+                )
+
+        return operations
 
     @staticmethod
     def collect_hybrid(scene_graph):
 
         return (
-            UnifiedOperationCollector
-            .collect_legacy(scene_graph)
+            UnifiedOperationCollector.collect_legacy(
+                scene_graph
+            )
             +
-            UnifiedOperationCollector
-            .collect_modern(scene_graph)
+            UnifiedOperationCollector.collect_modern(
+                scene_graph
+            )
         )

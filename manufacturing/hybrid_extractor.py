@@ -22,8 +22,12 @@ class HybridManufacturingExtractor:
         )
 
         for spec in specs:
-            spec.unified_operations = list(
-                unified_ops
-            )
+
+            spec.unified_operations = [
+                op
+                for op in unified_ops
+                if op.metadata.get("panel_id")
+                == spec.identity
+            ]
 
         return specs

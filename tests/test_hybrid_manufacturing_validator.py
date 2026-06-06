@@ -171,5 +171,26 @@ class TestHybridManufacturingValidator(unittest.TestCase):
             )
         )
 
+    def test_depth_exceeds_panel_thickness(self):
+
+        op = UnifiedManufacturingOperation(
+            operation_type="FACE_DRILL",
+            depth=20,
+            source="modern-core",
+            metadata={"panel_thickness": 18}
+        )
+
+        issues = (
+            HybridManufacturingValidator()
+            .validate([op])
+        )
+
+        self.assertTrue(
+            any(
+                i.code == "DRILL_DEPTH_EXCEEDS_PANEL_THICKNESS"
+                for i in issues
+            )
+        )
+
 if __name__ == "__main__":
     unittest.main()
