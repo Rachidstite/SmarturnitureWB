@@ -55,6 +55,11 @@ class UnifiedOperationCollector:
 
     @staticmethod
     def collect_legacy(scene_graph):
+        """
+        DEPRECATED:
+        Legacy manufacturing runtime.
+        Scheduled for removal after canonical runtime migration.
+        """
 
         operations = []
 
@@ -83,11 +88,24 @@ class UnifiedOperationCollector:
 
     @staticmethod
     def collect_hybrid(scene_graph):
+        """
+        DEPRECATED:
+        Transitional compatibility path.
+        Use collect_canonical() instead.
+        """
 
         return (
             UnifiedOperationCollector
             .collect_legacy(scene_graph)
             +
+            UnifiedOperationCollector
+            .collect_modern(scene_graph)
+        )
+
+    @staticmethod
+    def collect_canonical(scene_graph):
+
+        return (
             UnifiedOperationCollector
             .collect_modern(scene_graph)
         )
