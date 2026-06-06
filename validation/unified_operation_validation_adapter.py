@@ -13,18 +13,15 @@ class UnifiedOperationValidationAdapter:
 
     def validate(self, specs):
 
-        issues = []
+        if not specs:
+            return []
 
-        for spec in specs:
+        operations = getattr(
+            specs[0],
+            "unified_operations",
+            []
+        )
 
-            issues.extend(
-                self.validator.validate(
-                    getattr(
-                        spec,
-                        "unified_operations",
-                        []
-                    )
-                )
-            )
-
-        return issues
+        return self.validator.validate(
+            operations
+        )

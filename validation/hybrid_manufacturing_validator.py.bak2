@@ -8,6 +8,14 @@ class HybridManufacturingValidator:
 
         issues = []
 
+        SUPPORTED_OPERATION_TYPES = {
+            "DRILL",
+            "FACE_DRILL",
+            "EDGE_DRILL",
+            "GROOVE",
+            "DRILL_MINIFIX",
+        }
+
         for op in operations:
 
             if not op.operation_type:
@@ -16,6 +24,19 @@ class HybridManufacturingValidator:
                         "ERROR",
                         "OPERATION_TYPE_MISSING",
                         "operation type missing",
+                        domain=Domain.MANUFACTURING
+                    )
+                )
+
+            if (
+                op.operation_type
+                and op.operation_type not in SUPPORTED_OPERATION_TYPES
+            ):
+                issues.append(
+                    GeometryIssue(
+                        "ERROR",
+                        "UNSUPPORTED_OPERATION_TYPE",
+                        f"unsupported operation type: {op.operation_type}",
                         domain=Domain.MANUFACTURING
                     )
                 )
