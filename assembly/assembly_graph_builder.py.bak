@@ -1,0 +1,34 @@
+from assembly.assembly_graph import AssemblyGraph
+
+class AssemblyGraphBuilder:
+
+    @staticmethod
+    def build(cabinet):
+
+        g = AssemblyGraph()
+
+        g.add_joint(
+            "LEFT_SIDE",
+            "TOP_PANEL",
+            "MINIFIX"
+        )
+
+        g.add_joint(
+            "RIGHT_SIDE",
+            "TOP_PANEL",
+            "MINIFIX"
+        )
+
+        g.add_joint(
+            "LEFT_SIDE",
+            "BOTTOM_PANEL",
+            "MINIFIX"
+        )
+
+        g.add_joint(
+            "RIGHT_SIDE",
+            "BOTTOM_PANEL",
+            "MINIFIX"
+        )
+
+        return g
