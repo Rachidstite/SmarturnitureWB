@@ -8,6 +8,7 @@ class UnifiedManufacturingOperation:
 
     diameter: float = 0.0
     depth: float = 0.0
+    is_through: bool = False
 
     x: float = 0.0
     y: float = 0.0
