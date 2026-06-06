@@ -38,10 +38,7 @@ class TestHybridManufacturingValidator(unittest.TestCase):
         )
 
         self.assertTrue(
-            any(
-                i.code == "OPERATION_TYPE_MISSING"
-                for i in issues
-            )
+            any(i.code == "OPERATION_TYPE_MISSING" for i in issues)
         )
 
     def test_empty_source(self):
@@ -57,10 +54,7 @@ class TestHybridManufacturingValidator(unittest.TestCase):
         )
 
         self.assertTrue(
-            any(
-                i.code == "OPERATION_SOURCE_MISSING"
-                for i in issues
-            )
+            any(i.code == "OPERATION_SOURCE_MISSING" for i in issues)
         )
 
     def test_negative_values(self):
@@ -96,10 +90,7 @@ class TestHybridManufacturingValidator(unittest.TestCase):
         )
 
         self.assertTrue(
-            any(
-                i.code == "INVALID_OPERATION_AXIS"
-                for i in issues
-            )
+            any(i.code == "INVALID_OPERATION_AXIS" for i in issues)
         )
 
     def test_invalid_face(self):
@@ -116,8 +107,45 @@ class TestHybridManufacturingValidator(unittest.TestCase):
         )
 
         self.assertTrue(
+            any(i.code == "INVALID_OPERATION_FACE" for i in issues)
+        )
+
+    def test_invalid_face_drill_diameter(self):
+
+        op = UnifiedManufacturingOperation(
+            operation_type="FACE_DRILL",
+            diameter=10,
+            source="legacy"
+        )
+
+        issues = (
+            HybridManufacturingValidator()
+            .validate([op])
+        )
+
+        self.assertTrue(
             any(
-                i.code == "INVALID_OPERATION_FACE"
+                i.code == "INVALID_MINIFIX_FACE_DIAMETER"
+                for i in issues
+            )
+        )
+
+    def test_invalid_edge_drill_diameter(self):
+
+        op = UnifiedManufacturingOperation(
+            operation_type="EDGE_DRILL",
+            diameter=5,
+            source="legacy"
+        )
+
+        issues = (
+            HybridManufacturingValidator()
+            .validate([op])
+        )
+
+        self.assertTrue(
+            any(
+                i.code == "INVALID_MINIFIX_EDGE_DIAMETER"
                 for i in issues
             )
         )

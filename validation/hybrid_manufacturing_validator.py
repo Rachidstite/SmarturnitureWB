@@ -65,6 +65,32 @@ class HybridManufacturingValidator:
                     )
                 )
 
+            if (
+                op.operation_type == "FACE_DRILL"
+                and op.diameter != 15
+            ):
+                issues.append(
+                    GeometryIssue(
+                        "ERROR",
+                        "INVALID_MINIFIX_FACE_DIAMETER",
+                        "FACE_DRILL diameter must be 15mm",
+                        domain=Domain.MANUFACTURING
+                    )
+                )
+
+            if (
+                op.operation_type == "EDGE_DRILL"
+                and op.diameter != 8
+            ):
+                issues.append(
+                    GeometryIssue(
+                        "ERROR",
+                        "INVALID_MINIFIX_EDGE_DIAMETER",
+                        "EDGE_DRILL diameter must be 8mm",
+                        domain=Domain.MANUFACTURING
+                    )
+                )
+
             if op.diameter < 0:
                 issues.append(
                     GeometryIssue(
