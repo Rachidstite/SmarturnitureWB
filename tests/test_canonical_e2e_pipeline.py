@@ -4,6 +4,15 @@ import unittest
 
 from domain.builders import WardrobeBuilder
 
+from domain.rules_engine import (
+    RuleContext,
+    HardwarePlacementEngine,
+)
+
+from domain.manufacturing_compiler import (
+    ManufacturingCompiler,
+)
+
 from services.canonical_manufacturing_export_service import (
     CanonicalManufacturingExportService,
 )
@@ -20,6 +29,17 @@ class TestCanonicalE2EPipeline(unittest.TestCase):
                 height=2000,
                 depth=600,
             ).build()
+        )
+
+        context = RuleContext()
+
+        HardwarePlacementEngine(
+            context
+        ).process(project)
+
+        ManufacturingCompiler().compile(
+            project,
+            context
         )
 
         with tempfile.TemporaryDirectory() as tmp:

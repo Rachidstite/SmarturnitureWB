@@ -1,8 +1,8 @@
 from manufacturing.extractor import \
     ManufacturingExtractor
 
-from manufacturing.unified_operation_collector import \
-    UnifiedOperationCollector
+from manufacturing.canonical_operation_collector import \
+    CanonicalOperationCollector
 
 
 class HybridManufacturingExtractor:
@@ -17,8 +17,8 @@ class HybridManufacturingExtractor:
         )
 
         unified_ops = (
-            UnifiedOperationCollector
-            .collect_hybrid(scene_graph)
+            CanonicalOperationCollector
+            .collect(scene_graph)
         )
 
         for spec in specs:

@@ -72,6 +72,35 @@ class TestExportParity(unittest.TestCase):
                 os.path.exists(canonical_csv)
             )
 
+            with open(
+                legacy_csv,
+                "r",
+                encoding="utf-8"
+            ) as f:
+                legacy_lines = f.readlines()
+
+            with open(
+                canonical_csv,
+                "r",
+                encoding="utf-8"
+            ) as f:
+                canonical_lines = f.readlines()
+
+            self.assertGreater(
+                len(legacy_lines),
+                1
+            )
+
+            self.assertGreater(
+                len(canonical_lines),
+                1
+            )
+
+            self.assertEqual(
+                len(legacy_lines) - 1,
+                len(canonical_lines) - 1
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
