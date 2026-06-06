@@ -151,5 +151,25 @@ class TestHybridManufacturingValidator(unittest.TestCase):
         )
 
 
+    def test_incomplete_minifix_set(self):
+
+        op = UnifiedManufacturingOperation(
+            operation_type="FACE_DRILL",
+            diameter=15,
+            source="legacy"
+        )
+
+        issues = (
+            HybridManufacturingValidator()
+            .validate([op])
+        )
+
+        self.assertTrue(
+            any(
+                i.code == "INCOMPLETE_MINIFIX_SET"
+                for i in issues
+            )
+        )
+
 if __name__ == "__main__":
     unittest.main()

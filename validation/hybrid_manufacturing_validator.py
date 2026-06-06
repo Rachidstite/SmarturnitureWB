@@ -23,7 +23,16 @@ class HybridManufacturingValidator:
             "BACK",
         }
 
+        face_drills = 0
+        edge_drills = 0
+
         for op in operations:
+
+            if op.operation_type == "FACE_DRILL":
+                face_drills += 1
+
+            if op.operation_type == "EDGE_DRILL":
+                edge_drills += 1
 
             if not op.operation_type:
                 issues.append(
@@ -140,5 +149,18 @@ class HybridManufacturingValidator:
                         domain=Domain.MANUFACTURING
                     )
                 )
+
+        if (
+            face_drills > 0
+            and edge_drills == 0
+        ):
+            issues.append(
+                GeometryIssue(
+                    "ERROR",
+                    "INCOMPLETE_MINIFIX_SET",
+                    "FACE_DRILL exists without EDGE_DRILL",
+                    domain=Domain.MANUFACTURING
+                )
+            )
 
         return issues
