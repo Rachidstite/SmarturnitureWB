@@ -24,16 +24,16 @@ class ManufacturingCompiler:
             # Host Processing (مثال: جانب الخزانة)
             host_node = project.graph.get_node(placement.host_node_id)
             if host_node and hardware_spec.host_holes:
-                self._inject_operations(host_node, placement.anchor, hardware_spec.host_holes)
+                self._inject_operations(host_node, placement, placement.anchor, hardware_spec.host_holes)
                 
             # Target Processing (مثال: الرف)
             target_node_id = getattr(placement, 'target_node_id', None)
             if target_node_id:
                 target_node = project.graph.get_node(target_node_id)
                 if target_node and hardware_spec.target_holes:
-                    self._inject_operations(target_node, placement.anchor, hardware_spec.target_holes)
+                    self._inject_operations(target_node, placement, placement.anchor, hardware_spec.target_holes)
 
-    def _inject_operations(self, node, anchor, hole_specs):
+    def _inject_operations(self, node, placement, anchor, hole_specs):
         if not hasattr(node, 'machining_ops'):
             node.machining_ops = []
             
@@ -58,8 +58,21 @@ class ManufacturingCompiler:
                     
             if not is_dup:
                 op = MachiningOperation(
-                    op_type="DRILL", diameter=hole.diameter, depth=hole.depth, face=f_face,
-                    local_x=resolved.local_x, local_y=resolved.local_y, 
-                    axis=getattr(hole, 'axis', 'Z'), is_through=getattr(hole, 'is_through_hole', False)
+                    op_type="DRILL",
+                    diameter=hole.diameter,
+                    depth=hole.depth,
+                    face=f_face,
+                    local_x=resolved.local_x,
+                    local_y=resolved.local_y,
+                    axis=getattr(hole, 'axis', 'Z'),
+                    is_through=getattr(hole, 'is_through_hole', False),
+                    metadata={
+                        "hardware_intent": placement.hardware_intent,
+                        "target_node_id": getattr(
+                            placement,
+                            "target_node_id",
+                            None
+                        )
+                    }
                 )
                 node.machining_ops.append(op)
