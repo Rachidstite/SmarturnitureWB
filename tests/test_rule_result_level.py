@@ -9,11 +9,11 @@ from validation.intelligence.result_level import (
 )
 
 
-class TestRuleResultContract(
+class TestRuleResultLevel(
     unittest.TestCase
 ):
 
-    def test_result_fields(self):
+    def test_level_is_stored(self):
 
         result = RuleResult(
             passed=True,
@@ -22,7 +22,10 @@ class TestRuleResultContract(
             message="valid"
         )
 
-        self.assertTrue(result.passed)
+        self.assertEqual(
+            result.level,
+            ResultLevel.INFO
+        )
 
 
 if __name__ == "__main__":
