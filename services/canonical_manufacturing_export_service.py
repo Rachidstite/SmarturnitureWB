@@ -10,8 +10,16 @@ from exports.canonical_csv_exporter import (
     CanonicalCSVExporter,
 )
 
+from exports.manufacturing_intelligence_csv_exporter import (
+    ManufacturingIntelligenceCSVExporter,
+)
+
 from validation.intelligence.manufacturing_intelligence_report_builder import (
     ManufacturingIntelligenceReportBuilder,
+)
+
+from validation.intelligence.manufacturing_intelligence_csv_report import (
+    ManufacturingIntelligenceCSVReport,
 )
 
 
@@ -35,6 +43,16 @@ class CanonicalManufacturingExportService:
             raise RuntimeError(
                 "Manufacturing intelligence validation failed"
             )
+
+        intelligence_rows = (
+            ManufacturingIntelligenceCSVReport()
+            .build(report)
+        )
+
+        ManufacturingIntelligenceCSVExporter().export(
+            intelligence_rows,
+            filepath + ".intelligence.csv"
+        )
 
         rows = (
             CanonicalCNCExporter.export_rows(
