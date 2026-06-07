@@ -35,7 +35,7 @@ class TestManufacturingRuleEngine(
 
         self.assertEqual(
             len(results),
-            1
+            2
         )
 
         self.assertTrue(
