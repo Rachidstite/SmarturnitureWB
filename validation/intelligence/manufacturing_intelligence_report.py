@@ -14,4 +14,6 @@ class ManufacturingIntelligenceReport:
 
     cost_impacts: list
 
-    can_export: bool
+    score: object = None
+
+    can_export: bool = True

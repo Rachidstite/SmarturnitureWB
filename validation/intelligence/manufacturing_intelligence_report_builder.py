@@ -10,6 +10,9 @@ from validation.intelligence.cost_impact_engine import (
     CostImpactEngine,
 )
 
+from validation.intelligence.manufacturing_score_engine import (
+    ManufacturingScoreEngine,
+)
 
 from validation.intelligence.manufacturing_intelligence_report import (
     ManufacturingIntelligenceReport,
@@ -43,12 +46,30 @@ class ManufacturingIntelligenceReportBuilder:
             .estimate(panel_specs)
         )
 
+        score = (
+            ManufacturingScoreEngine()
+            .calculate(
+                ManufacturingIntelligenceReport(
+                    errors=rule_engine.errors(results),
+                    warnings=rule_engine.warnings(results),
+                    recommendations=recommendations,
+                    optimizations=rule_engine.optimizations(results),
+                    cost_impacts=cost_impacts,
+                    score=None,
+                    can_export=rule_engine.can_export(
+                        results
+                    ),
+                )
+            )
+        )
+
         return ManufacturingIntelligenceReport(
             errors=rule_engine.errors(results),
             warnings=rule_engine.warnings(results),
             recommendations=recommendations,
             optimizations=rule_engine.optimizations(results),
             cost_impacts=cost_impacts,
+            score=score,
             can_export=rule_engine.can_export(
                 results
             ),

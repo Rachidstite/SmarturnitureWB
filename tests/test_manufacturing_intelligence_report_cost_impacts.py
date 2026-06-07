@@ -1,5 +1,9 @@
 import unittest
 
+from validation.intelligence.manufacturing_score import (
+    ManufacturingScore,
+)
+
 from validation.intelligence.manufacturing_intelligence_report import (
     ManufacturingIntelligenceReport,
 )
@@ -17,6 +21,11 @@ class TestManufacturingIntelligenceReportCostImpacts(
             recommendations=[],
             optimizations=[],
             cost_impacts=[],
+            score=ManufacturingScore(
+                score=100,
+                grade="A",
+                explanation="perfect",
+            ),
             can_export=True,
         )
 

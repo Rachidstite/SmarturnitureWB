@@ -1,7 +1,7 @@
 import unittest
 
-from validation.intelligence.manufacturing_score import (
-    ManufacturingScore,
+from validation.intelligence.manufacturing_score_engine import (
+    ManufacturingScoreEngine,
 )
 
 from validation.intelligence.manufacturing_intelligence_report import (
@@ -9,11 +9,11 @@ from validation.intelligence.manufacturing_intelligence_report import (
 )
 
 
-class TestManufacturingIntelligenceReport(
+class TestManufacturingScoreCalculation(
     unittest.TestCase
 ):
 
-    def test_report_fields(self):
+    def test_perfect_report_scores_100(self):
 
         report = ManufacturingIntelligenceReport(
             errors=[],
@@ -21,16 +21,17 @@ class TestManufacturingIntelligenceReport(
             recommendations=[],
             optimizations=[],
             cost_impacts=[],
-            score=ManufacturingScore(
-                score=100,
-                grade="A",
-                explanation="perfect",
-            ),
             can_export=True,
         )
 
-        self.assertTrue(
-            report.can_export
+        score = (
+            ManufacturingScoreEngine()
+            .calculate(report)
+        )
+
+        self.assertEqual(
+            score.score,
+            100
         )
 
 

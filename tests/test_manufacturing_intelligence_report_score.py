@@ -9,11 +9,11 @@ from validation.intelligence.manufacturing_intelligence_report import (
 )
 
 
-class TestManufacturingIntelligenceReport(
+class TestManufacturingIntelligenceReportScore(
     unittest.TestCase
 ):
 
-    def test_report_fields(self):
+    def test_score_field_exists(self):
 
         report = ManufacturingIntelligenceReport(
             errors=[],
@@ -22,15 +22,16 @@ class TestManufacturingIntelligenceReport(
             optimizations=[],
             cost_impacts=[],
             score=ManufacturingScore(
-                score=100,
+                score=95,
                 grade="A",
-                explanation="perfect",
+                explanation="good"
             ),
             can_export=True,
         )
 
-        self.assertTrue(
-            report.can_export
+        self.assertEqual(
+            report.score.score,
+            95
         )
 
 
