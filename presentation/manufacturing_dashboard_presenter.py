@@ -22,3 +22,5 @@ class ManufacturingDashboardPresenter:
             ManufacturingDashboardState
             .from_viewmodel(viewmodel)
         )
+
+        return self.state

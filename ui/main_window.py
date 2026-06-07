@@ -3,11 +3,18 @@ from shared.contracts import CabinetParams, SectionConfig; from shared.enums imp
 from shared.issues import ValidationState; from core.logging_config import logger
 from engine.cabinet import Cabinet; from engine.cabinet_builder import CabinetBuilder
 from services.validation_service import ValidationService; from ui.issue_presenter import IssuePresenter
+from ui.manufacturing_dashboard_widget import ManufacturingDashboardWidget
+from services.manufacturing_dashboard_service import (
+    ManufacturingDashboardService,
+)
+from presentation.manufacturing_dashboard_presenter import (
+    ManufacturingDashboardPresenter,
+)
 import csv
 
 class UIManager(QtWidgets.QMainWindow):
     def __init__(self):
-        super().__init__(); self.params = CabinetParams(); self.builder = CabinetBuilder(); self.val_state = ValidationState()
+        super().__init__(); self.params = CabinetParams(); self.builder = CabinetBuilder(); self.val_state = ValidationState(); self.dashboard_presenter = ManufacturingDashboardPresenter()
         self.is_updating_ui = False; self.build_timer = QtCore.QTimer(); self.build_timer.setSingleShot(True); self.build_timer.timeout.connect(self.trigger_build)
         self.init_ui(); self._first_build()
 
@@ -19,6 +26,7 @@ class UIManager(QtWidgets.QMainWindow):
         self.chk_hw = QtWidgets.QCheckBox("🔩 SHOW 3D HARDWARE"); self.chk_hw.stateChanged.connect(self.on_param_changed)
         layout.addWidget(self.chk_cnc); layout.addWidget(self.chk_hw)
         self.issue_presenter = IssuePresenter(); layout.addWidget(self.issue_presenter)
+        self.dashboard_widget = ManufacturingDashboardWidget(); layout.addWidget(self.dashboard_widget)
         btn_build = QtWidgets.QPushButton("🚀 FORCE GENERATE 3D MODEL"); btn_build.clicked.connect(self.trigger_build); layout.addWidget(btn_build)
         btn_export = QtWidgets.QPushButton("📋 EXPORT CUTLIST (CSV)"); btn_export.clicked.connect(self.export_cutlist); layout.addWidget(btn_export)
 
@@ -93,7 +101,21 @@ class UIManager(QtWidgets.QMainWindow):
             cabinet = Cabinet(self.params)
             validation_service = ValidationService(cabinet, self.builder.mat); self.val_state = validation_service.validate_only(); self.issue_presenter.display_issues(self.val_state.issues)
             if self.val_state.has_errors: logger.error("Blocked by constraint errors."); return
-            self.builder.build(cabinet); logger.info("Build completed.")
+            self.builder.build(cabinet)
+            try:
+                if hasattr(self.builder, 'scene_graph'):
+                    vm = ManufacturingDashboardService.build(
+                        self.builder.scene_graph
+                    )
+                    self.dashboard_presenter.present(vm)
+                    self.dashboard_widget.update_state(
+                        self.dashboard_presenter.state
+                    )
+            except Exception as dashboard_error:
+                logger.warning(
+                    f'Dashboard unavailable: {dashboard_error}'
+                )
+            logger.info("Build completed.")
         except Exception as e: logger.error(f"Failure: {e}")
 
     def export_cutlist(self):

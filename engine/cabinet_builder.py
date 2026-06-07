@@ -15,7 +15,7 @@ class CabinetBuilder:
     def __init__(self):
         self.mat = MaterialManager(); self.cnc = CNCBuilder(self.mat); self.hw = None
         self.groups = {}; self.drilling_z_positions = []; self._cabinet = None
-        self._doc = None; self.geo = None
+        self._doc = None; self.geo = None; self.scene_graph = None
 
     def build(self, cabinet: Cabinet):
         logger.debug("BUILD STARTED")
@@ -32,6 +32,17 @@ class CabinetBuilder:
 
         self.geo = GeometryEngine(cabinet, self.mat)
         self.geo.resolve_all()
+
+        sg_builder = SceneGraphBuilder(
+            cabinet,
+            self.mat,
+        )
+
+        self.scene_graph = (
+            sg_builder.build(
+                self.geo
+            )
+        )
         logger.debug(f"BUILDABLE: {self.geo.is_buildable}, Sections: {len(self.geo.resolved_sections)}")
         if not self.geo.is_buildable:
             logger.error("Build aborted: unbuildable.")
