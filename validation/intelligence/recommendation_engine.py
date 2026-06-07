@@ -9,4 +9,18 @@ class RecommendationEngine:
         self,
         panel_specs
     ):
-        return []
+
+        results = []
+
+        for rule in (
+            RecommendationRegistry
+            .get_rules()
+        ):
+
+            results.extend(
+                rule.recommend(
+                    panel_specs
+                )
+            )
+
+        return results
