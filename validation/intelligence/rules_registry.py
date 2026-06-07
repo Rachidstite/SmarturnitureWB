@@ -6,6 +6,10 @@ from validation.intelligence.minimum_edge_distance_rule import (
     MinimumEdgeDistanceRule,
 )
 
+from validation.intelligence.through_hole_thickness_rule import (
+    ThroughHoleThicknessRule,
+)
+
 
 class RulesRegistry:
 
@@ -15,4 +19,5 @@ class RulesRegistry:
         return [
             DrillInsidePanelRule(),
             MinimumEdgeDistanceRule(),
+            ThroughHoleThicknessRule(),
         ]
