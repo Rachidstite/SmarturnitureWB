@@ -4,6 +4,15 @@ import unittest
 
 from domain.builders import WardrobeBuilder
 
+from domain.rules_engine import (
+    RuleContext,
+    HardwarePlacementEngine,
+)
+
+from domain.manufacturing_compiler import (
+    ManufacturingCompiler,
+)
+
 from manufacturing.hybrid_extractor import (
     HybridManufacturingExtractor,
 )
@@ -28,6 +37,17 @@ class TestCanonicalPipeline(unittest.TestCase):
                 height=800,
                 depth=400,
             ).build()
+        )
+
+        context = RuleContext()
+
+        HardwarePlacementEngine(
+            context
+        ).process(project)
+
+        ManufacturingCompiler().compile(
+            project,
+            context
         )
 
         specs = (
