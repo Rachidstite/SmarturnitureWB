@@ -25,11 +25,13 @@ class ManufacturingScoreEngine:
         ) * 2
 
         score = max(
-            score,
-            0
+            0,
+            score
         )
 
-        if score >= 90:
+        if score >= 95:
+            grade = "A+"
+        elif score >= 90:
             grade = "A"
         elif score >= 80:
             grade = "B"
