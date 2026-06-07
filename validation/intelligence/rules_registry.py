@@ -1,25 +1,13 @@
-from validation.intelligence.drill_inside_panel_rule import (
-    DrillInsidePanelRule,
+from validation.intelligence.categories.geometric_rules import (
+    get_geometric_rules,
 )
 
-from validation.intelligence.minimum_edge_distance_rule import (
-    MinimumEdgeDistanceRule,
+from validation.intelligence.categories.hardware_rules import (
+    get_hardware_rules,
 )
 
-from validation.intelligence.through_hole_thickness_rule import (
-    ThroughHoleThicknessRule,
-)
-
-from validation.intelligence.connector_intent_rule import (
-    ConnectorIntentRule,
-)
-
-from validation.intelligence.minifix_depth_rule import (
-    MinifixDepthRule,
-)
-
-from validation.intelligence.confirmat_depth_rule import (
-    ConfirmatDepthRule,
+from validation.intelligence.categories.manufacturing_rules import (
+    get_manufacturing_rules,
 )
 
 
@@ -28,11 +16,8 @@ class RulesRegistry:
     @staticmethod
     def get_rules():
 
-        return [
-            DrillInsidePanelRule(),
-            MinimumEdgeDistanceRule(),
-            ThroughHoleThicknessRule(),
-            ConnectorIntentRule(),
-            MinifixDepthRule(),
-            ConfirmatDepthRule(),
-        ]
+        return (
+            get_geometric_rules()
+            + get_hardware_rules()
+            + get_manufacturing_rules()
+        )
