@@ -18,6 +18,10 @@ from validation.intelligence.minifix_depth_rule import (
     MinifixDepthRule,
 )
 
+from validation.intelligence.confirmat_depth_rule import (
+    ConfirmatDepthRule,
+)
+
 
 class RulesRegistry:
 
@@ -30,4 +34,5 @@ class RulesRegistry:
             ThroughHoleThicknessRule(),
             ConnectorIntentRule(),
             MinifixDepthRule(),
+            ConfirmatDepthRule(),
         ]
