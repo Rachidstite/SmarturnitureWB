@@ -14,6 +14,11 @@ from validation.intelligence.manufacturing_rule_engine import (
     ManufacturingRuleEngine,
 )
 
+from validation.intelligence.recommendation_engine import (
+    RecommendationEngine,
+)
+
+
 
 
 class CanonicalManufacturingExportService:
@@ -41,6 +46,11 @@ class CanonicalManufacturingExportService:
             raise RuntimeError(
                 "Manufacturing intelligence validation failed"
             )
+
+        recommendations = (
+            RecommendationEngine()
+            .recommend(panel_specs)
+        )
 
         rows = (
             CanonicalCNCExporter.export_rows(
