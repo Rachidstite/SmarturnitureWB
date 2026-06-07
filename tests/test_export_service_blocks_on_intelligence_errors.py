@@ -1,14 +1,6 @@
 import unittest
 from unittest.mock import patch
 
-from validation.intelligence.rule_result import (
-    RuleResult,
-)
-
-from validation.intelligence.result_level import (
-    ResultLevel,
-)
-
 from services.canonical_manufacturing_export_service import (
     CanonicalManufacturingExportService,
 )
@@ -22,28 +14,21 @@ class TestExportServiceBlocking(
         "services.canonical_manufacturing_export_service.HybridManufacturingExtractor"
     )
     @patch(
-        "services.canonical_manufacturing_export_service.ManufacturingRuleEngine"
+        "services.canonical_manufacturing_export_service.ManufacturingIntelligenceReportBuilder"
     )
     def test_export_blocked_when_errors_exist(
         self,
-        engine_cls,
+        builder_cls,
         extractor_cls
     ):
 
         extractor_cls.extract.return_value = []
 
-        engine = engine_cls.return_value
+        report = (
+            builder_cls.return_value.build.return_value
+        )
 
-        engine.validate.return_value = [
-            RuleResult(
-                passed=False,
-                level=ResultLevel.ERROR,
-                code="FAIL",
-                message="fatal"
-            )
-        ]
-
-        engine.can_export.return_value = False
+        report.can_export = False
 
         with self.assertRaises(
             RuntimeError

@@ -6,7 +6,7 @@ from services.canonical_manufacturing_export_service import (
 )
 
 
-class TestExportServiceRecommendations(
+class TestExportServiceUsesReportBuilder(
     unittest.TestCase
 ):
 
@@ -20,17 +20,17 @@ class TestExportServiceRecommendations(
         "services.canonical_manufacturing_export_service.ManufacturingIntelligenceReportBuilder"
     )
     @patch(
-        "services.canonical_manufacturing_export_service.HybridManufacturingExtractor.extract"
+        "services.canonical_manufacturing_export_service.HybridManufacturingExtractor"
     )
-    def test_recommendations_are_executed(
+    def test_service_uses_report_builder(
         self,
-        extract,
+        extractor,
         builder_cls,
         exporter,
-        csv_export
+        csv_exporter
     ):
 
-        extract.return_value = []
+        extractor.extract.return_value = []
 
         report = (
             builder_cls.return_value.build.return_value
