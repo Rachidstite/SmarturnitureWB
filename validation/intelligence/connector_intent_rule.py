@@ -6,6 +6,10 @@ from validation.intelligence.rule_result import (
     RuleResult,
 )
 
+from validation.intelligence.result_level import (
+    ResultLevel,
+)
+
 
 class ConnectorIntentRule(
     ManufacturingRule
@@ -31,6 +35,7 @@ class ConnectorIntentRule(
         if intent is None:
             return RuleResult(
                 passed=True,
+            level=ResultLevel.INFO,
                 code="NO_INTENT",
                 message="No hardware intent"
             )
@@ -38,12 +43,14 @@ class ConnectorIntentRule(
         if intent not in self.ALLOWED_INTENTS:
             return RuleResult(
                 passed=False,
+                level=ResultLevel.ERROR,
                 code="UNKNOWN_INTENT",
                 message=f"Unknown hardware intent: {intent}"
             )
 
         return RuleResult(
             passed=True,
+            level=ResultLevel.INFO,
             code="VALID_INTENT",
             message="Valid hardware intent"
         )

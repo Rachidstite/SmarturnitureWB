@@ -6,6 +6,10 @@ from validation.intelligence.rule_result import (
     RuleResult,
 )
 
+from validation.intelligence.result_level import (
+    ResultLevel,
+)
+
 
 class MinimumEdgeDistanceRule(
     ManufacturingRule
@@ -30,6 +34,7 @@ class MinimumEdgeDistanceRule(
 
             return RuleResult(
                 passed=False,
+                level=ResultLevel.ERROR,
                 code="MIN_EDGE_DISTANCE",
                 message=(
                     f"Operation too close to edge "
@@ -39,6 +44,7 @@ class MinimumEdgeDistanceRule(
 
         return RuleResult(
             passed=True,
+            level=ResultLevel.INFO,
             code="OK",
             message="valid"
         )

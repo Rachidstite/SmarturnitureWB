@@ -6,6 +6,10 @@ from validation.intelligence.rule_result import (
     RuleResult,
 )
 
+from validation.intelligence.result_level import (
+    ResultLevel,
+)
+
 
 class DrillInsidePanelRule(
     ManufacturingRule
@@ -25,6 +29,7 @@ class DrillInsidePanelRule(
             ):
                 return RuleResult(
                     passed=False,
+                level=ResultLevel.ERROR,
                     code="DRILL_OUTSIDE_X",
                     message="Operation outside panel width"
                 )
@@ -37,12 +42,14 @@ class DrillInsidePanelRule(
             ):
                 return RuleResult(
                     passed=False,
+                level=ResultLevel.ERROR,
                     code="DRILL_OUTSIDE_Y",
                     message="Operation outside panel height"
                 )
 
         return RuleResult(
             passed=True,
+            level=ResultLevel.INFO,
             code="OK",
             message="valid"
         )

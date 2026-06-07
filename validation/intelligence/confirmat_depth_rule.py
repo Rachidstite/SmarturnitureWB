@@ -6,6 +6,10 @@ from validation.intelligence.rule_result import (
     RuleResult,
 )
 
+from validation.intelligence.result_level import (
+    ResultLevel,
+)
+
 
 class ConfirmatDepthRule(
     ManufacturingRule
@@ -31,6 +35,7 @@ class ConfirmatDepthRule(
         ):
             return RuleResult(
                 passed=True,
+            level=ResultLevel.INFO,
                 code="SKIP",
                 message="Not confirmat"
             )
@@ -41,12 +46,14 @@ class ConfirmatDepthRule(
         ):
             return RuleResult(
                 passed=False,
+                level=ResultLevel.ERROR,
                 code="CONFIRMAT_DEPTH",
                 message="Confirmat depth too small"
             )
 
         return RuleResult(
             passed=True,
+            level=ResultLevel.INFO,
             code="OK",
             message="Valid confirmat depth"
         )

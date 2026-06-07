@@ -6,6 +6,10 @@ from validation.intelligence.rule_result import (
     RuleResult,
 )
 
+from validation.intelligence.result_level import (
+    ResultLevel,
+)
+
 
 class MinifixDepthRule(
     ManufacturingRule
@@ -28,6 +32,7 @@ class MinifixDepthRule(
         if intent != "INTENT_MINIFIX_15":
             return RuleResult(
                 passed=True,
+            level=ResultLevel.INFO,
                 code="SKIP",
                 message="Not a minifix"
             )
@@ -35,6 +40,7 @@ class MinifixDepthRule(
         if operation.diameter != 15:
             return RuleResult(
                 passed=True,
+            level=ResultLevel.INFO,
                 code="SKIP",
                 message="Not cam drill"
             )
@@ -42,12 +48,14 @@ class MinifixDepthRule(
         if operation.depth < self.REQUIRED_DEPTH:
             return RuleResult(
                 passed=False,
+                level=ResultLevel.ERROR,
                 code="MINIFIX_DEPTH",
                 message="Minifix depth too small"
             )
 
         return RuleResult(
             passed=True,
+            level=ResultLevel.INFO,
             code="OK",
             message="Valid minifix depth"
         )

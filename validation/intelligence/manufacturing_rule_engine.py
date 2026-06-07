@@ -88,3 +88,42 @@ class ManufacturingRuleEngine:
             r for r in results
             if r.level == ResultLevel.INFO
         ]
+
+
+    def has_blocking_errors(
+        self,
+        results
+    ):
+        return len(
+            self.errors(results)
+        ) > 0
+
+    def can_export(
+        self,
+        results
+    ):
+        return not self.has_blocking_errors(
+            results
+        )
+
+    def summary(
+        self,
+        results
+    ):
+        return {
+            "errors": len(
+                self.errors(results)
+            ),
+            "warnings": len(
+                self.warnings(results)
+            ),
+            "recommendations": len(
+                self.recommendations(results)
+            ),
+            "optimizations": len(
+                self.optimizations(results)
+            ),
+            "infos": len(
+                self.infos(results)
+            ),
+        }

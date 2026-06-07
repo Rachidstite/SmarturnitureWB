@@ -10,6 +10,11 @@ from exports.canonical_csv_exporter import (
     CanonicalCSVExporter,
 )
 
+from validation.intelligence.manufacturing_rule_engine import (
+    ManufacturingRuleEngine,
+)
+
+
 
 class CanonicalManufacturingExportService:
 
@@ -21,6 +26,21 @@ class CanonicalManufacturingExportService:
                 scene_graph
             )
         )
+
+        validation_results = (
+            ManufacturingRuleEngine()
+            .validate(panel_specs)
+        )
+
+        if not (
+            ManufacturingRuleEngine()
+            .can_export(
+                validation_results
+            )
+        ):
+            raise RuntimeError(
+                "Manufacturing intelligence validation failed"
+            )
 
         rows = (
             CanonicalCNCExporter.export_rows(

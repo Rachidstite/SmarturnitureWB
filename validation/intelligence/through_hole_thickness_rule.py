@@ -6,6 +6,10 @@ from validation.intelligence.rule_result import (
     RuleResult,
 )
 
+from validation.intelligence.result_level import (
+    ResultLevel,
+)
+
 
 class ThroughHoleThicknessRule(
     ManufacturingRule
@@ -20,6 +24,7 @@ class ThroughHoleThicknessRule(
         if not operation.is_through:
             return RuleResult(
                 passed=True,
+            level=ResultLevel.INFO,
                 code="OK",
                 message="not through hole"
             )
@@ -28,6 +33,7 @@ class ThroughHoleThicknessRule(
 
             return RuleResult(
                 passed=False,
+                level=ResultLevel.ERROR,
                 code="THROUGH_HOLE_DEPTH",
                 message=(
                     "Through hole depth is smaller "
@@ -37,6 +43,7 @@ class ThroughHoleThicknessRule(
 
         return RuleResult(
             passed=True,
+            level=ResultLevel.INFO,
             code="OK",
             message="valid"
         )

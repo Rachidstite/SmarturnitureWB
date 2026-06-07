@@ -18,7 +18,7 @@ class MachiningOperationAdapter:
                 y=getattr(op, "local_y", 0.0),
                 axis=getattr(op, "axis", "Z"),
                 source="modern-core",
-                metadata={}
+                metadata=dict(getattr(op, "metadata", {}))
             )
 
         if hasattr(op, "transform"):
@@ -33,7 +33,7 @@ class MachiningOperationAdapter:
                 y=getattr(transform, "y", 0.0),
                 z=getattr(transform, "z", 0.0),
                 source="modern-hardware",
-                metadata={}
+                metadata=dict(getattr(op, "metadata", {}))
             )
 
         raise TypeError(
