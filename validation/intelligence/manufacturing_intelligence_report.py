@@ -12,4 +12,6 @@ class ManufacturingIntelligenceReport:
 
     optimizations: list
 
+    cost_impacts: list
+
     can_export: bool

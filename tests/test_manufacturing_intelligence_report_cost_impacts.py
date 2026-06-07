@@ -5,11 +5,11 @@ from validation.intelligence.manufacturing_intelligence_report import (
 )
 
 
-class TestManufacturingIntelligenceReport(
+class TestManufacturingIntelligenceReportCostImpacts(
     unittest.TestCase
 ):
 
-    def test_report_fields(self):
+    def test_cost_impacts_field_exists(self):
 
         report = ManufacturingIntelligenceReport(
             errors=[],
@@ -20,8 +20,9 @@ class TestManufacturingIntelligenceReport(
             can_export=True,
         )
 
-        self.assertTrue(
-            report.can_export
+        self.assertEqual(
+            len(report.cost_impacts),
+            0
         )
 
 
