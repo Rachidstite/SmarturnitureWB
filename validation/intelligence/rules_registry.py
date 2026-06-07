@@ -10,6 +10,14 @@ from validation.intelligence.through_hole_thickness_rule import (
     ThroughHoleThicknessRule,
 )
 
+from validation.intelligence.connector_intent_rule import (
+    ConnectorIntentRule,
+)
+
+from validation.intelligence.minifix_depth_rule import (
+    MinifixDepthRule,
+)
+
 
 class RulesRegistry:
 
@@ -20,4 +28,6 @@ class RulesRegistry:
             DrillInsidePanelRule(),
             MinimumEdgeDistanceRule(),
             ThroughHoleThicknessRule(),
+            ConnectorIntentRule(),
+            MinifixDepthRule(),
         ]
