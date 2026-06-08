@@ -10,6 +10,10 @@ from ui.manufacturing_intelligence_details_widget import (
 from services.manufacturing_dashboard_service import (
     ManufacturingDashboardService,
 )
+
+from services.project_intelligence_service import (
+    ProjectIntelligenceService,
+)
 from presentation.manufacturing_dashboard_presenter import (
     ManufacturingDashboardPresenter,
 )
@@ -109,7 +113,7 @@ class UIManager(QtWidgets.QMainWindow):
             try:
                 if hasattr(self.builder, 'scene_graph'):
                     dashboard = (
-                        ManufacturingDashboardService.build(
+                        ProjectIntelligenceService.build(
                             self.builder.scene_graph
                         )
                     )

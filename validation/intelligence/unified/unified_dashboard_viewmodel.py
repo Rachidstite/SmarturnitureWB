@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -14,6 +14,12 @@ class UnifiedDashboardViewModel:
 
     recommendation_count: int = 0
 
+    recommendations: list = field(
+        default_factory=list
+    )
+
+    can_export: bool = True
+
     @classmethod
     def from_report(
         cls,
@@ -22,6 +28,7 @@ class UnifiedDashboardViewModel:
         return cls(
             score=report.score.score,
             grade=report.score.grade,
+
             error_count=len(
                 getattr(
                     report,
@@ -29,6 +36,7 @@ class UnifiedDashboardViewModel:
                     [],
                 )
             ),
+
             warning_count=len(
                 getattr(
                     report,
@@ -36,11 +44,35 @@ class UnifiedDashboardViewModel:
                     [],
                 )
             ),
+
             recommendation_count=len(
                 getattr(
                     report,
                     "recommendations",
                     [],
                 )
+            ),
+
+            recommendations=[
+                getattr(
+                    r,
+                    "message",
+                    str(r)
+                )
+                for r in getattr(
+                    report,
+                    "recommendations",
+                    [],
+                )
+            ],
+
+            can_export=(
+                len(
+                    getattr(
+                        report,
+                        "errors",
+                        [],
+                    )
+                ) == 0
             ),
         )

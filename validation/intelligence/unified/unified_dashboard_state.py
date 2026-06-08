@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -14,6 +14,14 @@ class UnifiedDashboardState:
 
     recommendation_count: int
 
+    recommendations: list = field(
+        default_factory=list
+    )
+
+    cost_impact_count: int = 0
+
+    can_export: bool = True
+
     @classmethod
     def from_viewmodel(
         cls,
@@ -25,4 +33,22 @@ class UnifiedDashboardState:
             error_count=viewmodel.error_count,
             warning_count=viewmodel.warning_count,
             recommendation_count=viewmodel.recommendation_count,
+
+            recommendations=getattr(
+                viewmodel,
+                "recommendations",
+                [],
+            ),
+
+            cost_impact_count=getattr(
+                viewmodel,
+                "cost_impact_count",
+                0,
+            ),
+
+            can_export=getattr(
+                viewmodel,
+                "can_export",
+                True,
+            ),
         )
