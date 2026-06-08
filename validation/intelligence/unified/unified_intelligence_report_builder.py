@@ -20,6 +20,7 @@ class UnifiedIntelligenceReportBuilder:
     def build(
         self,
         panel_specs,
+        scene_graph=None,
     ):
 
         manufacturing_report = (
@@ -29,7 +30,10 @@ class UnifiedIntelligenceReportBuilder:
 
         engineering_report = (
             EngineeringIntelligenceReportBuilder()
-            .build(panel_specs)
+            .build(
+                panel_specs,
+                scene_graph=scene_graph,
+            )
         )
 
         report = (

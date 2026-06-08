@@ -26,7 +26,10 @@ class ProjectIntelligenceService:
 
         report = (
             UnifiedIntelligenceReportBuilder()
-            .build(panel_specs)
+            .build(
+                panel_specs,
+                scene_graph=scene_graph,
+            )
         )
 
         return (

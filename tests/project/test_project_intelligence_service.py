@@ -58,7 +58,8 @@ class TestProjectIntelligenceService(
         )
 
         report_builder_cls.return_value.build.assert_called_once_with(
-            ["panel"]
+            ["panel"],
+            scene_graph="scene_graph",
         )
 
         dashboard_service_cls.return_value.build_from_report.assert_called_once_with(
