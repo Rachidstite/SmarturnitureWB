@@ -26,3 +26,14 @@ __pycache__/
 Thumbs.db
 __pycache__/
 *.pyc
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Test outputs
+full_test_run.log
+
