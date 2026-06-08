@@ -30,6 +30,18 @@ from validation.intelligence.engineering.recommendations.recommendation_sorter i
     RecommendationSorter,
 )
 
+from validation.intelligence.engineering.cost.engineering_cost_engine import (
+    EngineeringCostEngine,
+)
+
+from validation.intelligence.engineering.cost.engineering_cost_summary_engine import (
+    EngineeringCostSummaryEngine,
+)
+
+from validation.intelligence.engineering.cost.engineering_cost_estimator import (
+    EngineeringCostEstimator,
+)
+
 
 class EngineeringIntelligenceReportBuilder:
 
@@ -88,6 +100,27 @@ class EngineeringIntelligenceReportBuilder:
                     warning_codes=
                     warning_codes + error_codes
                 )
+            )
+        )
+
+        cost_impacts = (
+            EngineeringCostEngine()
+            .calculate(
+                warning_codes + error_codes
+            )
+        )
+
+        report.cost_summary = (
+            EngineeringCostSummaryEngine()
+            .summarize(
+                cost_impacts
+            )
+        )
+
+        report.estimated_cost = (
+            EngineeringCostEstimator()
+            .estimate(
+                report.cost_summary
             )
         )
 

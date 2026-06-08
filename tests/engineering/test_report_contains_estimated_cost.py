@@ -1,0 +1,32 @@
+from types import SimpleNamespace
+
+from validation.intelligence.engineering.engineering_intelligence_report_builder import (
+    EngineeringIntelligenceReportBuilder,
+)
+
+
+def test_report_contains_estimated_cost():
+
+    panel = SimpleNamespace(
+        panel_category="shelf",
+        span=1200,
+        thickness=18,
+    )
+
+    report = (
+        EngineeringIntelligenceReportBuilder()
+        .build(
+            [panel]
+        )
+    )
+
+    assert hasattr(
+        report,
+        "estimated_cost"
+    )
+
+    assert (
+        report.estimated_cost
+        >=
+        0
+    )
