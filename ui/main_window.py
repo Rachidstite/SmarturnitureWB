@@ -7,9 +7,6 @@ from ui.manufacturing_dashboard_widget import ManufacturingDashboardWidget
 from ui.manufacturing_intelligence_details_widget import (
     ManufacturingIntelligenceDetailsWidget,
 )
-from services.manufacturing_dashboard_service import (
-    ManufacturingDashboardService,
-)
 
 from services.project_intelligence_service import (
     ProjectIntelligenceService,
