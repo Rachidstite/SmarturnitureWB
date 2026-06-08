@@ -17,11 +17,27 @@ class ManufacturingScoreEngine:
         ) * 30
 
         score -= len(
-            report.structural_warnings
+            getattr(
+                report,
+                "warnings",
+                []
+            )
+        ) * 5
+
+        score -= len(
+            getattr(
+                report,
+                "structural_warnings",
+                []
+            )
         ) * 3
 
         score -= len(
-            report.recommendations
+            getattr(
+                report,
+                "recommendations",
+                []
+            )
         ) * 1
 
         score = max(

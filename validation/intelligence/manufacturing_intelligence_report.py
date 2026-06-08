@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -8,13 +8,13 @@ class ManufacturingIntelligenceReport:
 
     warnings: list
 
-    structural_warnings: list
+    structural_warnings: list = field(default_factory=list)
 
-    recommendations: list
+    recommendations: list = field(default_factory=list)
 
-    optimizations: list
+    optimizations: list = field(default_factory=list)
 
-    cost_impacts: list
+    cost_impacts: list = field(default_factory=list)
 
     score: object = None
 

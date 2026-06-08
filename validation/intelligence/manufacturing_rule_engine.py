@@ -34,12 +34,20 @@ class ManufacturingRuleEngine:
 
             for rule in panel_rules:
 
-                result = rule.validate(
-                    panel,
-                    None
-                )
+                try:
 
-                results.append(result)
+                    result = rule.validate(
+                        panel,
+                        None
+                    )
+
+                    results.append(result)
+
+                except (
+                    AttributeError,
+                    KeyError,
+                ):
+                    pass
 
             # PASS 2 : OPERATION RULES
 

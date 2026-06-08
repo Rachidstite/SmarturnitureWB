@@ -1,15 +1,22 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
 class ManufacturingDashboardState:
+
     score: int
+
     grade: str
+
     warning_count: int
+
     recommendation_count: int
-    recommendations: list
-    cost_impact_count: int
-    can_export: bool
+
+    recommendations: list = field(default_factory=list)
+
+    cost_impact_count: int = 0
+
+    can_export: bool = True
 
     @classmethod
     def from_viewmodel(
@@ -21,7 +28,11 @@ class ManufacturingDashboardState:
             grade=viewmodel.grade,
             warning_count=viewmodel.warning_count,
             recommendation_count=viewmodel.recommendation_count,
-            recommendations=viewmodel.recommendations,
+            recommendations=getattr(
+                viewmodel,
+                "recommendations",
+                []
+            ),
             cost_impact_count=viewmodel.cost_impact_count,
             can_export=viewmodel.can_export,
         )

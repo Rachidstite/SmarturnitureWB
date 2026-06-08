@@ -25,7 +25,11 @@ class DividerSpacingRule(
         operation
     ):
 
-        if panel_spec.role != NodeRole.SHELF:
+        if getattr(
+            panel_spec,
+            "role",
+            None
+        ) != NodeRole.SHELF:
             return RuleResult(
                 passed=True,
                 level=ResultLevel.INFO,

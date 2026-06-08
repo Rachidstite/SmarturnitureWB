@@ -94,6 +94,44 @@ class ManufacturingExtractor:
                     )
                     else face_width
                 ),
+
+                section_width=face_width,
+
+                supported_edges=getattr(
+                    node,
+                    "supported_edges",
+                    2
+                ),
+
+                load_class=getattr(
+                    node,
+                    "load_class",
+                    "normal"
+                ),
+
+                panel_category=getattr(
+                    node,
+                    "panel_category",
+                    str(node.role).lower()
+                ),
+
+                metadata=(
+                    getattr(
+                        node,
+                        "metadata",
+                        {}
+                    )
+                    if isinstance(
+                        getattr(
+                            node,
+                            "metadata",
+                            {}
+                        ),
+                        dict
+                    )
+                    else {}
+                ),
+
                 edge_spec=getattr(
                     node,
                     "edge_spec",

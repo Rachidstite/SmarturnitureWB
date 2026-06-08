@@ -25,7 +25,11 @@ class BackPanelRequiredRule(
         operation
     ):
 
-        if panel_spec.role != NodeRole.BACK_PANEL:
+        if getattr(
+            panel_spec,
+            "role",
+            None
+        ) != NodeRole.BACK_PANEL:
             return RuleResult(
                 passed=True,
                 level=ResultLevel.INFO,

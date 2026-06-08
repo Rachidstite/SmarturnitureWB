@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -10,22 +10,21 @@ class ManufacturingDashboardViewModel:
 
     warning_count: int
 
-    structural_warning_count: int
+    structural_warning_count: int = 0
 
-    recommendation_count: int
+    recommendation_count: int = 0
 
-    recommendations: list
+    recommendations: list = field(default_factory=list)
 
-    cost_impact_count: int
+    cost_impact_count: int = 0
 
-    can_export: bool
+    can_export: bool = True
 
     @classmethod
     def from_report(
         cls,
         report
     ):
-
         return cls(
             score=report.score.score,
             grade=report.score.grade,
@@ -34,7 +33,11 @@ class ManufacturingDashboardViewModel:
             ),
 
             structural_warning_count=len(
-                report.structural_warnings
+                getattr(
+                    report,
+                    "structural_warnings",
+                    []
+                )
             ),
 
             recommendation_count=len(
@@ -42,12 +45,17 @@ class ManufacturingDashboardViewModel:
             ),
 
             recommendations=[
-                r.message
+                getattr(
+                    r,
+                    "message",
+                    str(r)
+                )
                 for r in report.recommendations
             ],
 
             cost_impact_count=len(
                 report.cost_impacts
             ),
+
             can_export=report.can_export,
         )

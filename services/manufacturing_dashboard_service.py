@@ -91,19 +91,23 @@ class ManufacturingDashboardService:
         print("=" * 60)
         print("DASHBOARD DIAGNOSTICS")
         print("panel_specs =", len(panel_specs))
-        print("errors =", len(report.errors))
 
-        for i, e in enumerate(report.errors, 1):
-            print(
-                f"ERROR #{i}:",
-                getattr(e, "message", ""),
-                getattr(e, "description", "")
-            )
-        print("warnings =", len(report.warnings))
-        print("recommendations =", len(report.recommendations))
-        print("cost_impacts =", len(report.cost_impacts))
-        print("can_export =", report.can_export)
-        print("score =", report.score)
+        if hasattr(report, "errors"):
+            print("errors =", len(report.errors))
+
+            for i, e in enumerate(report.errors, 1):
+                print(
+                    f"ERROR #{i}:",
+                    getattr(e, "message", ""),
+                    getattr(e, "description", "")
+                )
+
+            print("warnings =", len(getattr(report, "warnings", [])))
+            print("recommendations =", len(getattr(report, "recommendations", [])))
+            print("cost_impacts =", len(getattr(report, "cost_impacts", [])))
+            print("can_export =", getattr(report, "can_export", False))
+            print("score =", getattr(report, "score", None))
+
         print("=" * 60)
 
         viewmodel = (
