@@ -26,6 +26,10 @@ from validation.intelligence.engineering.recommendations.engineering_recommendat
     EngineeringRecommendationEngine,
 )
 
+from validation.intelligence.engineering.recommendations.recommendation_sorter import (
+    RecommendationSorter,
+)
+
 
 class EngineeringIntelligenceReportBuilder:
 
@@ -77,10 +81,13 @@ class EngineeringIntelligenceReportBuilder:
         ]
 
         report.recommendations = (
-            EngineeringRecommendationEngine()
-            .generate(
-                warning_codes=
-                warning_codes + error_codes
+            RecommendationSorter()
+            .sort(
+                EngineeringRecommendationEngine()
+                .generate(
+                    warning_codes=
+                    warning_codes + error_codes
+                )
             )
         )
 

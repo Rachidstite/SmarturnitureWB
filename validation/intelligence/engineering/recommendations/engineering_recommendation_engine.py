@@ -6,6 +6,10 @@ from validation.intelligence.engineering.recommendations.recommendation_registry
     RECOMMENDATIONS,
 )
 
+from validation.intelligence.engineering.recommendations.recommendation_priority import (
+    RecommendationPriority,
+)
+
 
 class EngineeringRecommendationEngine:
 
@@ -20,7 +24,7 @@ class EngineeringRecommendationEngine:
 
             data = RECOMMENDATIONS.get(code)
 
-            if data is None:
+            if not data:
                 continue
 
             recommendations.append(
@@ -28,6 +32,9 @@ class EngineeringRecommendationEngine:
                     title=data["title"],
                     description=data["description"],
                     severity=data["severity"],
+                    priority=RecommendationPriority.for_code(
+                        code
+                    ),
                 )
             )
 

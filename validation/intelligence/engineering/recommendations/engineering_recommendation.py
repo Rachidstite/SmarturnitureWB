@@ -9,3 +9,5 @@ class EngineeringRecommendation:
     description: str
 
     severity: str
+
+    priority: str
