@@ -79,6 +79,27 @@ class EngineeringRulesRegistry:
             DrawerBottomLoadRule,
         )
 
+        from validation.intelligence.engineering.rules.confirmat_spacing_rule import (
+            ConfirmatSpacingRule,
+        )
+
+
+        from validation.intelligence.engineering.rules.min_edge_distance_rule import (
+            MinEdgeDistanceRule,
+        )
+
+        from validation.intelligence.engineering.rules.dowel_distribution_rule import (
+            DowelDistributionRule,
+        )
+
+        from validation.intelligence.engineering.rules.fastener_capacity_rule import (
+            FastenerCapacityRule,
+        )
+
+        from validation.intelligence.engineering.rules.connector_recommendation_rule import (
+            ConnectorRecommendationRule,
+        )
+
         return [
             ShelfDeflectionRule(),
             DividerBucklingRule(),
@@ -99,4 +120,9 @@ class EngineeringRulesRegistry:
             ShelfLoadCapacityRule(),
             DrawerSlideCapacityRule(),
             DrawerBottomLoadRule(),
+            ConfirmatSpacingRule(),
+            MinEdgeDistanceRule(),
+            DowelDistributionRule(),
+            FastenerCapacityRule(),
+            ConnectorRecommendationRule(),
         ]
