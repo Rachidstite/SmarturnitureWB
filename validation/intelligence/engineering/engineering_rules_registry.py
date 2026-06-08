@@ -7,6 +7,11 @@ class EngineeringRulesRegistry:
             ShelfDeflectionRule,
         )
 
+        from validation.intelligence.engineering.rules.divider_buckling_rule import (
+            DividerBucklingRule,
+        )
+
         return [
             ShelfDeflectionRule(),
+            DividerBucklingRule(),
         ]
