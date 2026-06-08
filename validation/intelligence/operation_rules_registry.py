@@ -10,19 +10,14 @@ from validation.intelligence.categories.manufacturing_rules import (
     get_manufacturing_rules,
 )
 
-from validation.intelligence.structural.structural_rules import (
-    get_structural_rules,
-)
 
-
-class RulesRegistry:
+class OperationRulesRegistry:
 
     @staticmethod
     def get_rules():
 
         return (
             get_geometric_rules()
-            + get_structural_rules()
             + get_hardware_rules()
             + get_manufacturing_rules()
         )

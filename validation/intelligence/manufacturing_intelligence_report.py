@@ -8,6 +8,8 @@ class ManufacturingIntelligenceReport:
 
     warnings: list
 
+    structural_warnings: list
+
     recommendations: list
 
     optimizations: list

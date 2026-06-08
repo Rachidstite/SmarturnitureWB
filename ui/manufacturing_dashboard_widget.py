@@ -16,6 +16,9 @@ class ManufacturingDashboardWidget(
         self.lbl_grade = QtWidgets.QLabel("-")
         self.lbl_warnings = QtWidgets.QLabel("-")
         self.lbl_recommendations = QtWidgets.QLabel("-")
+        self.txt_recommendations = QtWidgets.QPlainTextEdit()
+        self.txt_recommendations.setReadOnly(True)
+
         self.lbl_cost_impacts = QtWidgets.QLabel("-")
         self.lbl_export = QtWidgets.QLabel("-")
 
@@ -40,6 +43,11 @@ class ManufacturingDashboardWidget(
         )
 
         layout.addRow(
+            "Recommendation Details",
+            self.txt_recommendations,
+        )
+
+        layout.addRow(
             "Cost Impacts",
             self.lbl_cost_impacts,
         )
@@ -53,6 +61,20 @@ class ManufacturingDashboardWidget(
         self,
         state,
     ):
+
+        print("\nUI UPDATE")
+        print(
+            "recommendation_count =",
+            state.recommendation_count
+        )
+        print(
+            "recommendations =",
+            getattr(
+                state,
+                "recommendations",
+                None
+            )
+        )
         self.lbl_score.setText(
             str(state.score)
         )
@@ -67,6 +89,16 @@ class ManufacturingDashboardWidget(
 
         self.lbl_recommendations.setText(
             str(state.recommendation_count)
+        )
+
+        self.txt_recommendations.setPlainText(
+            "\n".join(
+                getattr(
+                    state,
+                    "recommendations",
+                    []
+                )
+            )
         )
 
         self.lbl_cost_impacts.setText(

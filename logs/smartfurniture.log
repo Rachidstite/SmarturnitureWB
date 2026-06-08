@@ -100,3 +100,191 @@
 2026-05-29 17:11:53,093 [INFO] SmartFurniture: Build completed.
 2026-05-29 17:11:58,486 [INFO] SmartFurniture: Build completed.
 2026-05-29 17:12:00,685 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:44:59,620 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:44:59,638 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:45:09,364 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:45:09,364 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:45:20,640 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:45:20,641 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:45:23,981 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:45:23,982 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:45:27,040 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:45:27,041 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:45:30,536 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:45:30,542 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:45:38,412 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:45:38,412 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:45:41,348 [WARNING] SmartFurniture: Dashboard unavailable: 'SceneGraph' object has no attribute 'physical_nodes'
+2026-06-07 17:45:41,348 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:50:14,421 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:50:23,948 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:50:28,038 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:50:32,736 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:50:35,501 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:50:43,003 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:50:47,802 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:59:27,406 [INFO] SmartFurniture: Build completed.
+2026-06-07 17:59:36,558 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:00:01,872 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:00:07,144 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:00:11,102 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:00:12,510 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:05:56,358 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:06:07,712 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:06:12,470 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:06:15,729 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:06:21,059 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:06:23,279 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:18:29,119 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:28:04,335 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:28:15,042 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:28:23,026 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:28:29,196 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:28:32,578 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:28:39,058 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:28:41,976 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:29:11,670 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:29:18,695 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:29:34,918 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:29:39,474 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:29:47,532 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:58:23,847 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:58:40,901 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:58:45,243 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:58:50,704 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:58:56,153 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:58:59,390 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:59:04,052 [INFO] SmartFurniture: Build completed.
+2026-06-07 18:59:06,843 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:00:02,009 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:00:11,396 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:25:20,783 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:25:25,532 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:25:29,022 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:25:32,305 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:25:35,304 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:25:39,876 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:25:42,537 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:35:36,901 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:35:42,101 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:35:45,572 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:35:49,832 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:35:52,683 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:35:56,285 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:35:59,168 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:38:41,456 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:38:55,443 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:38:58,295 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:39:01,910 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:39:04,114 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:39:07,965 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:39:10,527 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:39:27,512 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:42:47,763 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:42:56,281 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:43:00,430 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:43:02,476 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:43:04,456 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:43:08,210 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:43:10,978 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:45:34,135 [WARNING] SmartFurniture: Dashboard unavailable: name 'operation' is not defined
+2026-06-07 19:45:34,136 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:45:49,246 [WARNING] SmartFurniture: Dashboard unavailable: name 'operation' is not defined
+2026-06-07 19:45:49,248 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:45:52,250 [WARNING] SmartFurniture: Dashboard unavailable: name 'operation' is not defined
+2026-06-07 19:45:52,251 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:45:55,760 [WARNING] SmartFurniture: Dashboard unavailable: name 'operation' is not defined
+2026-06-07 19:45:55,761 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:45:58,756 [WARNING] SmartFurniture: Dashboard unavailable: name 'operation' is not defined
+2026-06-07 19:45:58,757 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:46:03,453 [WARNING] SmartFurniture: Dashboard unavailable: name 'operation' is not defined
+2026-06-07 19:46:03,456 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:46:05,776 [WARNING] SmartFurniture: Dashboard unavailable: name 'operation' is not defined
+2026-06-07 19:46:05,777 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:50:17,686 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:50:24,119 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:50:26,725 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:50:28,944 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:50:31,648 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:50:35,796 [INFO] SmartFurniture: Build completed.
+2026-06-07 19:50:37,891 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:24:24,715 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:24:46,569 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:24:49,234 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:24:52,496 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:24:54,310 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:24:57,838 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:25:00,381 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:28:18,203 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:28:29,538 [INFO] SmartFurniture: Build completed.
+2026-06-07 20:28:47,088 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:19:10,169 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:19:58,896 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:20:04,784 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:20:04,785 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:20:09,801 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:20:09,803 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:20:16,030 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:20:16,033 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:20:19,572 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:20:19,578 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:23:34,775 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:23:45,097 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:23:48,764 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:23:48,765 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:23:51,847 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:23:51,847 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:23:54,396 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:23:54,397 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:23:58,358 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:23:58,358 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:24:00,831 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:24:00,831 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:27:21,373 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:27:25,699 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:27:29,306 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:27:29,307 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:27:32,265 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:27:32,266 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:27:34,769 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:27:34,769 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:27:39,393 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:27:39,393 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:27:41,812 [WARNING] SmartFurniture: Dashboard unavailable: 'DrawerMetadata' object has no attribute 'get'
+2026-06-08 10:27:41,812 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:38:00,432 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:38:08,193 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:38:11,580 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:38:15,148 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:38:17,899 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:38:24,114 [INFO] SmartFurniture: Build completed.
+2026-06-08 10:38:26,592 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:18:52,195 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:19:15,207 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:19:18,673 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:19:22,335 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:19:26,012 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:23:32,198 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:24:01,675 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:24:06,968 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:24:10,050 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:24:12,672 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:34:29,491 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:34:35,082 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:34:39,621 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:34:43,860 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:34:46,648 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:46:09,297 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:46:27,478 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:51:41,414 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:51:46,180 [INFO] SmartFurniture: Build completed.
+2026-06-08 11:52:12,095 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:17:00,335 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:17:04,605 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:17:08,488 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:17:12,087 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:17:58,040 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:18:14,159 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:18:17,754 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:18:22,561 [INFO] SmartFurniture: Build completed.
+2026-06-08 13:18:23,377 [INFO] SmartFurniture: Build completed.

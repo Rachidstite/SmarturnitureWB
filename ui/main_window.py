@@ -4,6 +4,9 @@ from shared.issues import ValidationState; from core.logging_config import logge
 from engine.cabinet import Cabinet; from engine.cabinet_builder import CabinetBuilder
 from services.validation_service import ValidationService; from ui.issue_presenter import IssuePresenter
 from ui.manufacturing_dashboard_widget import ManufacturingDashboardWidget
+from ui.manufacturing_intelligence_details_widget import (
+    ManufacturingIntelligenceDetailsWidget,
+)
 from services.manufacturing_dashboard_service import (
     ManufacturingDashboardService,
 )
@@ -27,6 +30,7 @@ class UIManager(QtWidgets.QMainWindow):
         layout.addWidget(self.chk_cnc); layout.addWidget(self.chk_hw)
         self.issue_presenter = IssuePresenter(); layout.addWidget(self.issue_presenter)
         self.dashboard_widget = ManufacturingDashboardWidget(); layout.addWidget(self.dashboard_widget)
+        self.details_widget = ManufacturingIntelligenceDetailsWidget(); layout.addWidget(self.details_widget)
         btn_build = QtWidgets.QPushButton("🚀 FORCE GENERATE 3D MODEL"); btn_build.clicked.connect(self.trigger_build); layout.addWidget(btn_build)
         btn_export = QtWidgets.QPushButton("📋 EXPORT CUTLIST (CSV)"); btn_export.clicked.connect(self.export_cutlist); layout.addWidget(btn_export)
 
@@ -104,12 +108,22 @@ class UIManager(QtWidgets.QMainWindow):
             self.builder.build(cabinet)
             try:
                 if hasattr(self.builder, 'scene_graph'):
-                    vm = ManufacturingDashboardService.build(
-                        self.builder.scene_graph
+                    dashboard = (
+                        ManufacturingDashboardService.build(
+                            self.builder.scene_graph
+                        )
                     )
-                    self.dashboard_presenter.present(vm)
+
+                    self.dashboard_presenter.present(
+                        dashboard.viewmodel
+                    )
+
                     self.dashboard_widget.update_state(
                         self.dashboard_presenter.state
+                    )
+
+                    self.details_widget.update_report(
+                        dashboard.report
                     )
             except Exception as dashboard_error:
                 logger.warning(

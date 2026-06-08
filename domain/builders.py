@@ -20,6 +20,7 @@ class SceneNode:
     transform: Transform3D = field(default_factory=Transform3D)
     category: NodeCategory = NodeCategory.PHYSICAL
     machining_ops: list = field(default_factory=list)
+    metadata: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -33,6 +34,7 @@ class SceneNode:
             "grain_direction": self.grain_direction,
             "transform": asdict(self.transform),
             "category": self.category.value if hasattr(self.category, 'value') else self.category,
+            "metadata": self.metadata,
             "machining_ops": [op.to_dict() for op in getattr(self, "machining_ops", [])]
         }
 
@@ -202,11 +204,13 @@ class WardrobeBuilder:
         for i in range(count):
             shelf_key = f"{self.uid}_SH_{section_id}_{i+1}"
             shelf = SceneNode(
-                Identity(shelf_key), NodeRole.SHELF, 
-                sec_w - 1, self.d - 20, self.t, self.mat, 
+                Identity(shelf_key), NodeRole.SHELF,
+                sec_w - 1, self.d - 20, self.t, self.mat,
                 {"FRONT": "ABS_1MM"}, "HORIZONTAL",
                 transform=Transform3D(x=self.t + start_x, y=0, z=self.t + current_z)
             )
+
+            shelf.metadata["span"] = sec_w
             self.graph.add_node(shelf)
             current_z += self.t + vertical_gap
             self.joinery.add_connection(self.shelf_anchor.identity.key, shelf_key, JoineryType.SHELF_PIN_5MM.value, "Virtual Anchor support")

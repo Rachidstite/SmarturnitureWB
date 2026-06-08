@@ -7,6 +7,7 @@ class ManufacturingDashboardState:
     grade: str
     warning_count: int
     recommendation_count: int
+    recommendations: list
     cost_impact_count: int
     can_export: bool
 
@@ -20,6 +21,7 @@ class ManufacturingDashboardState:
             grade=viewmodel.grade,
             warning_count=viewmodel.warning_count,
             recommendation_count=viewmodel.recommendation_count,
+            recommendations=viewmodel.recommendations,
             cost_impact_count=viewmodel.cost_impact_count,
             can_export=viewmodel.can_export,
         )

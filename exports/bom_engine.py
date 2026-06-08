@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from manufacturing.panel_spec import PanelSpec
 from manufacturing.extractor import ManufacturingExtractor
-from scene_graph.scene_graph import SceneGraph
 from manufacturing.edge_spec import EdgeSpec
 
 @dataclass
@@ -37,7 +36,7 @@ class BOMReport:
 
 class BOMEngine:
     @staticmethod
-    def generate(scene_graph: SceneGraph) -> BOMReport:
+    def generate(scene_graph) -> BOMReport:
         specs = ManufacturingExtractor.extract(scene_graph)
         report = BOMReport()
 

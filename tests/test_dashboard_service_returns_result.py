@@ -48,8 +48,13 @@ class TestDashboardServiceReturnsResult(
         )
 
         self.assertIs(
-            result,
+            result.viewmodel,
             expected_vm,
+        )
+
+        self.assertIs(
+            result.report,
+            report,
         )
 
 

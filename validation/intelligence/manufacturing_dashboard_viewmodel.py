@@ -10,7 +10,11 @@ class ManufacturingDashboardViewModel:
 
     warning_count: int
 
+    structural_warning_count: int
+
     recommendation_count: int
+
+    recommendations: list
 
     cost_impact_count: int
 
@@ -28,9 +32,20 @@ class ManufacturingDashboardViewModel:
             warning_count=len(
                 report.warnings
             ),
+
+            structural_warning_count=len(
+                report.structural_warnings
+            ),
+
             recommendation_count=len(
                 report.recommendations
             ),
+
+            recommendations=[
+                r.message
+                for r in report.recommendations
+            ],
+
             cost_impact_count=len(
                 report.cost_impacts
             ),

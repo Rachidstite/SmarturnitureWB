@@ -18,6 +18,14 @@ from validation.intelligence.manufacturing_intelligence_report import (
     ManufacturingIntelligenceReport,
 )
 
+from validation.intelligence.structural_warning_classifier import (
+    StructuralWarningClassifier,
+)
+
+from validation.intelligence.result_aggregator import (
+    ResultAggregator,
+)
+
 
 class ManufacturingIntelligenceReportBuilder:
 
@@ -30,13 +38,29 @@ class ManufacturingIntelligenceReportBuilder:
             ManufacturingRuleEngine()
         )
 
-        results = (
+        results = ResultAggregator.aggregate(
             rule_engine.validate(
                 panel_specs
             )
         )
 
+        print("\n================ RULE FAILURES ================")
+
+        for r in results:
+            if not r.passed:
+                print(
+                    r.code,
+                    "|",
+                    r.message
+                )
+
+        print("==============================================\n")
+
         recommendations = (
+            rule_engine.recommendations(
+                results
+            )
+            +
             RecommendationEngine()
             .recommend(panel_specs)
         )
@@ -52,6 +76,12 @@ class ManufacturingIntelligenceReportBuilder:
                 ManufacturingIntelligenceReport(
                     errors=rule_engine.errors(results),
                     warnings=rule_engine.warnings(results),
+
+                    structural_warnings=
+                    StructuralWarningClassifier.classify(
+                        results
+                    ),
+
                     recommendations=recommendations,
                     optimizations=rule_engine.optimizations(results),
                     cost_impacts=cost_impacts,
@@ -66,6 +96,12 @@ class ManufacturingIntelligenceReportBuilder:
         return ManufacturingIntelligenceReport(
             errors=rule_engine.errors(results),
             warnings=rule_engine.warnings(results),
+
+            structural_warnings=
+            StructuralWarningClassifier.classify(
+                results
+            ),
+
             recommendations=recommendations,
             optimizations=rule_engine.optimizations(results),
             cost_impacts=cost_impacts,

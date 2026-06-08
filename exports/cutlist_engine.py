@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import List
 from manufacturing.panel_spec import PanelSpec
-from scene_graph.scene_graph import SceneGraph
 from manufacturing.extractor import ManufacturingExtractor
 
 @dataclass
@@ -18,7 +17,7 @@ class CutListItem:
 
 class CutListEngine:
     @staticmethod
-    def extract(scene_graph: SceneGraph) -> List[CutListItem]:
+    def extract(scene_graph) -> List[CutListItem]:
         """يستخرج قائمة القطع من PanelSpecs (طبقة تصنيعية خالصة)."""
         specs = ManufacturingExtractor.extract(scene_graph)
         items = []

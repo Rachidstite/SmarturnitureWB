@@ -12,6 +12,7 @@ class PanelSpec:
     height: float
     thickness: float
     material: str
+    span: float = 0.0
     grain_direction: str = "NONE"
     edge_spec: EdgeSpec = field(default_factory=EdgeSpec)  # ✅ نظام الحواف الجديد
     quantity: int = 1

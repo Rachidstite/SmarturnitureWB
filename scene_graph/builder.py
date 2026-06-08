@@ -49,7 +49,10 @@ class SceneGraphBuilder:
             for j, shelf in enumerate(r.shelves):
                 self._add(SceneNode(PanelIdentity.make_shelf(self.cabinet_id, i, j),
                                     shelf.width, shelf.depth, T, shelf.x, shelf.y, shelf.z,
-                                    group="Shelves", role=NodeRole.SHELF, thickness=T))
+                                    group="Shelves",
+                                    role=NodeRole.SHELF,
+                                    metadata={"span": r.inner_width},
+                                    thickness=T))
             for j, drawer in enumerate(r.drawers):
                 # Typed Metadata
                 meta = DrawerMetadata(
@@ -65,6 +68,8 @@ class SceneGraphBuilder:
             for j, door in enumerate(r.doors):
                 meta = DoorMetadata(
                     door_type=door.door_type.name,
+                    door_width=door.width,
+                    door_height=door.height,
                     layer=door.layer,
                     cnc_enabled=self.cabinet.params.cnc_mode
                 )

@@ -17,12 +17,12 @@ class ManufacturingScoreEngine:
         ) * 30
 
         score -= len(
-            report.warnings
-        ) * 10
+            report.structural_warnings
+        ) * 3
 
         score -= len(
             report.recommendations
-        ) * 2
+        ) * 1
 
         score = max(
             0,

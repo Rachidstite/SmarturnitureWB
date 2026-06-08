@@ -3,6 +3,8 @@ from dataclasses import dataclass
 @dataclass
 class DoorMetadata:
     door_type: str
+    door_width: float
+    door_height: float
     layer: int = 0
     cnc_enabled: bool = False
 

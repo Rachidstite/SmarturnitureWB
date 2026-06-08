@@ -67,7 +67,7 @@ class TestDashboardPipelineIntegration(
         )
 
         state = presenter.present(
-            result
+            result.viewmodel
         )
 
         self.assertEqual(

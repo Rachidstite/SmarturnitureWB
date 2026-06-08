@@ -20,3 +20,4 @@ class SceneNode:
     edge_spec: EdgeSpec = None  # ✅ نظام الحواف           # تنظيم المجموعات
     role: NodeRole = NodeRole.SHELF  # افتراضي                   # DRAWER_FACE, DOOR, SHELF, ...
     metadata: Dict[str, Any] = field(default_factory=dict)  # بيانات تصنيع إضافية
+    machining_ops: List[Any] = field(default_factory=list)

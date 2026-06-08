@@ -17,13 +17,18 @@ class CabinetConstraintValidator:
                     severity=sev, node_id=uid, current_value=sec.width, required_value=100.0
                 ))
 
+    
     def _check_shelf_deflection(self):
-        for node in getattr(self.project.graph, 'physical_nodes', []):
-            if getattr(node, 'role', '') == "SHELF" and node.width > 900:
-                self.report.add(ConstraintViolation(
-                    code="EXCESSIVE_SHELF_SPAN", message="Shelf span exceeds limits.",
-                    severity=Severity.WARNING, node_id=node.identity.key, current_value=node.width, required_value=900.0
-                ))
+        """
+        Legacy rule removed.
+
+        Shelf span validation now lives in:
+        - ShelfSagRule
+        - DividerSpacingRule
+
+        using PanelSpec.span.
+        """
+        return
 
     def _check_collisions(self):
         collisions = self.spatial_engine.find_collisions()
@@ -80,16 +85,15 @@ class CabinetConstraintValidator:
                         ))
 
     def _check_racking_stability(self):
-        """Rule 6: Racking Validation - يمنع ترخيم الخزانة في غياب الضهر"""
-        has_back = any(getattr(node, 'role', '') == "BACK_PANEL" or (hasattr(node.role, 'value') and node.role.value == "BACK_PANEL") for node in getattr(self.project.graph, 'physical_nodes', []))
-        if not has_back:
-            nodes = getattr(self.project.graph, 'physical_nodes', [])
-            nid = nodes[0].identity.key if nodes else "PROJECT"
-            self.report.add(ConstraintViolation(
-                code="MISSING_BACK_PANEL", 
-                message="Cabinet has no back panel. Structure may be unstable (Racking risk).",
-                severity=Severity.WARNING, node_id=nid
-            ))
+        """
+        Legacy rule removed.
+
+        Back panel validation now lives in:
+        - BackPanelRequiredRule
+        """
+        return
+
+
 
     def validate_all(self) -> ValidationReport:
         self._check_section_widths()
