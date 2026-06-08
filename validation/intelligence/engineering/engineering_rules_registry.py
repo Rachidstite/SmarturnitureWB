@@ -100,6 +100,10 @@ class EngineeringRulesRegistry:
             ConnectorRecommendationRule,
         )
 
+        from validation.intelligence.engineering.rules.anchoring_required_rule import (
+            AnchoringRequiredRule,
+        )
+
         return [
             ShelfDeflectionRule(),
             DividerBucklingRule(),
@@ -125,4 +129,5 @@ class EngineeringRulesRegistry:
             DowelDistributionRule(),
             FastenerCapacityRule(),
             ConnectorRecommendationRule(),
+            AnchoringRequiredRule(),
         ]

@@ -288,3 +288,21 @@
 2026-06-08 13:18:17,754 [INFO] SmartFurniture: Build completed.
 2026-06-08 13:18:22,561 [INFO] SmartFurniture: Build completed.
 2026-06-08 13:18:23,377 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:39:52,503 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:39:52,552 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:40:20,883 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:40:20,885 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:40:28,493 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:40:28,501 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:40:32,623 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:40:32,627 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:40:38,434 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:40:38,440 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:40:42,392 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:40:42,394 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:40:45,404 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:40:45,413 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:40:49,077 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:40:49,078 [INFO] SmartFurniture: Build completed.
+2026-06-08 18:41:34,020 [WARNING] SmartFurniture: Dashboard unavailable: 'UnifiedDashboardViewModel' object has no attribute 'cost_impact_count'
+2026-06-08 18:41:34,021 [INFO] SmartFurniture: Build completed.

@@ -22,6 +22,10 @@ from validation.intelligence.engineering.engineering_score_engine import (
     EngineeringScoreEngine,
 )
 
+from validation.intelligence.engineering.recommendations.engineering_recommendation_engine import (
+    EngineeringRecommendationEngine,
+)
+
 
 class EngineeringIntelligenceReportBuilder:
 
@@ -60,6 +64,24 @@ class EngineeringIntelligenceReportBuilder:
         report = (
             EngineeringReportBuilder()
             .build(results)
+        )
+
+        warning_codes = [
+            getattr(r, "code", None)
+            for r in report.warnings
+        ]
+
+        error_codes = [
+            getattr(r, "code", None)
+            for r in report.errors
+        ]
+
+        report.recommendations = (
+            EngineeringRecommendationEngine()
+            .generate(
+                warning_codes=
+                warning_codes + error_codes
+            )
         )
 
         report.score = (
