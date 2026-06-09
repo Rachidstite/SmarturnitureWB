@@ -2,6 +2,10 @@ from validation.intelligence.unused_operation_recommendation import (
     UnusedOperationRecommendation,
 )
 
+from validation.intelligence.hardware_recommendation_rule import (
+    HardwareRecommendationRule,
+)
+
 
 class RecommendationRegistry:
 
@@ -10,4 +14,5 @@ class RecommendationRegistry:
 
         return [
             UnusedOperationRecommendation(),
+            HardwareRecommendationRule(),
         ]
