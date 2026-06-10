@@ -14,6 +14,8 @@ class UnifiedDashboardViewModel:
 
     recommendation_count: int = 0
 
+    cost_impact_count: int = 0
+
     recommendations: list = field(
         default_factory=list
     )
@@ -49,6 +51,14 @@ class UnifiedDashboardViewModel:
                 getattr(
                     report,
                     "recommendations",
+                    [],
+                )
+            ),
+
+            cost_impact_count=len(
+                getattr(
+                    report,
+                    "cost_impacts",
                     [],
                 )
             ),
