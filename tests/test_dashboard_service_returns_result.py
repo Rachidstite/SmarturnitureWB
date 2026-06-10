@@ -5,6 +5,8 @@ from services.manufacturing_dashboard_service import (
     ManufacturingDashboardService,
 )
 
+from scene_graph.scene_graph import SceneGraph
+
 
 class TestDashboardServiceReturnsResult(
     unittest.TestCase
@@ -41,9 +43,11 @@ class TestDashboardServiceReturnsResult(
             expected_vm
         )
 
+        scene_graph = SceneGraph()
+
         result = (
             ManufacturingDashboardService.build(
-                "scene_graph"
+                scene_graph
             )
         )
 

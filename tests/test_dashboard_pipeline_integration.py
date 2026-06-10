@@ -13,6 +13,8 @@ from validation.intelligence.manufacturing_dashboard_viewmodel import (
     ManufacturingDashboardViewModel,
 )
 
+from scene_graph.scene_graph import SceneGraph
+
 
 class TestDashboardPipelineIntegration(
     unittest.TestCase
@@ -56,9 +58,11 @@ class TestDashboardPipelineIntegration(
             vm
         )
 
+        scene_graph = SceneGraph()
+
         result = (
             ManufacturingDashboardService.build(
-                "scene_graph"
+                scene_graph
             )
         )
 

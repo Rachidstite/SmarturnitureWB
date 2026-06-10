@@ -5,6 +5,8 @@ from services.manufacturing_dashboard_service import (
     ManufacturingDashboardService,
 )
 
+from scene_graph.scene_graph import SceneGraph
+
 
 class TestManufacturingDashboardService(
     unittest.TestCase
@@ -35,8 +37,10 @@ class TestManufacturingDashboardService(
             report
         )
 
+        scene_graph = SceneGraph()
+
         ManufacturingDashboardService.build(
-            "scene_graph"
+            scene_graph
         )
 
         extractor_cls.extract.assert_called_once()
