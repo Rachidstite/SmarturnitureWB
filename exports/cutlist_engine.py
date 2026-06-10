@@ -14,6 +14,7 @@ class CutListItem:
     role: str
     edge_banding: str = ""
     quantity: int = 1
+    grain_direction: str = "NONE"
 
 class CutListEngine:
     @staticmethod
@@ -30,7 +31,8 @@ class CutListEngine:
                 material=spec.material,
                 group=spec.group,
                 role=spec.role.name if hasattr(spec.role, 'name') else str(spec.role),
-                edge_banding=spec.edge_banding,
-                quantity=spec.quantity
+                edge_banding=getattr(spec, "edge_banding", ""),
+                quantity=getattr(spec, "quantity", 1),
+                grain_direction=getattr(spec, "grain_direction", "NONE")
             ))
         return items
