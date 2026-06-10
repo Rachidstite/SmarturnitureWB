@@ -10,6 +10,10 @@ from validation.intelligence.engineering.recommendations.recommendation_priority
     RecommendationPriority,
 )
 
+from validation.intelligence.engineering.roi.engineering_roi_engine import (
+    EngineeringROIEngine,
+)
+
 
 class EngineeringRecommendationEngine:
 
@@ -27,6 +31,11 @@ class EngineeringRecommendationEngine:
             if not data:
                 continue
 
+            roi = (
+                EngineeringROIEngine()
+                .evaluate(code)
+            )
+
             recommendations.append(
                 EngineeringRecommendation(
                     title=data["title"],
@@ -35,6 +44,8 @@ class EngineeringRecommendationEngine:
                     priority=RecommendationPriority.for_code(
                         code
                     ),
+                    roi_rating=roi.rating,
+                    roi_score=roi.score,
                 )
             )
 

@@ -14,8 +14,15 @@ class RecommendationSorter:
 
         return sorted(
             recommendations,
-            key=lambda r: self.PRIORITY_ORDER.get(
-                r.priority,
-                999,
+            key=lambda r: (
+                self.PRIORITY_ORDER.get(
+                    r.priority,
+                    999,
+                ),
+                -getattr(
+                    r,
+                    "roi_score",
+                    0,
+                ),
             ),
         )
