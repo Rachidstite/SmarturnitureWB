@@ -30,6 +30,26 @@ class TestRuntimeProjectAdapter(
             0,
         )
 
+    def test_creates_joinery_graph(self):
+
+        graph = SceneGraph()
+
+        project = (
+            RuntimeProjectAdapter
+            .from_scene_graph(graph)
+        )
+
+        self.assertIsNotNone(
+            project.joinery,
+        )
+
+        self.assertTrue(
+            hasattr(
+                project.joinery,
+                "edges",
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
