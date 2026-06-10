@@ -37,3 +37,6 @@ __pycache__/
 # Test outputs
 full_test_run.log
 
+
+# Archived legacy code
+_archived_legacy/
