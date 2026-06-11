@@ -17,6 +17,7 @@ class MaterialCostCalculator:
         pricing_catalog = pricing_catalog or {}
 
         total = 0
+        warnings = []
 
         for item in cutlist_items:
             thickness = getattr(
@@ -45,8 +46,13 @@ class MaterialCostCalculator:
 
             price_data = pricing_catalog.get(
                 stock_key,
-                {},
             )
+
+            if price_data is None:
+                warnings.append(
+                    f"Missing material price for {stock_key}"
+                )
+                continue
 
             price_per_m2 = price_data.get(
                 "price_per_m2",
@@ -74,4 +80,5 @@ class MaterialCostCalculator:
         return CostEstimate(
             material_cost=total,
             total_cost=total,
+            warnings=warnings,
         )

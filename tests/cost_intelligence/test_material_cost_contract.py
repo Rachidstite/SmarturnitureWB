@@ -134,5 +134,38 @@ class TestMaterialCostContract(unittest.TestCase):
             CostEstimate,
         )
 
+
+    def test_material_cost_calculator_warns_when_price_is_missing(self):
+
+        from exports.cutlist_engine import CutListItem
+        from cost_intelligence.material_cost_calculator import (
+            MaterialCostCalculator,
+        )
+
+        item = CutListItem(
+            identity="P1",
+            width=1000,
+            height=500,
+            thickness=18,
+            material="UNKNOWN",
+            group="TEST",
+            role="SHELF",
+            quantity=1,
+        )
+
+        result = MaterialCostCalculator().estimate(
+            cutlist_items=[item],
+            pricing_catalog={},
+        )
+
+        self.assertEqual(
+            result.material_cost,
+            0,
+        )
+
+        self.assertTrue(
+            result.warnings,
+        )
+
 if __name__ == "__main__":
     unittest.main()
