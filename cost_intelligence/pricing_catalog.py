@@ -19,3 +19,10 @@ class PricingCatalog:
         return self.prices.get(
             stock_key,
         )
+
+    def set_price(
+        self,
+        stock_key,
+        data,
+    ):
+        self.prices[stock_key] = data
