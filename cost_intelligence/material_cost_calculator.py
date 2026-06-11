@@ -1,3 +1,6 @@
+from cost_intelligence.cost_estimate import CostEstimate
+
+
 class MaterialCostCalculator:
     """
     Minimal Cost Intelligence V1 component.
@@ -68,4 +71,7 @@ class MaterialCostCalculator:
                 * quantity
             )
 
-        return total
+        return CostEstimate(
+            material_cost=total,
+            total_cost=total,
+        )

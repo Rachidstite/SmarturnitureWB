@@ -63,7 +63,12 @@ class TestMaterialCostContract(unittest.TestCase):
         )
 
         self.assertEqual(
-            result,
+            result.material_cost,
+            50,
+        )
+
+        self.assertEqual(
+            result.total_cost,
             50,
         )
 
@@ -99,8 +104,34 @@ class TestMaterialCostContract(unittest.TestCase):
         )
 
         self.assertEqual(
-            result,
+            result.material_cost,
             150,
+        )
+
+        self.assertEqual(
+            result.total_cost,
+            150,
+        )
+
+
+    def test_material_cost_calculator_returns_cost_estimate(self):
+
+        from cost_intelligence.material_cost_calculator import (
+            MaterialCostCalculator,
+        )
+
+        from cost_intelligence.cost_estimate import (
+            CostEstimate,
+        )
+
+        result = MaterialCostCalculator().estimate(
+            [],
+            {},
+        )
+
+        self.assertIsInstance(
+            result,
+            CostEstimate,
         )
 
 if __name__ == "__main__":
