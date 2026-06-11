@@ -17,12 +17,18 @@ class SheetCostCalculator:
         pricing_catalog = pricing_catalog or {}
 
         total = 0
+        warnings = []
 
         for stock_key, sheets in nesting_results.items():
             price_data = pricing_catalog.get(
                 stock_key,
-                {},
             )
+
+            if price_data is None:
+                warnings.append(
+                    f"Missing sheet price for {stock_key}"
+                )
+                continue
 
             price_per_sheet = price_data.get(
                 "price_per_sheet",
@@ -37,4 +43,5 @@ class SheetCostCalculator:
         return CostEstimate(
             sheet_cost=total,
             total_cost=total,
+            warnings=warnings,
         )

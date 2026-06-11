@@ -67,5 +67,32 @@ class TestSheetCostContractV1(unittest.TestCase):
             560,
         )
 
+
+    def test_sheet_cost_calculator_warns_when_sheet_price_is_missing(self):
+
+        from cost_intelligence.sheet_cost_calculator import (
+            SheetCostCalculator,
+        )
+
+        nesting_results = {
+            "UNKNOWN_18MM": [
+                object(),
+            ]
+        }
+
+        result = SheetCostCalculator().estimate(
+            nesting_results=nesting_results,
+            pricing_catalog={},
+        )
+
+        self.assertEqual(
+            result.sheet_cost,
+            0,
+        )
+
+        self.assertTrue(
+            result.warnings,
+        )
+
 if __name__ == "__main__":
     unittest.main()
