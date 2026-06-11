@@ -31,9 +31,7 @@ class CostSummaryCalculator:
             waste_cost=waste_cost,
             hardware_cost=hardware_cost,
             total_cost=(
-                material_cost
-                + sheet_cost
-                + waste_cost
+                sheet_cost
                 + hardware_cost
             ),
             warnings=(

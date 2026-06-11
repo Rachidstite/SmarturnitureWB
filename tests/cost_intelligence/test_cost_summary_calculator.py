@@ -16,7 +16,7 @@ class TestCostSummaryCalculator(unittest.TestCase):
 
 
 
-    def test_cost_summary_calculator_combines_material_and_sheet_costs(self):
+    def test_cost_summary_calculator_uses_sheet_cost_as_authoritative(self):
 
         from cost_intelligence.cost_estimate import CostEstimate
         from cost_intelligence.cost_summary_calculator import (
@@ -50,11 +50,11 @@ class TestCostSummaryCalculator(unittest.TestCase):
 
         self.assertEqual(
             result.total_cost,
-            610,
+            560,
         )
 
 
-    def test_cost_summary_calculator_combines_waste_cost(self):
+    def test_cost_summary_calculator_keeps_waste_cost_informational(self):
 
         from cost_intelligence.cost_estimate import CostEstimate
         from cost_intelligence.cost_summary_calculator import (
@@ -89,7 +89,7 @@ class TestCostSummaryCalculator(unittest.TestCase):
 
         self.assertEqual(
             result.total_cost,
-            694,
+            560,
         )
 
 if __name__ == "__main__":

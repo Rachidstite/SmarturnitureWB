@@ -77,7 +77,17 @@ class TestProjectCostCalculator(unittest.TestCase):
 
         self.assertEqual(
             report.total_cost,
-            742,
+            608,
+        )
+
+        self.assertEqual(
+            report.material_cost,
+            50,
+        )
+
+        self.assertEqual(
+            report.waste_cost,
+            84,
         )
 
 

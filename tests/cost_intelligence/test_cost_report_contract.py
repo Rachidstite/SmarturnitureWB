@@ -28,7 +28,7 @@ class TestCostReportContract(unittest.TestCase):
             sheet_cost=560,
             waste_cost=84,
             hardware_cost=48,
-            total_cost=742,
+            total_cost=608,
             currency="MAD",
         )
 
@@ -38,7 +38,7 @@ class TestCostReportContract(unittest.TestCase):
 
         self.assertEqual(
             report.total_cost,
-            742,
+            608,
         )
 
         self.assertEqual(
