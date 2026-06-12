@@ -1,3 +1,4 @@
+import inspect
 from typing import Dict, List
 from exports.strategies import PlacementStrategy, GuillotineStripStrategy, SheetResult
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ class IndustrialNestingEngine:
 
     def process(self, cutlist_items) -> Dict[str, List[SheetResult]]:
         materials_baskets = {}
+        materials_context = {}
         
         for item in cutlist_items:
             thickness = item.thickness
@@ -37,6 +39,10 @@ class IndustrialNestingEngine:
                 )
             if stock_key not in materials_baskets:
                 materials_baskets[stock_key] = []
+                materials_context[stock_key] = (
+                    material,
+                    thickness,
+                )
                 
             role = str(getattr(item, 'role', 'PART')).split('.')[-1]
             part_width = getattr(item, "cut_width", None)
@@ -60,6 +66,31 @@ class IndustrialNestingEngine:
         results = {}
         for mat, parts in materials_baskets.items():
             # حقن الاستراتيجية لتقوم بعملية التعشيق
-            results[mat] = self.strategy.pack(parts, self.sheet_width, self.sheet_height, self.kerf)
+            material, thickness = materials_context[mat]
+            pack_signature = inspect.signature(self.strategy.pack)
+            accepts_stock_metadata = any(
+                param.kind == inspect.Parameter.VAR_KEYWORD
+                for param in pack_signature.parameters.values()
+            ) or (
+                "material" in pack_signature.parameters
+                and "thickness" in pack_signature.parameters
+            )
+
+            if accepts_stock_metadata:
+                results[mat] = self.strategy.pack(
+                    parts,
+                    self.sheet_width,
+                    self.sheet_height,
+                    self.kerf,
+                    material=material,
+                    thickness=thickness,
+                )
+            else:
+                results[mat] = self.strategy.pack(
+                    parts,
+                    self.sheet_width,
+                    self.sheet_height,
+                    self.kerf,
+                )
             
         return results

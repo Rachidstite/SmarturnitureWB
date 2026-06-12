@@ -26,6 +26,8 @@ class SheetResult:
     used_area: float = 0.0
     placed_parts: List[PlacedPart] = field(default_factory=list)
     strips: List[StripNode] = field(default_factory=list)
+    material: str = ""
+    thickness: float = 0.0
     sheet_width: float = 0.0
     sheet_height: float = 0.0
     kerf: float = 0.0
@@ -40,11 +42,13 @@ class GuillotineStripStrategy(PlacementStrategy):
     def __init__(self, trim_cut: float = 10.0):
         self.trim = trim_cut 
 
-    def pack(self, parts: list, sheet_w: float, sheet_h: float, kerf: float) -> List[SheetResult]:
+    def pack(self, parts: list, sheet_w: float, sheet_h: float, kerf: float, material: str = "", thickness: float = 0.0) -> List[SheetResult]:
         parts.sort(key=lambda p: max(p.width, p.height), reverse=True)
         sheets = []
         current_sheet = SheetResult(
             sheet_id=1,
+            material=material,
+            thickness=thickness,
             sheet_width=sheet_w,
             sheet_height=sheet_h,
             kerf=kerf,
@@ -100,6 +104,8 @@ class GuillotineStripStrategy(PlacementStrategy):
                     sheets.append(current_sheet)
                     current_sheet = SheetResult(
                         sheet_id=len(sheets) + 1,
+                        material=material,
+                        thickness=thickness,
                         sheet_width=sheet_w,
                         sheet_height=sheet_h,
                         kerf=kerf,

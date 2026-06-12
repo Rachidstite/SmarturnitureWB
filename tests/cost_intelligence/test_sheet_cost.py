@@ -31,8 +31,9 @@ class TestSheetCostCharacterization(unittest.TestCase):
         self.assertIn("sheet_height", field_names)
         self.assertIn("kerf", field_names)
         self.assertIn("trim", field_names)
+        self.assertIn("material", field_names)
+        self.assertIn("thickness", field_names)
         self.assertNotIn("sheet_cost", field_names)
-        self.assertNotIn("material", field_names)
 
 
 if __name__ == "__main__":

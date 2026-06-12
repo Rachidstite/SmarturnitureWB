@@ -1,5 +1,7 @@
 import unittest
 
+from exports.cutlist_engine import CutListItem
+from exports.nesting_engine import IndustrialNestingEngine
 from exports.nesting_engine import NestingPart
 from exports.strategies import GuillotineStripStrategy, SheetResult
 
@@ -31,6 +33,14 @@ class TestSheetGeometryMetadata(unittest.TestCase):
         self.assertEqual(
             sheet.remaining_regions,
             [],
+        )
+        self.assertEqual(
+            sheet.material,
+            "",
+        )
+        self.assertEqual(
+            sheet.thickness,
+            0.0,
         )
 
     def test_remaining_regions_default_is_not_shared(self):
@@ -90,6 +100,34 @@ class TestSheetGeometryMetadata(unittest.TestCase):
         self.assertTrue(
             sheet.remaining_regions,
         )
+
+    def test_nesting_engine_populates_stock_context_on_sheet_results(self):
+
+        engine = IndustrialNestingEngine(
+            GuillotineStripStrategy(trim_cut=10),
+        )
+
+        result = engine.process(
+            [
+                CutListItem(
+                    identity="SHELF_1",
+                    width=100,
+                    height=50,
+                    thickness=18,
+                    material="MDF",
+                    group="Shelves",
+                    role="SHELF",
+                ),
+            ]
+        )
+
+        sheets = result["MDF_18MM"]
+
+        self.assertTrue(sheets)
+        self.assertEqual(sheets[0].material, "MDF")
+        self.assertEqual(sheets[0].thickness, 18)
+        self.assertEqual(sheets[0].sheet_width, 2440.0)
+        self.assertEqual(sheets[0].sheet_height, 1220.0)
 
 
 if __name__ == "__main__":
