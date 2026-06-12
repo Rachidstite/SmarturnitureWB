@@ -54,6 +54,42 @@ class TestManufacturingCostCalculator(unittest.TestCase):
         self.assertEqual(report.complexity_cost, 0.0)
         self.assertEqual(report.total_manufacturing_cost, 0.0)
 
+    def test_custom_rules_change_calculation(self):
+        from cost_intelligence.manufacturing_cost_calculator import (
+            ManufacturingCostCalculator,
+        )
+        from cost_intelligence.manufacturing_cost_context import (
+            ManufacturingCostContext,
+        )
+        from cost_intelligence.manufacturing_cost_rules import (
+            ManufacturingCostRules,
+        )
+
+        calculator = ManufacturingCostCalculator(
+            ManufacturingCostRules(
+                material_area_rate=200,
+                edge_meter_rate=10,
+                drilling_rate=2,
+                complexity_material_type_rate=50,
+                currency="MAD",
+            )
+        )
+        context = ManufacturingCostContext(
+            total_panel_area_m2=2,
+            total_edge_meters=3,
+            total_drilling_operations=4,
+            total_material_types=1,
+        )
+
+        report = calculator.calculate(context)
+
+        self.assertEqual(report.material_cost, 400)
+        self.assertEqual(report.edge_banding_cost, 30)
+        self.assertEqual(report.drilling_cost, 8)
+        self.assertEqual(report.complexity_cost, 50)
+        self.assertEqual(report.total_manufacturing_cost, 488)
+        self.assertEqual(report.currency, "MAD")
+
 
 if __name__ == "__main__":
     unittest.main()
