@@ -1,3 +1,4 @@
+import inspect
 from typing import Dict, List
 from exports.strategies import PlacementStrategy, GuillotineStripStrategy, SheetResult
 from dataclasses import dataclass
@@ -21,26 +22,75 @@ class IndustrialNestingEngine:
 
     def process(self, cutlist_items) -> Dict[str, List[SheetResult]]:
         materials_baskets = {}
+        materials_context = {}
         
         for item in cutlist_items:
-            mat = item.material
-            if mat not in materials_baskets:
-                materials_baskets[mat] = []
+            thickness = item.thickness
+            thickness_label = f"{thickness:g}MM"
+            material = str(item.material)
+
+            if material.upper().endswith(
+                f"_{thickness_label}".upper()
+            ):
+                stock_key = material
+            else:
+                stock_key = (
+                    f"{material}_{thickness_label}"
+                )
+            if stock_key not in materials_baskets:
+                materials_baskets[stock_key] = []
+                materials_context[stock_key] = (
+                    material,
+                    thickness,
+                )
                 
             role = str(getattr(item, 'role', 'PART')).split('.')[-1]
-            semantic_name = f"{role}_{int(item.cut_width)}x{int(item.cut_height)}"
-            can_rotate = (item.grain_direction in ["NONE", None, ""])
+            part_width = getattr(item, "cut_width", None)
+            if part_width is None:
+                part_width = item.width
+            part_height = getattr(item, "cut_height", None)
+            if part_height is None:
+                part_height = item.height
+            grain_direction = getattr(item, "grain_direction", "NONE")
+            semantic_name = f"{role}_{int(part_width)}x{int(part_height)}"
+            can_rotate = (grain_direction in ["NONE", None, ""])
             
-            materials_baskets[mat].append(NestingPart(
-                semantic_name=semantic_name,
-                width=item.cut_width,
-                height=item.cut_height,
-                can_rotate=can_rotate
-            ))
+            for _ in range(getattr(item, "quantity", 1)):
+                materials_baskets[stock_key].append(NestingPart(
+                    semantic_name=semantic_name,
+                    width=part_width,
+                    height=part_height,
+                    can_rotate=can_rotate
+                ))
             
         results = {}
         for mat, parts in materials_baskets.items():
             # حقن الاستراتيجية لتقوم بعملية التعشيق
-            results[mat] = self.strategy.pack(parts, self.sheet_width, self.sheet_height, self.kerf)
+            material, thickness = materials_context[mat]
+            pack_signature = inspect.signature(self.strategy.pack)
+            accepts_stock_metadata = any(
+                param.kind == inspect.Parameter.VAR_KEYWORD
+                for param in pack_signature.parameters.values()
+            ) or (
+                "material" in pack_signature.parameters
+                and "thickness" in pack_signature.parameters
+            )
+
+            if accepts_stock_metadata:
+                results[mat] = self.strategy.pack(
+                    parts,
+                    self.sheet_width,
+                    self.sheet_height,
+                    self.kerf,
+                    material=material,
+                    thickness=thickness,
+                )
+            else:
+                results[mat] = self.strategy.pack(
+                    parts,
+                    self.sheet_width,
+                    self.sheet_height,
+                    self.kerf,
+                )
             
         return results

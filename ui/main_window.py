@@ -24,6 +24,7 @@ class UIManager(QtWidgets.QMainWindow):
         btn_export = QtWidgets.QPushButton("📋 EXPORT CUTLIST (CSV)"); btn_export.clicked.connect(self.export_cutlist); layout.addWidget(btn_export)
         btn_mfg = QtWidgets.QPushButton("🏭 MANUFACTURING REPORT"); btn_mfg.clicked.connect(self.export_manufacturing_report); layout.addWidget(btn_mfg)
         btn_mfg_csv = QtWidgets.QPushButton("🏭 EXPORT MANUFACTURING CSV"); btn_mfg_csv.clicked.connect(self.export_manufacturing_csv); layout.addWidget(btn_mfg_csv)
+        btn_executive_csv = QtWidgets.QPushButton("📊 EXPORT EXECUTIVE CSV"); btn_executive_csv.clicked.connect(self.export_executive_csv); layout.addWidget(btn_executive_csv)
         btn_hw = QtWidgets.QPushButton("🔩 HARDWARE REPORT"); btn_hw.clicked.connect(self.export_hardware_report); layout.addWidget(btn_hw)
 
     def setup_tab_general(self, tabs):
@@ -199,6 +200,40 @@ class UIManager(QtWidgets.QMainWindow):
             self,
             "Manufacturing Exported",
             f"Manufacturing report saved to\n{path}"
+        )
+
+    def export_executive_csv(self):
+
+        if not self.builder.scene_graph:
+            return
+
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Executive Report",
+            "Executive_Report.csv",
+            "CSV (*.csv)"
+        )
+
+        if not path:
+            return
+
+        from exports.manufacturing_executive_export import (
+            ManufacturingExecutiveExport
+        )
+
+        report = ManufacturingExecutiveExport.generate(
+            self.builder.scene_graph
+        )
+
+        ManufacturingExecutiveExport.export_csv(
+            report,
+            path
+        )
+
+        QtWidgets.QMessageBox.information(
+            self,
+            "Executive Report Exported",
+            f"Executive report saved to\n{path}"
         )
 
 
