@@ -26,3 +26,20 @@ class PricingCatalog:
         data,
     ):
         self.prices[stock_key] = data
+
+    def has_price(
+        self,
+        stock_key,
+    ):
+        return stock_key in self.prices
+
+    def list_stock_keys(
+        self,
+    ):
+        return list(self.prices)
+
+    def remove_price(
+        self,
+        stock_key,
+    ):
+        del self.prices[stock_key]
