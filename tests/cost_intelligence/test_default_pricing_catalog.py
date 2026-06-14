@@ -17,6 +17,19 @@ class TestDefaultPricingCatalog(unittest.TestCase):
         "SLIDING_DOOR_HANDLE_METER": 30.0,
     }
 
+    edge_banding_prices_per_meter = {
+        "ABS_1MM": 5.0,
+        "PVC_0.4MM": 1.5,
+        "PVC_1MM": 5.0,
+        "PVC_2MM": 5.0,
+    }
+
+    machining_prices_per_operation = {
+        "MACHINING_DRILL": 1.5,
+        "MACHINING_ROUTE": 8.0,
+        "MACHINING_GROOVE": 5.0,
+    }
+
     default_catalog_path = (
         Path(__file__).resolve().parents[2]
         / "data"
@@ -102,6 +115,66 @@ class TestDefaultPricingCatalog(unittest.TestCase):
             with self.subTest(sku=sku):
                 self.assertEqual(
                     catalog.get(sku)["currency"],
+                    "MAD",
+                )
+
+    def test_default_catalog_contains_each_edge_banding_sku(self):
+
+        catalog = self._load_default_catalog()
+
+        for sku in self.edge_banding_prices_per_meter:
+            with self.subTest(sku=sku):
+                self.assertIsNotNone(catalog.get(sku))
+
+    def test_default_catalog_edge_banding_has_expected_price_per_meter(self):
+
+        catalog = self._load_default_catalog()
+
+        for sku, expected_price in self.edge_banding_prices_per_meter.items():
+            with self.subTest(sku=sku):
+                self.assertEqual(
+                    catalog.get(sku)["price_per_meter"],
+                    expected_price,
+                )
+
+    def test_default_catalog_edge_banding_currency_is_mad(self):
+
+        catalog = self._load_default_catalog()
+
+        for sku in self.edge_banding_prices_per_meter:
+            with self.subTest(sku=sku):
+                self.assertEqual(
+                    catalog.get(sku)["currency"],
+                    "MAD",
+                )
+
+    def test_default_catalog_contains_each_machining_operation_key(self):
+
+        catalog = self._load_default_catalog()
+
+        for key in self.machining_prices_per_operation:
+            with self.subTest(key=key):
+                self.assertIsNotNone(catalog.get(key))
+
+    def test_default_catalog_machining_has_expected_price_per_operation(self):
+
+        catalog = self._load_default_catalog()
+
+        for key, expected_price in self.machining_prices_per_operation.items():
+            with self.subTest(key=key):
+                self.assertEqual(
+                    catalog.get(key)["price_per_operation"],
+                    expected_price,
+                )
+
+    def test_default_catalog_machining_currency_is_mad(self):
+
+        catalog = self._load_default_catalog()
+
+        for key in self.machining_prices_per_operation:
+            with self.subTest(key=key):
+                self.assertEqual(
+                    catalog.get(key)["currency"],
                     "MAD",
                 )
 

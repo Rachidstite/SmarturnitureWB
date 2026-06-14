@@ -43,5 +43,33 @@
     "SLIDING_DOOR_HANDLE_METER": {
         "unit_price": 30.0,
         "currency": "MAD"
+    },
+    "ABS_1MM": {
+        "price_per_meter": 5.0,
+        "currency": "MAD"
+    },
+    "PVC_0.4MM": {
+        "price_per_meter": 1.5,
+        "currency": "MAD"
+    },
+    "PVC_1MM": {
+        "price_per_meter": 5.0,
+        "currency": "MAD"
+    },
+    "PVC_2MM": {
+        "price_per_meter": 5.0,
+        "currency": "MAD"
+    },
+    "MACHINING_DRILL": {
+        "price_per_operation": 1.5,
+        "currency": "MAD"
+    },
+    "MACHINING_ROUTE": {
+        "price_per_operation": 8.0,
+        "currency": "MAD"
+    },
+    "MACHINING_GROOVE": {
+        "price_per_operation": 5.0,
+        "currency": "MAD"
     }
 }

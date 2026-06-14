@@ -22,7 +22,9 @@ class TestManufacturingCostContextContract(unittest.TestCase):
                 "total_panels",
                 "total_panel_area_m2",
                 "total_edge_meters",
+                "edge_meters_by_banding",
                 "total_drilling_operations",
+                "machining_operations_by_type",
                 "total_material_types",
                 "warnings_count",
                 "warnings",
@@ -39,7 +41,9 @@ class TestManufacturingCostContextContract(unittest.TestCase):
         self.assertEqual(context.total_panels, 0)
         self.assertEqual(context.total_panel_area_m2, 0.0)
         self.assertEqual(context.total_edge_meters, 0.0)
+        self.assertEqual(context.edge_meters_by_banding, {})
         self.assertEqual(context.total_drilling_operations, 0)
+        self.assertEqual(context.machining_operations_by_type, {})
         self.assertEqual(context.total_material_types, 0)
         self.assertEqual(context.warnings_count, 0)
         self.assertEqual(context.warnings, [])
@@ -53,6 +57,32 @@ class TestManufacturingCostContextContract(unittest.TestCase):
         second_context = ManufacturingCostContext()
 
         self.assertIsNot(first_context.warnings, second_context.warnings)
+
+    def test_edge_meters_by_banding_defaults_are_independent(self):
+        from cost_intelligence.manufacturing_cost_context import (
+            ManufacturingCostContext,
+        )
+
+        first_context = ManufacturingCostContext()
+        second_context = ManufacturingCostContext()
+
+        self.assertIsNot(
+            first_context.edge_meters_by_banding,
+            second_context.edge_meters_by_banding,
+        )
+
+    def test_machining_operations_by_type_defaults_are_independent(self):
+        from cost_intelligence.manufacturing_cost_context import (
+            ManufacturingCostContext,
+        )
+
+        first_context = ManufacturingCostContext()
+        second_context = ManufacturingCostContext()
+
+        self.assertIsNot(
+            first_context.machining_operations_by_type,
+            second_context.machining_operations_by_type,
+        )
 
 
 if __name__ == "__main__":
