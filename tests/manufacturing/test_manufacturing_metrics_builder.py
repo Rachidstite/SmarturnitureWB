@@ -52,6 +52,58 @@ class TestManufacturingMetricsBuilder(unittest.TestCase):
         self.assertEqual(report.total_edge_meters, 2.5)
         self.assertEqual(production_package.edge_report.items, original_edge_items)
 
+    def test_build_aggregates_machining_operations_without_mutating_items(self):
+        from manufacturing.manufacturing_cutlist_report import (
+            ManufacturingCutlistReport,
+        )
+        from manufacturing.manufacturing_edge_report import (
+            ManufacturingEdgeReport,
+        )
+        from manufacturing.manufacturing_machining_report import (
+            ManufacturingMachiningReport,
+        )
+        from manufacturing.manufacturing_metrics_builder import (
+            ManufacturingMetricsBuilder,
+        )
+        from manufacturing.manufacturing_production_package import (
+            ManufacturingProductionPackage,
+        )
+        from manufacturing.manufacturing_summary_report import (
+            ManufacturingSummaryReport,
+        )
+
+        machining_items = [
+            {"operation_type": "DRILL"},
+            {"operation_type": "ROUTE"},
+            {"operation_type": "DRILL"},
+            {"operation_type": "GROOVE"},
+        ]
+        original_machining_items = copy.deepcopy(machining_items)
+        production_package = ManufacturingProductionPackage(
+            cutlist_report=ManufacturingCutlistReport(items=[]),
+            edge_report=ManufacturingEdgeReport(items=[]),
+            machining_report=ManufacturingMachiningReport(
+                items=machining_items,
+            ),
+            summary_report=ManufacturingSummaryReport(total_panels=0),
+        )
+
+        report = ManufacturingMetricsBuilder().build(production_package)
+
+        self.assertEqual(
+            report.machining_operations_by_type,
+            {
+                "DRILL": 2,
+                "ROUTE": 1,
+                "GROOVE": 1,
+            },
+        )
+        self.assertEqual(report.total_drilling_operations, 2)
+        self.assertEqual(
+            production_package.machining_report.items,
+            original_machining_items,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

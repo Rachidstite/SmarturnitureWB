@@ -24,6 +24,7 @@ class TestManufacturingMetricsReportContract(unittest.TestCase):
                 "total_edge_meters",
                 "edge_meters_by_banding",
                 "total_drilling_operations",
+                "machining_operations_by_type",
                 "total_material_types",
                 "warnings_count",
                 "warnings",
@@ -42,6 +43,20 @@ class TestManufacturingMetricsReportContract(unittest.TestCase):
         self.assertIsNot(
             first_report.edge_meters_by_banding,
             second_report.edge_meters_by_banding,
+        )
+
+    def test_machining_operations_by_type_defaults_to_empty_independent_dict(self):
+        from manufacturing.manufacturing_metrics_report import (
+            ManufacturingMetricsReport,
+        )
+
+        first_report = ManufacturingMetricsReport()
+        second_report = ManufacturingMetricsReport()
+
+        self.assertEqual(first_report.machining_operations_by_type, {})
+        self.assertIsNot(
+            first_report.machining_operations_by_type,
+            second_report.machining_operations_by_type,
         )
 
 

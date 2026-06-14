@@ -18,6 +18,14 @@ class ManufacturingMetricsBuilder:
             for item in machining_items
         )
 
+        machining_operations_by_type = {}
+        for item in machining_items:
+            operation_type = item["operation_type"]
+            machining_operations_by_type[operation_type] = (
+                machining_operations_by_type.get(operation_type, 0)
+                + 1
+            )
+
         total_material_types = len(
             {item["material"] for item in cutlist_items}
         )
@@ -38,6 +46,7 @@ class ManufacturingMetricsBuilder:
             ),
             edge_meters_by_banding=edge_meters_by_banding,
             total_drilling_operations=total_drilling_operations,
+            machining_operations_by_type=machining_operations_by_type,
             total_material_types=total_material_types,
             warnings_count=len(production_package.warnings),
             warnings=production_package.warnings,

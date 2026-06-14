@@ -10,6 +10,7 @@ class ManufacturingCostContextBuilder:
             total_edge_meters=metrics_report.total_edge_meters,
             edge_meters_by_banding=metrics_report.edge_meters_by_banding,
             total_drilling_operations=metrics_report.total_drilling_operations,
+            machining_operations_by_type=metrics_report.machining_operations_by_type,
             total_material_types=metrics_report.total_material_types,
             warnings_count=metrics_report.warnings_count,
             warnings=metrics_report.warnings,
