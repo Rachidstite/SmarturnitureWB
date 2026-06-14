@@ -100,3 +100,74 @@ class HardwareRegistry:
             category="LEGS"
         )
 
+        self._catalog["DRAWER_SLIDE_STANDARD_450"] = HardwareSpec(
+            sku="DRAWER_SLIDE_STANDARD_450",
+            manufacturer="GENERIC",
+            model="STANDARD_SLIDE_450",
+            revision="1.0",
+            category="DRAWER_SLIDES",
+            price=20.0
+        )
+
+        self._catalog["TOUCH_LATCH_STANDARD"] = HardwareSpec(
+            sku="TOUCH_LATCH_STANDARD",
+            manufacturer="GENERIC",
+            model="TOUCH_LATCH",
+            revision="1.0",
+            category="LATCHES",
+            price=45.0
+        )
+
+        self._catalog["SCREW_4X40"] = HardwareSpec(
+            sku="SCREW_4X40",
+            manufacturer="GENERIC",
+            model="SCREW_4X40",
+            revision="1.0",
+            category="SCREWS",
+            price=0.10
+        )
+
+        self._catalog["SCREW_3_5X16"] = HardwareSpec(
+            sku="SCREW_3_5X16",
+            manufacturer="GENERIC",
+            model="SCREW_3.5X16",
+            revision="1.0",
+            category="SCREWS",
+            price=0.08
+        )
+
+        self._catalog["HANDLE_STANDARD_LOW"] = HardwareSpec(
+            sku="HANDLE_STANDARD_LOW",
+            manufacturer="GENERIC",
+            model="HANDLE_STANDARD_LOW",
+            revision="1.0",
+            category="HANDLES",
+            price=6.0
+        )
+
+        self._catalog["HANDLE_STANDARD_MID"] = HardwareSpec(
+            sku="HANDLE_STANDARD_MID",
+            manufacturer="GENERIC",
+            model="HANDLE_STANDARD_MID",
+            revision="1.0",
+            category="HANDLES",
+            price=12.0
+        )
+
+        self._catalog["HANDLE_STANDARD_HIGH"] = HardwareSpec(
+            sku="HANDLE_STANDARD_HIGH",
+            manufacturer="GENERIC",
+            model="HANDLE_STANDARD_HIGH",
+            revision="1.0",
+            category="HANDLES",
+            price=20.0
+        )
+
+        self._catalog["SLIDING_DOOR_HANDLE_METER"] = HardwareSpec(
+            sku="SLIDING_DOOR_HANDLE_METER",
+            manufacturer="GENERIC",
+            model="SLIDING_DOOR_HANDLE_METER",
+            revision="1.0",
+            category="HANDLES",
+            price=30.0
+        )
