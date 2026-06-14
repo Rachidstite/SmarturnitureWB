@@ -1,4 +1,5 @@
 import unittest
+import copy
 
 
 class TestManufacturingCostContextBuilder(unittest.TestCase):
@@ -22,10 +23,16 @@ class TestManufacturingCostContextBuilder(unittest.TestCase):
         )
 
         warnings = ["Missing edge data"]
+        edge_meters_by_banding = {
+            "ABS_1MM": 4.0,
+            "PVC_2MM": 2.5,
+        }
+        original_edge_meters_by_banding = copy.deepcopy(edge_meters_by_banding)
         metrics_report = ManufacturingMetricsReport(
             total_panels=4,
             total_panel_area_m2=3.25,
             total_edge_meters=6.5,
+            edge_meters_by_banding=edge_meters_by_banding,
             total_drilling_operations=12,
             total_material_types=2,
             warnings_count=1,
@@ -44,6 +51,10 @@ class TestManufacturingCostContextBuilder(unittest.TestCase):
             context.total_edge_meters,
             metrics_report.total_edge_meters,
         )
+        self.assertIs(
+            context.edge_meters_by_banding,
+            metrics_report.edge_meters_by_banding,
+        )
         self.assertEqual(
             context.total_drilling_operations,
             metrics_report.total_drilling_operations,
@@ -54,6 +65,10 @@ class TestManufacturingCostContextBuilder(unittest.TestCase):
         )
         self.assertEqual(context.warnings_count, metrics_report.warnings_count)
         self.assertIs(context.warnings, metrics_report.warnings)
+        self.assertEqual(
+            metrics_report.edge_meters_by_banding,
+            original_edge_meters_by_banding,
+        )
 
 
 if __name__ == "__main__":

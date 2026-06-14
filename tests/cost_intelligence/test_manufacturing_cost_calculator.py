@@ -90,6 +90,91 @@ class TestManufacturingCostCalculator(unittest.TestCase):
         self.assertEqual(report.total_manufacturing_cost, 488)
         self.assertEqual(report.currency, "MAD")
 
+    def test_edge_banding_breakdown_uses_catalog_price_per_meter(self):
+        from cost_intelligence.manufacturing_cost_context import (
+            ManufacturingCostContext,
+        )
+
+        context = ManufacturingCostContext(
+            total_edge_meters=100,
+            edge_meters_by_banding={
+                "ABS_1MM": 10,
+                "PVC_2MM": 5,
+            },
+        )
+        pricing_catalog = {
+            "ABS_1MM": {
+                "price_per_meter": 5,
+            },
+            "PVC_2MM": {
+                "price_per_meter": 9,
+            },
+        }
+
+        report = self.calculator.calculate(
+            context,
+            pricing_catalog=pricing_catalog,
+        )
+
+        self.assertEqual(report.edge_banding_cost, 95)
+        self.assertEqual(report.total_manufacturing_cost, 95)
+
+    def test_missing_edge_banding_catalog_price_uses_rule_fallback(self):
+        from cost_intelligence.manufacturing_cost_calculator import (
+            ManufacturingCostCalculator,
+        )
+        from cost_intelligence.manufacturing_cost_context import (
+            ManufacturingCostContext,
+        )
+        from cost_intelligence.manufacturing_cost_rules import (
+            ManufacturingCostRules,
+        )
+
+        calculator = ManufacturingCostCalculator(
+            ManufacturingCostRules(edge_meter_rate=7)
+        )
+        context = ManufacturingCostContext(
+            total_edge_meters=15,
+            edge_meters_by_banding={
+                "ABS_1MM": 10,
+                "PVC_2MM": 5,
+            },
+        )
+        pricing_catalog = {
+            "ABS_1MM": {
+                "price_per_meter": 5,
+            },
+        }
+
+        report = calculator.calculate(
+            context,
+            pricing_catalog=pricing_catalog,
+        )
+
+        self.assertEqual(report.edge_banding_cost, 85)
+
+    def test_empty_edge_banding_breakdown_preserves_legacy_calculation(self):
+        from cost_intelligence.manufacturing_cost_context import (
+            ManufacturingCostContext,
+        )
+
+        context = ManufacturingCostContext(
+            total_edge_meters=20,
+            edge_meters_by_banding={},
+        )
+        pricing_catalog = {
+            "ABS_1MM": {
+                "price_per_meter": 100,
+            },
+        }
+
+        report = self.calculator.calculate(
+            context,
+            pricing_catalog=pricing_catalog,
+        )
+
+        self.assertEqual(report.edge_banding_cost, 100)
+
 
 if __name__ == "__main__":
     unittest.main()

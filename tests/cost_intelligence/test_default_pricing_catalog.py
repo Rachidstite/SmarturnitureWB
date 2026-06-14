@@ -17,6 +17,13 @@ class TestDefaultPricingCatalog(unittest.TestCase):
         "SLIDING_DOOR_HANDLE_METER": 30.0,
     }
 
+    edge_banding_prices_per_meter = {
+        "ABS_1MM": 5.0,
+        "PVC_0.4MM": 1.5,
+        "PVC_1MM": 5.0,
+        "PVC_2MM": 5.0,
+    }
+
     default_catalog_path = (
         Path(__file__).resolve().parents[2]
         / "data"
@@ -99,6 +106,36 @@ class TestDefaultPricingCatalog(unittest.TestCase):
         catalog = self._load_default_catalog()
 
         for sku in self.hardware_unit_prices:
+            with self.subTest(sku=sku):
+                self.assertEqual(
+                    catalog.get(sku)["currency"],
+                    "MAD",
+                )
+
+    def test_default_catalog_contains_each_edge_banding_sku(self):
+
+        catalog = self._load_default_catalog()
+
+        for sku in self.edge_banding_prices_per_meter:
+            with self.subTest(sku=sku):
+                self.assertIsNotNone(catalog.get(sku))
+
+    def test_default_catalog_edge_banding_has_expected_price_per_meter(self):
+
+        catalog = self._load_default_catalog()
+
+        for sku, expected_price in self.edge_banding_prices_per_meter.items():
+            with self.subTest(sku=sku):
+                self.assertEqual(
+                    catalog.get(sku)["price_per_meter"],
+                    expected_price,
+                )
+
+    def test_default_catalog_edge_banding_currency_is_mad(self):
+
+        catalog = self._load_default_catalog()
+
+        for sku in self.edge_banding_prices_per_meter:
             with self.subTest(sku=sku):
                 self.assertEqual(
                     catalog.get(sku)["currency"],
