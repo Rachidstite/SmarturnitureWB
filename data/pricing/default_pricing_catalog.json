@@ -3,5 +3,45 @@
         "price_per_sheet": 280,
         "price_per_m2": 94.08,
         "currency": "MAD"
+    },
+    "HINGE_BLUM_110_V1": {
+        "unit_price": 6.0,
+        "currency": "MAD"
+    },
+    "MINIFIX_15_V1": {
+        "unit_price": 1.5,
+        "currency": "MAD"
+    },
+    "DRAWER_SLIDE_STANDARD_450": {
+        "unit_price": 20.0,
+        "currency": "MAD"
+    },
+    "TOUCH_LATCH_STANDARD": {
+        "unit_price": 45.0,
+        "currency": "MAD"
+    },
+    "SCREW_4X40": {
+        "unit_price": 0.10,
+        "currency": "MAD"
+    },
+    "SCREW_3_5X16": {
+        "unit_price": 0.08,
+        "currency": "MAD"
+    },
+    "HANDLE_STANDARD_LOW": {
+        "unit_price": 6.0,
+        "currency": "MAD"
+    },
+    "HANDLE_STANDARD_MID": {
+        "unit_price": 12.0,
+        "currency": "MAD"
+    },
+    "HANDLE_STANDARD_HIGH": {
+        "unit_price": 20.0,
+        "currency": "MAD"
+    },
+    "SLIDING_DOOR_HANDLE_METER": {
+        "unit_price": 30.0,
+        "currency": "MAD"
     }
 }
