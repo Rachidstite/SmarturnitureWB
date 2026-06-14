@@ -1,6 +1,9 @@
 from cost_intelligence.cost_report import CostReport
 from cost_intelligence.cost_summary_calculator import CostSummaryCalculator
 from cost_intelligence.hardware_cost_calculator import HardwareCostCalculator
+from cost_intelligence.hardware_report_cost_service import (
+    HardwareReportCostService,
+)
 from cost_intelligence.material_cost_calculator import MaterialCostCalculator
 from cost_intelligence.sheet_cost_calculator import SheetCostCalculator
 from cost_intelligence.waste_cost_calculator import WasteCostCalculator
@@ -17,7 +20,14 @@ class ProjectCostCalculator:
         nesting_results=None,
         hardware_items=None,
         pricing_catalog=None,
+        *,
+        scene_graph=None,
     ):
+        if scene_graph is not None and hardware_items is not None:
+            raise ValueError(
+                "scene_graph and hardware_items are mutually exclusive"
+            )
+
         material_estimate = MaterialCostCalculator().estimate(
             cutlist_items=cutlist_items,
             pricing_catalog=pricing_catalog,
@@ -30,10 +40,16 @@ class ProjectCostCalculator:
             nesting_results=nesting_results,
             pricing_catalog=pricing_catalog,
         )
-        hardware_estimate = HardwareCostCalculator().estimate(
-            hardware_items=hardware_items,
-            pricing_catalog=pricing_catalog,
-        )
+        if scene_graph is not None:
+            hardware_estimate = HardwareReportCostService.estimate(
+                scene_graph,
+                pricing_catalog=pricing_catalog,
+            )
+        else:
+            hardware_estimate = HardwareCostCalculator().estimate(
+                hardware_items=hardware_items,
+                pricing_catalog=pricing_catalog,
+            )
 
         summary = CostSummaryCalculator().estimate(
             material_estimate=material_estimate,
