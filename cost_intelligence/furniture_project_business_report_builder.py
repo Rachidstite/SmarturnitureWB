@@ -13,6 +13,13 @@ from cost_intelligence.furniture_project_quotation_breakdown_builder import (
 from cost_intelligence.furniture_project_quotation_builder import (
     FurnitureProjectQuotationBuilder,
 )
+from manufacturing.furniture_project_manufacturing_package_builder import (
+    FurnitureProjectManufacturingPackageBuilder,
+)
+from manufacturing.manufacturing_metrics_builder import ManufacturingMetricsBuilder
+from manufacturing.manufacturing_production_package_builder import (
+    ManufacturingProductionPackageBuilder,
+)
 from manufacturing.furniture_project_summary_builder import (
     FurnitureProjectSummaryBuilder,
 )
@@ -61,6 +68,17 @@ class FurnitureProjectBusinessReportBuilder:
             markup_rate=markup_rate,
             currency=currency,
         )
+        manufacturing_package = FurnitureProjectManufacturingPackageBuilder().build(
+            furniture_project
+        )
+        manufacturing_production_package = (
+            ManufacturingProductionPackageBuilder().build(
+                manufacturing_package
+            )
+        )
+        manufacturing_metrics_report = ManufacturingMetricsBuilder().build(
+            manufacturing_production_package
+        )
         factory_decision_report = FurnitureProjectFactoryDecisionBuilder().build(
             furniture_project,
             markup_rate=markup_rate,
@@ -71,6 +89,7 @@ class FurnitureProjectBusinessReportBuilder:
             project_summary=project_summary,
             quotation_document=quotation_document,
             quotation_breakdowns=quotation_breakdowns,
+            manufacturing_metrics_report=manufacturing_metrics_report,
             profitability_report=profitability_report,
             executive_report=None,
             factory_decision_report=factory_decision_report,

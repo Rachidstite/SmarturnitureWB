@@ -13,6 +13,18 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
 
     @patch(
         "cost_intelligence.furniture_project_business_report_builder."
+        "ManufacturingMetricsBuilder"
+    )
+    @patch(
+        "cost_intelligence.furniture_project_business_report_builder."
+        "ManufacturingProductionPackageBuilder"
+    )
+    @patch(
+        "cost_intelligence.furniture_project_business_report_builder."
+        "FurnitureProjectManufacturingPackageBuilder"
+    )
+    @patch(
+        "cost_intelligence.furniture_project_business_report_builder."
         "FurnitureProjectFactoryDecisionBuilder"
     )
     @patch(
@@ -38,6 +50,9 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         breakdown_builder_class,
         profitability_builder_class,
         decision_builder_class,
+        project_package_builder_class,
+        production_package_builder_class,
+        metrics_builder_class,
     ):
         from cost_intelligence.furniture_project_business_report import (
             FurnitureProjectBusinessReport,
@@ -51,6 +66,9 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         quotation_document = object()
         quotation_breakdowns = [{"cabinet_index": 1}]
         profitability_report = object()
+        manufacturing_package = object()
+        manufacturing_production_package = object()
+        manufacturing_metrics_report = object()
         factory_decision_report = object()
 
         summary_builder_class.return_value.build.return_value = project_summary
@@ -60,6 +78,15 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         )
         profitability_builder_class.return_value.build.return_value = (
             profitability_report
+        )
+        project_package_builder_class.return_value.build.return_value = (
+            manufacturing_package
+        )
+        production_package_builder_class.return_value.build.return_value = (
+            manufacturing_production_package
+        )
+        metrics_builder_class.return_value.build.return_value = (
+            manufacturing_metrics_report
         )
         decision_builder_class.return_value.build.return_value = (
             factory_decision_report
@@ -83,6 +110,10 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         self.assertIs(result.project_summary, project_summary)
         self.assertIs(result.quotation_document, quotation_document)
         self.assertIs(result.quotation_breakdowns, quotation_breakdowns)
+        self.assertIs(
+            result.manufacturing_metrics_report,
+            manufacturing_metrics_report,
+        )
         self.assertIs(result.profitability_report, profitability_report)
         self.assertIsNone(result.executive_report)
         self.assertIs(result.factory_decision_report, factory_decision_report)
@@ -112,6 +143,15 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
             furniture_project,
             markup_rate=0.25,
             currency="EUR",
+        )
+        project_package_builder_class.return_value.build.assert_called_once_with(
+            furniture_project
+        )
+        production_package_builder_class.return_value.build.assert_called_once_with(
+            manufacturing_package
+        )
+        metrics_builder_class.return_value.build.assert_called_once_with(
+            manufacturing_production_package
         )
         decision_builder_class.return_value.build.assert_called_once_with(
             furniture_project,
