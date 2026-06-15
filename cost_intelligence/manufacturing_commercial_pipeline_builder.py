@@ -13,6 +13,9 @@ from cost_intelligence.manufacturing_quotation_input_builder import (
 from cost_intelligence.manufacturing_quotation_report_builder import (
     ManufacturingQuotationReportBuilder,
 )
+from cost_intelligence.quotation_intelligence_builder import (
+    QuotationIntelligenceBuilder,
+)
 
 
 class ManufacturingCommercialPipelineBuilder:
@@ -39,9 +42,14 @@ class ManufacturingCommercialPipelineBuilder:
         profitability_report = ManufacturingProfitabilityReportBuilder().build(
             quotation_report
         )
+        quotation_intelligence_report = QuotationIntelligenceBuilder().build(
+            quotation_report,
+            profitability_report,
+        )
         return ManufacturingCommercialResult(
             manufacturing_cost_summary=manufacturing_cost_summary,
             manufacturing_quotation_input=manufacturing_quotation_input,
             quotation_report=quotation_report,
             profitability_report=profitability_report,
+            quotation_intelligence_report=quotation_intelligence_report,
         )
