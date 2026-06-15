@@ -7,3 +7,4 @@ class ManufacturingCommercialResult:
     manufacturing_quotation_input: object
     quotation_report: object
     profitability_report: object
+    quotation_intelligence_report: object = None

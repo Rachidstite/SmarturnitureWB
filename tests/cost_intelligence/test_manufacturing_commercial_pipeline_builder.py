@@ -18,6 +18,7 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
                 "manufacturing_quotation_input",
                 "quotation_report",
                 "profitability_report",
+                "quotation_intelligence_report",
             ],
         )
 
@@ -28,6 +29,10 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
 
         self.assertTrue(callable(ManufacturingCommercialPipelineBuilder().build))
 
+    @patch(
+        "cost_intelligence.manufacturing_commercial_pipeline_builder."
+        "QuotationIntelligenceBuilder"
+    )
     @patch(
         "cost_intelligence.manufacturing_commercial_pipeline_builder."
         "ManufacturingProfitabilityReportBuilder"
@@ -50,6 +55,7 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
         quotation_input_builder_class,
         quotation_report_builder_class,
         profitability_report_builder_class,
+        quotation_intelligence_builder_class,
     ):
         from cost_intelligence.manufacturing_commercial_result import (
             ManufacturingCommercialResult,
@@ -63,6 +69,7 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
         quotation_input = object()
         quotation_report = object()
         profitability_report = object()
+        quotation_intelligence_report = object()
 
         cost_builder_class.return_value.build.return_value = cost_summary
         quotation_input_builder_class.return_value.build.return_value = (
@@ -73,6 +80,9 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
         )
         profitability_report_builder_class.return_value.build.return_value = (
             profitability_report
+        )
+        quotation_intelligence_builder_class.return_value.build.return_value = (
+            quotation_intelligence_report
         )
 
         result = ManufacturingCommercialPipelineBuilder().build(
@@ -86,6 +96,10 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
         self.assertIs(result.manufacturing_quotation_input, quotation_input)
         self.assertIs(result.quotation_report, quotation_report)
         self.assertIs(result.profitability_report, profitability_report)
+        self.assertIs(
+            result.quotation_intelligence_report,
+            quotation_intelligence_report,
+        )
         cost_builder_class.return_value.build.assert_called_once_with(
             production_package
         )
@@ -100,7 +114,15 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
         profitability_report_builder_class.return_value.build.assert_called_once_with(
             quotation_report
         )
+        quotation_intelligence_builder_class.return_value.build.assert_called_once_with(
+            quotation_report,
+            profitability_report,
+        )
 
+    @patch(
+        "cost_intelligence.manufacturing_commercial_pipeline_builder."
+        "QuotationIntelligenceBuilder"
+    )
     @patch(
         "cost_intelligence.manufacturing_commercial_pipeline_builder."
         "ManufacturingProfitabilityReportBuilder"
@@ -123,6 +145,7 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
         quotation_input_builder_class,
         quotation_report_builder_class,
         profitability_report_builder_class,
+        quotation_intelligence_builder_class,
     ):
         from cost_intelligence.manufacturing_commercial_pipeline_builder import (
             ManufacturingCommercialPipelineBuilder,
