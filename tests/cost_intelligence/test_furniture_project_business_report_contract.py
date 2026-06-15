@@ -22,6 +22,7 @@ class TestFurnitureProjectBusinessReportContract(unittest.TestCase):
                 "project_summary",
                 "quotation_document",
                 "quotation_breakdowns",
+                "manufacturing_metrics_report",
                 "profitability_report",
                 "executive_report",
                 "factory_decision_report",
@@ -38,6 +39,7 @@ class TestFurnitureProjectBusinessReportContract(unittest.TestCase):
         self.assertIsNone(report.project_summary)
         self.assertIsNone(report.quotation_document)
         self.assertEqual(report.quotation_breakdowns, [])
+        self.assertIsNone(report.manufacturing_metrics_report)
         self.assertIsNone(report.profitability_report)
         self.assertIsNone(report.executive_report)
         self.assertIsNone(report.factory_decision_report)
