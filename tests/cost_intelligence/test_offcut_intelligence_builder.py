@@ -24,6 +24,9 @@ class TestOffcutIntelligenceBuilder(unittest.TestCase):
                 "waste_recovery_score",
                 "recommendation",
                 "warnings",
+                "reusable_area",
+                "largest_reusable_area",
+                "estimated_recovered_value",
             ],
         )
 
@@ -82,6 +85,72 @@ class TestOffcutIntelligenceBuilder(unittest.TestCase):
         intelligence = self.builder.build(report)
 
         self.assertIs(intelligence.warnings, warnings)
+
+    def test_builder_calculates_reusable_area_from_reusable_offcuts_only(self):
+        reusable_small = self._offcut(width=100.0, height=200.0, reusable=True)
+        reusable_large = self._offcut(width=300.0, height=400.0, reusable=True)
+        non_reusable = self._offcut(width=1000.0, height=1000.0, reusable=False)
+        report = self._offcut_report(
+            offcuts=[reusable_small, reusable_large, non_reusable],
+            total_offcuts=3,
+            reusable_offcuts=2,
+        )
+
+        intelligence = self.builder.build(report)
+
+        self.assertEqual(intelligence.reusable_area, 140000.0)
+        self.assertEqual(intelligence.largest_reusable_area, 120000.0)
+
+    def test_builder_estimates_recovered_value_from_square_meters(self):
+        reusable = self._offcut(width=1000.0, height=500.0, reusable=True)
+        report = self._offcut_report(
+            offcuts=[reusable],
+            total_offcuts=1,
+            reusable_offcuts=1,
+        )
+
+        intelligence = self.builder.build(report, price_per_m2=200.0)
+
+        self.assertEqual(intelligence.reusable_area, 500000.0)
+        self.assertEqual(intelligence.estimated_recovered_value, 100.0)
+
+    def test_builder_does_not_mutate_offcut_report_or_offcuts(self):
+        reusable = self._offcut(width=100.0, height=200.0, reusable=True)
+        non_reusable = self._offcut(width=300.0, height=400.0, reusable=False)
+        report = self._offcut_report(
+            offcuts=[reusable, non_reusable],
+            total_offcuts=2,
+            reusable_offcuts=1,
+            warnings=["Offcut warning"],
+        )
+        original_report_values = report.__dict__.copy()
+        original_offcut_values = [
+            offcut.__dict__.copy()
+            for offcut in report.offcuts
+        ]
+
+        self.builder.build(report, price_per_m2=200.0)
+
+        self.assertEqual(report.__dict__, original_report_values)
+        self.assertEqual(
+            [offcut.__dict__ for offcut in report.offcuts],
+            original_offcut_values,
+        )
+
+    @staticmethod
+    def _offcut(**values):
+        from cost_intelligence.offcut import Offcut
+
+        defaults = {
+            "id": "OFFCUT-001",
+            "material": "MDF",
+            "thickness": 18.0,
+            "width": 100.0,
+            "height": 100.0,
+            "source_sheet": "SHEET-001",
+        }
+        defaults.update(values)
+        return Offcut(**defaults)
 
     @staticmethod
     def _offcut_report(**values):
