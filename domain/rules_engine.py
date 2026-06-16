@@ -20,6 +20,33 @@ class RuleContext:
         "INTENT_DRAWER_SLIDE": "DRAWER_SLIDE_SOFTCLOSE_450"
     })
 
+
+def build_rule_context_from_params(params, base_context=None):
+    if base_context is None:
+        context = RuleContext()
+    else:
+        context = RuleContext(
+            market_region=base_context.market_region,
+            preferred_connector=base_context.preferred_connector,
+            cnc_capabilities=base_context.cnc_capabilities,
+            material_thickness=base_context.material_thickness,
+            hardware_profile=dict(getattr(base_context, "hardware_profile", {}) or {}),
+        )
+
+    hinge_sku = getattr(params, "hinge_sku", None)
+    if hinge_sku:
+        context.hardware_profile["INTENT_HINGE"] = hinge_sku
+
+    slide_sku = getattr(params, "slide_sku", None)
+    if slide_sku:
+        context.hardware_profile["INTENT_DRAWER_SLIDE"] = slide_sku
+
+    handle_sku = getattr(params, "handle_sku", None)
+    if handle_sku:
+        context.hardware_profile["INTENT_HANDLE"] = handle_sku
+
+    return context
+
 class HardwareRule:
     """الفئة الأساسية لأي قاعدة تصنيعية"""
     def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
