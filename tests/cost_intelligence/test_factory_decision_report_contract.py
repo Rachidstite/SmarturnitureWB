@@ -19,6 +19,10 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
                 "nesting_risk_level",
                 "quotation_risk_level",
                 "margin_status",
+                "capacity_status",
+                "schedule_risk_level",
+                "workload_status",
+                "complexity_level",
                 "blocking_issues",
                 "warnings",
                 "recommendations",
@@ -38,6 +42,10 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
         self.assertEqual(report.nesting_risk_level, "LOW")
         self.assertEqual(report.quotation_risk_level, "UNKNOWN")
         self.assertEqual(report.margin_status, "UNKNOWN")
+        self.assertEqual(report.capacity_status, "AVAILABLE")
+        self.assertEqual(report.schedule_risk_level, "LOW")
+        self.assertEqual(report.workload_status, "AVAILABLE")
+        self.assertEqual(report.complexity_level, "LOW")
         self.assertEqual(report.blocking_issues, [])
         self.assertEqual(report.warnings, [])
         self.assertEqual(report.recommendations, [])

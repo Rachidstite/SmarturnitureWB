@@ -55,6 +55,14 @@ class TestFactoryDecisionBuilder(unittest.TestCase):
 
         self.assertEqual(report.decision_status, "APPROVED")
 
+    def test_existing_callers_still_work_without_optional_reports(self):
+        report = self.builder.build(*self._inputs())
+
+        self.assertEqual(report.capacity_status, "AVAILABLE")
+        self.assertEqual(report.schedule_risk_level, "LOW")
+        self.assertEqual(report.workload_status, "AVAILABLE")
+        self.assertEqual(report.complexity_level, "LOW")
+
     def test_builder_maps_decision_fields(self):
         report = self.builder.build(
             *self._inputs(
@@ -125,6 +133,114 @@ class TestFactoryDecisionBuilder(unittest.TestCase):
             quotation.recommendations,
         ):
             self.assertIsNot(report.recommendations, recommendations)
+
+    def test_overloaded_capacity_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(),
+            capacity_report=self._capacity_report(
+                capacity_status="OVERLOADED",
+                warnings=["Capacity warning"],
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_high_schedule_risk_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(),
+            production_schedule_report=self._schedule_report(
+                schedule_risk_level="HIGH",
+                warnings=["Schedule warning"],
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_overloaded_workload_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(),
+            factory_workload_report=self._workload_report(
+                factory_workload_status="OVERLOADED",
+                warnings=["Workload warning"],
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_high_complexity_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(),
+            manufacturing_complexity_report=self._complexity_report(
+                complexity_level="HIGH",
+                warnings=["Complexity warning"],
+                recommendations=["Complexity recommendation"],
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_builder_aggregates_new_warnings_in_order(self):
+        report = self.builder.build(
+            *self._inputs(),
+            capacity_report=self._capacity_report(
+                capacity_status="OVERLOADED",
+                warnings=["Capacity warning"],
+            ),
+            production_schedule_report=self._schedule_report(
+                schedule_risk_level="HIGH",
+                warnings=["Schedule warning"],
+            ),
+            factory_workload_report=self._workload_report(
+                factory_workload_status="OVERLOADED",
+                warnings=["Workload warning"],
+            ),
+            manufacturing_complexity_report=self._complexity_report(
+                complexity_level="HIGH",
+                warnings=["Complexity warning"],
+                recommendations=["Complexity recommendation"],
+            ),
+        )
+
+        self.assertEqual(
+            report.warnings,
+            [
+                "Readiness warning",
+                "Cost warning",
+                "Waste warning",
+                "Nesting warning",
+                "Capacity warning",
+                "Schedule warning",
+                "Workload warning",
+                "Complexity warning",
+            ],
+        )
+
+    def test_complexity_recommendations_are_included_without_mutation(self):
+        complexity_report = self._complexity_report(
+            complexity_level="HIGH",
+            warnings=["Complexity warning"],
+            recommendations=["Complexity recommendation"],
+        )
+
+        report = self.builder.build(
+            *self._inputs(),
+            manufacturing_complexity_report=complexity_report,
+        )
+
+        self.assertEqual(
+            report.recommendations,
+            [
+                "Readiness recommendation",
+                "Waste recommendation",
+                "Nesting recommendation",
+                "Quotation recommendation",
+                "Complexity recommendation",
+            ],
+        )
+        self.assertEqual(
+            complexity_report.recommendations,
+            ["Complexity recommendation"],
+        )
 
     def test_builder_skips_empty_single_recommendations(self):
         inputs = self._inputs(
@@ -221,6 +337,38 @@ class TestFactoryDecisionBuilder(unittest.TestCase):
                 recommendations=["Quotation recommendation"],
             ),
         )
+
+    @staticmethod
+    def _capacity_report(**values):
+        from manufacturing.manufacturing_capacity_report import (
+            ManufacturingCapacityReport,
+        )
+
+        return ManufacturingCapacityReport(**values)
+
+    @staticmethod
+    def _schedule_report(**values):
+        from manufacturing.production_schedule_report import (
+            ProductionScheduleReport,
+        )
+
+        return ProductionScheduleReport(**values)
+
+    @staticmethod
+    def _workload_report(**values):
+        from manufacturing.factory_workload_report import (
+            FactoryWorkloadReport,
+        )
+
+        return FactoryWorkloadReport(**values)
+
+    @staticmethod
+    def _complexity_report(**values):
+        from manufacturing.manufacturing_complexity_report import (
+            ManufacturingComplexityReport,
+        )
+
+        return ManufacturingComplexityReport(**values)
 
 
 if __name__ == "__main__":
