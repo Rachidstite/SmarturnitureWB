@@ -3,7 +3,6 @@ from typing import Dict
 
 from assembly.joint_rules import RULES
 from assembly.assembly_graph_builder import AssemblyGraphBuilder
-from domain.hardware_library import HardwareRegistry
 
 
 @dataclass
@@ -23,8 +22,6 @@ class HardwareReportEngine:
     def generate(scene_graph):
 
         report = HardwareReport()
-
-        registry = HardwareRegistry()
 
         assembly = AssemblyGraphBuilder.build(
             scene_graph
@@ -54,25 +51,5 @@ class HardwareReportEngine:
         report.hardware_items["MINIFIX"] = report.minifix_count
         report.hardware_items["DOWEL"] = report.dowel_count
         report.hardware_items["HINGE"] = report.hinge_count
-
-        minifix = registry.get_hardware(
-            "MINIFIX_15_V1"
-        )
-
-        hinge = registry.get_hardware(
-            "HINGE_BLUM_110_V1"
-        )
-
-        if minifix:
-            report.hardware_cost += (
-                report.minifix_count *
-                minifix.price
-            )
-
-        if hinge:
-            report.hardware_cost += (
-                report.hinge_count *
-                hinge.price
-            )
 
         return report
