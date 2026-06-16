@@ -49,6 +49,86 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
         self.assertEqual(report.waste_rate, 0.25)
         self.assertEqual(report.recovery_score, 60)
 
+    def test_existing_callers_still_work_without_optional_reports(self):
+        kpi_report, readiness_report, optimization_result = self._inputs()
+
+        report = self.builder.build(
+            kpi_report,
+            readiness_report,
+            optimization_result,
+        )
+
+        self.assertEqual(report.overall_score, 100)
+        self.assertEqual(report.overall_grade, "A")
+
+    def test_overloaded_capacity_reduces_score(self):
+        report = self.builder.build(
+            *self._inputs(),
+            capacity_report=self._capacity_report(
+                capacity_status="OVERLOADED",
+            ),
+        )
+
+        self.assertEqual(report.overall_score, 85)
+        self.assertEqual(report.overall_grade, "A")
+
+    def test_high_schedule_risk_reduces_score(self):
+        report = self.builder.build(
+            *self._inputs(),
+            production_schedule_report=self._schedule_report(
+                schedule_risk_level="HIGH",
+            ),
+        )
+
+        self.assertEqual(report.overall_score, 85)
+        self.assertEqual(report.overall_grade, "A")
+
+    def test_overloaded_workload_reduces_score(self):
+        report = self.builder.build(
+            *self._inputs(),
+            factory_workload_report=self._workload_report(
+                factory_workload_status="OVERLOADED",
+            ),
+        )
+
+        self.assertEqual(report.overall_score, 85)
+        self.assertEqual(report.overall_grade, "A")
+
+    def test_high_complexity_reduces_score(self):
+        report = self.builder.build(
+            *self._inputs(),
+            manufacturing_complexity_report=self._complexity_report(
+                complexity_level="HIGH",
+                recommendations=["Review complexity"],
+                warnings=["Complexity warning"],
+            ),
+        )
+
+        self.assertEqual(report.overall_score, 90)
+        self.assertEqual(report.overall_grade, "A")
+
+    def test_combined_production_intelligence_penalties_stack(self):
+        report = self.builder.build(
+            *self._inputs(),
+            capacity_report=self._capacity_report(
+                capacity_status="LIMITED",
+            ),
+            production_schedule_report=self._schedule_report(
+                schedule_risk_level="MEDIUM",
+            ),
+            factory_workload_report=self._workload_report(
+                factory_workload_status="BUSY",
+            ),
+            manufacturing_complexity_report=self._complexity_report(
+                complexity_level="MEDIUM",
+                recommendations=["Review complexity"],
+                warnings=["Complexity warning"],
+            ),
+        )
+
+        self.assertEqual(report.overall_score, 80)
+        self.assertEqual(report.overall_grade, "B")
+
     def test_ready_high_performing_project_gets_a(self):
         kpi_report, readiness_report, optimization_result = self._inputs()
 
@@ -109,6 +189,30 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
             readiness_report.recommendations,
         )
 
+    def test_complexity_recommendations_are_appended_without_mutation(self):
+        kpi_report, readiness_report, optimization_result = self._inputs()
+        complexity_report = self._complexity_report(
+            complexity_level="HIGH",
+            recommendations=["Review complexity"],
+            warnings=["Complexity warning"],
+        )
+
+        report = self.builder.build(
+            kpi_report,
+            readiness_report,
+            optimization_result,
+            manufacturing_complexity_report=complexity_report,
+        )
+
+        self.assertEqual(
+            report.recommendations,
+            ["Review nesting", "Review complexity"],
+        )
+        self.assertEqual(
+            complexity_report.recommendations,
+            ["Review complexity"],
+        )
+
     def test_builder_does_not_mutate_inputs(self):
         kpi_report, readiness_report, optimization_result = self._inputs()
         original_kpi_warnings = list(kpi_report.warnings)
@@ -166,6 +270,38 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
             ),
         )
         return kpi_report, readiness_report, optimization_result
+
+    @staticmethod
+    def _capacity_report(**values):
+        from manufacturing.manufacturing_capacity_report import (
+            ManufacturingCapacityReport,
+        )
+
+        return ManufacturingCapacityReport(**values)
+
+    @staticmethod
+    def _schedule_report(**values):
+        from manufacturing.production_schedule_report import (
+            ProductionScheduleReport,
+        )
+
+        return ProductionScheduleReport(**values)
+
+    @staticmethod
+    def _workload_report(**values):
+        from manufacturing.factory_workload_report import (
+            FactoryWorkloadReport,
+        )
+
+        return FactoryWorkloadReport(**values)
+
+    @staticmethod
+    def _complexity_report(**values):
+        from manufacturing.manufacturing_complexity_report import (
+            ManufacturingComplexityReport,
+        )
+
+        return ManufacturingComplexityReport(**values)
 
 
 if __name__ == "__main__":

@@ -50,8 +50,38 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
         "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
         "ManufacturingCostPipelineBuilder"
     )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingMetricsBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingDurationBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingCapacityBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ProductionScheduleBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "FactoryWorkloadBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingComplexityBuilder"
+    )
     def test_pipeline_orchestrates_builders_in_order_and_returns_results(
         self,
+        complexity_builder_class,
+        workload_builder_class,
+        schedule_builder_class,
+        capacity_builder_class,
+        duration_builder_class,
+        metrics_builder_class,
         cost_builder_class,
         optimization_builder_class,
         commercial_builder_class,
@@ -72,10 +102,22 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
         commercial_result = object()
         readiness_report = object()
         kpi_report = object()
+        metrics_report = object()
+        duration_report = object()
+        capacity_report = object()
+        schedule_report = object()
+        workload_report = object()
+        complexity_report = object()
         executive_report = object()
         calls = []
 
         builders = [
+            (metrics_builder_class, "metrics", metrics_report),
+            (duration_builder_class, "duration", duration_report),
+            (capacity_builder_class, "capacity", capacity_report),
+            (schedule_builder_class, "schedule", schedule_report),
+            (workload_builder_class, "workload", workload_report),
+            (complexity_builder_class, "complexity", complexity_report),
             (cost_builder_class, "cost", cost_summary),
             (optimization_builder_class, "optimization", optimization_result),
             (commercial_builder_class, "commercial", commercial_result),
@@ -105,6 +147,12 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
                 "commercial",
                 "readiness",
                 "kpi",
+                "metrics",
+                "duration",
+                "capacity",
+                "schedule",
+                "workload",
+                "complexity",
                 "executive",
             ],
         )
@@ -139,10 +187,33 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
             commercial_result,
             readiness_report,
         )
+        metrics_builder_class.return_value.build.assert_called_once_with(
+            production_package
+        )
+        duration_builder_class.return_value.build.assert_called_once_with(
+            metrics_report
+        )
+        capacity_builder_class.return_value.build.assert_called_once_with(
+            duration_report
+        )
+        schedule_builder_class.return_value.build.assert_called_once_with(
+            duration_report,
+            capacity_report,
+        )
+        workload_builder_class.return_value.build.assert_called_once_with(
+            [schedule_report]
+        )
+        complexity_builder_class.return_value.build.assert_called_once_with(
+            metrics_report
+        )
         executive_builder_class.return_value.build.assert_called_once_with(
             kpi_report,
             readiness_report,
             optimization_result,
+            capacity_report=capacity_report,
+            production_schedule_report=schedule_report,
+            factory_workload_report=workload_report,
+            manufacturing_complexity_report=complexity_report,
         )
 
     @patch(
@@ -169,8 +240,38 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
         "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
         "ManufacturingCostPipelineBuilder"
     )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingMetricsBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingDurationBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingCapacityBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ProductionScheduleBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "FactoryWorkloadBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder."
+        "ManufacturingComplexityBuilder"
+    )
     def test_pipeline_uses_defaults_and_does_not_mutate_package(
         self,
+        complexity_builder_class,
+        workload_builder_class,
+        schedule_builder_class,
+        capacity_builder_class,
+        duration_builder_class,
+        metrics_builder_class,
         cost_builder_class,
         optimization_builder_class,
         commercial_builder_class,
@@ -190,6 +291,13 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
             release_ready=True,
             warnings=warnings,
         )
+
+        metrics_builder_class.return_value.build.return_value = object()
+        duration_builder_class.return_value.build.return_value = object()
+        capacity_builder_class.return_value.build.return_value = object()
+        schedule_builder_class.return_value.build.return_value = object()
+        workload_builder_class.return_value.build.return_value = object()
+        complexity_builder_class.return_value.build.return_value = object()
 
         ManufacturingFactoryIntelligencePipelineBuilder().build(
             production_package

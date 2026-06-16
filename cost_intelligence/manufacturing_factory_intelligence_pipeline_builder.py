@@ -17,6 +17,20 @@ from cost_intelligence.manufacturing_optimization_pipeline_builder import (
 from cost_intelligence.production_readiness_builder import (
     ProductionReadinessBuilder,
 )
+from manufacturing.factory_workload_builder import FactoryWorkloadBuilder
+from manufacturing.manufacturing_capacity_builder import (
+    ManufacturingCapacityBuilder,
+)
+from manufacturing.manufacturing_complexity_builder import (
+    ManufacturingComplexityBuilder,
+)
+from manufacturing.manufacturing_duration_builder import (
+    ManufacturingDurationBuilder,
+)
+from manufacturing.manufacturing_metrics_builder import (
+    ManufacturingMetricsBuilder,
+)
+from manufacturing.production_schedule_builder import ProductionScheduleBuilder
 
 
 class ManufacturingFactoryIntelligencePipelineBuilder:
@@ -54,11 +68,38 @@ class ManufacturingFactoryIntelligencePipelineBuilder:
             manufacturing_commercial_result,
             production_readiness_report,
         )
+        manufacturing_metrics_report = ManufacturingMetricsBuilder().build(
+            manufacturing_production_package
+        )
+        manufacturing_duration_report = ManufacturingDurationBuilder().build(
+            manufacturing_metrics_report
+        )
+        manufacturing_capacity_report = ManufacturingCapacityBuilder().build(
+            manufacturing_duration_report
+        )
+        production_schedule_report = ProductionScheduleBuilder().build(
+            manufacturing_duration_report,
+            manufacturing_capacity_report,
+        )
+        factory_workload_report = FactoryWorkloadBuilder().build(
+            [production_schedule_report]
+        )
+        manufacturing_complexity_report = (
+            ManufacturingComplexityBuilder().build(
+                manufacturing_metrics_report
+            )
+        )
         manufacturing_executive_report = (
             ManufacturingExecutiveReportBuilder().build(
                 manufacturing_kpi_report,
                 production_readiness_report,
                 manufacturing_optimization_result,
+                capacity_report=manufacturing_capacity_report,
+                production_schedule_report=production_schedule_report,
+                factory_workload_report=factory_workload_report,
+                manufacturing_complexity_report=(
+                    manufacturing_complexity_report
+                ),
             )
         )
         return ManufacturingFactoryIntelligenceResult(
