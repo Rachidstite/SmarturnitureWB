@@ -50,6 +50,8 @@ class TestHardwareReportCostService(unittest.TestCase):
                 SimpleNamespace(hardware_intent="INTENT_SHELF_PIN"),
                 SimpleNamespace(hardware_intent="INTENT_SHELF_PIN"),
                 SimpleNamespace(hardware_intent="INTENT_SHELF_PIN"),
+                SimpleNamespace(hardware_intent="INTENT_DRAWER_SLIDE"),
+                SimpleNamespace(hardware_intent="INTENT_DRAWER_SLIDE"),
             ]
         )
         context = SimpleNamespace(
@@ -58,6 +60,7 @@ class TestHardwareReportCostService(unittest.TestCase):
                 "INTENT_MINIFIX_15": "MINIFIX_15_V1",
                 "INTENT_CONFIRMAT_50": "CONFIRMAT_50_V1",
                 "INTENT_SHELF_PIN": "SHELF_PIN_5MM",
+                "INTENT_DRAWER_SLIDE": "DRAWER_SLIDE_SOFTCLOSE_450",
             }
         )
         pricing_catalog = {
@@ -65,6 +68,7 @@ class TestHardwareReportCostService(unittest.TestCase):
             "MINIFIX_15_V1": {"unit_price": 1.5},
             "CONFIRMAT_50_V1": {"unit_price": 2.0},
             "SHELF_PIN_5MM": {"unit_price": 0.5},
+            "DRAWER_SLIDE_SOFTCLOSE_450": {"unit_price": 20.0},
         }
 
         result = HardwareReportCostService.estimate_from_project(
@@ -73,8 +77,8 @@ class TestHardwareReportCostService(unittest.TestCase):
             pricing_catalog=pricing_catalog,
         )
 
-        self.assertEqual(result.hardware_cost, 17.0)
-        self.assertEqual(result.total_cost, 17.0)
+        self.assertEqual(result.hardware_cost, 57.0)
+        self.assertEqual(result.total_cost, 57.0)
 
     def test_estimate_from_project_surfaces_missing_price_warnings(
         self,
@@ -89,6 +93,7 @@ class TestHardwareReportCostService(unittest.TestCase):
                 SimpleNamespace(hardware_intent="INTENT_MINIFIX_15"),
                 SimpleNamespace(hardware_intent="INTENT_CONFIRMAT_50"),
                 SimpleNamespace(hardware_intent="INTENT_SHELF_PIN"),
+                SimpleNamespace(hardware_intent="INTENT_DRAWER_SLIDE"),
             ]
         )
         context = SimpleNamespace(
@@ -97,6 +102,7 @@ class TestHardwareReportCostService(unittest.TestCase):
                 "INTENT_MINIFIX_15": "MINIFIX_15_V1",
                 "INTENT_CONFIRMAT_50": "CONFIRMAT_50_V1",
                 "INTENT_SHELF_PIN": "SHELF_PIN_5MM",
+                "INTENT_DRAWER_SLIDE": "DRAWER_SLIDE_SOFTCLOSE_450",
             }
         )
         pricing_catalog = {
@@ -115,6 +121,7 @@ class TestHardwareReportCostService(unittest.TestCase):
                 "Missing hardware price for MINIFIX_15_V1",
                 "Missing hardware price for CONFIRMAT_50_V1",
                 "Missing hardware price for SHELF_PIN_5MM",
+                "Missing hardware price for DRAWER_SLIDE_SOFTCLOSE_450",
             ],
         )
         self.assertEqual(result.hardware_cost, 6.0)
@@ -151,12 +158,33 @@ class TestHardwareReportCostService(unittest.TestCase):
                 "MINIFIX": 1,
                 "CONFIRMAT": 1,
                 "SHELF_PIN": 2,
+                "DRAWER_SLIDE": 0,
                 "DOWEL": 0,
             },
         )
         self.assertEqual(report.hinge_count, 2)
         self.assertEqual(report.minifix_count, 1)
         self.assertEqual(report.dowel_count, 0)
+
+    def test_generate_from_project_counts_drawer_slide_placements(self):
+        from exports.hardware_report import HardwareReportEngine
+
+        project = SimpleNamespace(
+            placements=[
+                SimpleNamespace(hardware_intent="INTENT_DRAWER_SLIDE"),
+                SimpleNamespace(hardware_intent="INTENT_DRAWER_SLIDE"),
+                SimpleNamespace(hardware_intent="INTENT_DRAWER_SLIDE"),
+            ]
+        )
+        context = SimpleNamespace(
+            hardware_profile={
+                "INTENT_DRAWER_SLIDE": "DRAWER_SLIDE_SOFTCLOSE_450",
+            }
+        )
+
+        report = HardwareReportEngine.generate_from_project(project, context)
+
+        self.assertEqual(report.hardware_items["DRAWER_SLIDE"], 3)
 
     @patch(
         "cost_intelligence.hardware_report_cost_service."

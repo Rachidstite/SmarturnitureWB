@@ -21,8 +21,19 @@ class ProjectCostCalculator:
         hardware_items=None,
         pricing_catalog=None,
         *,
+        project=None,
+        context=None,
         scene_graph=None,
     ):
+        if project is not None and context is None:
+            raise ValueError("project requires context")
+
+        if project is not None and scene_graph is not None:
+            raise ValueError("project and scene_graph are mutually exclusive")
+
+        if project is not None and hardware_items is not None:
+            raise ValueError("project and hardware_items are mutually exclusive")
+
         if scene_graph is not None and hardware_items is not None:
             raise ValueError(
                 "scene_graph and hardware_items are mutually exclusive"
@@ -40,7 +51,13 @@ class ProjectCostCalculator:
             nesting_results=nesting_results,
             pricing_catalog=pricing_catalog,
         )
-        if scene_graph is not None:
+        if project is not None:
+            hardware_estimate = HardwareReportCostService.estimate_from_project(
+                project,
+                context,
+                pricing_catalog=pricing_catalog,
+            )
+        elif scene_graph is not None:
             hardware_estimate = HardwareReportCostService.estimate(
                 scene_graph,
                 pricing_catalog=pricing_catalog,

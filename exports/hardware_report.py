@@ -66,6 +66,8 @@ class HardwareReportEngine:
             "MINIFIX_15_V1": "MINIFIX",
             "CONFIRMAT_50_V1": "CONFIRMAT",
             "SHELF_PIN_5MM": "SHELF_PIN",
+            "DRAWER_SLIDE_SOFTCLOSE_450": "DRAWER_SLIDE",
+            "DRAWER_SLIDE_STANDARD_450": "DRAWER_SLIDE",
         }
 
         counts = defaultdict(int)
@@ -92,6 +94,7 @@ class HardwareReportEngine:
         report.hardware_items["MINIFIX"] = report.minifix_count
         report.hardware_items["CONFIRMAT"] = counts.get("CONFIRMAT", 0)
         report.hardware_items["SHELF_PIN"] = counts.get("SHELF_PIN", 0)
+        report.hardware_items["DRAWER_SLIDE"] = counts.get("DRAWER_SLIDE", 0)
         report.hardware_items["DOWEL"] = report.dowel_count
 
         return report

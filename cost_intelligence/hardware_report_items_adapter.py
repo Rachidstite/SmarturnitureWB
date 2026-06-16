@@ -5,6 +5,7 @@ class HardwareReportItemsAdapter:
         ("HINGE", "HINGE_BLUM_110_V1"),
         ("CONFIRMAT", "CONFIRMAT_50_V1"),
         ("SHELF_PIN", "SHELF_PIN_5MM"),
+        ("DRAWER_SLIDE", "DRAWER_SLIDE_SOFTCLOSE_450"),
     )
 
     @staticmethod

@@ -16,7 +16,8 @@ class RuleContext:
         "INTENT_HINGE": "HINGE_BLUM_110_V1",
         "INTENT_MINIFIX_15": "MINIFIX_15_V1",
         "INTENT_CONFIRMAT_50": "CONFIRMAT_50_V1",
-        "INTENT_SHELF_PIN": "SHELF_PIN_5MM"
+        "INTENT_SHELF_PIN": "SHELF_PIN_5MM",
+        "INTENT_DRAWER_SLIDE": "DRAWER_SLIDE_SOFTCLOSE_450"
     })
 
 class HardwareRule:
@@ -113,6 +114,39 @@ class ShelfSupportRule(HardwareRule):
                         ))
         return placements
 
+class DrawerSlideRule(HardwareRule):
+    """قاعدة توزيع شرائح الأدراج (شريحتان لكل واجهة درج)"""
+    def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
+        placements = []
+        drawers = self._drawer_faces_from_graph(project.graph)
+
+        for drawer in drawers:
+            placements.append(HardwarePlacement(
+                host_node_id=drawer.identity.key,
+                hardware_intent="INTENT_DRAWER_SLIDE",
+                anchor=AnchorCoordinate(MountFace.LEFT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
+                description="Left drawer slide"
+            ))
+            placements.append(HardwarePlacement(
+                host_node_id=drawer.identity.key,
+                hardware_intent="INTENT_DRAWER_SLIDE",
+                anchor=AnchorCoordinate(MountFace.RIGHT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
+                description="Right drawer slide"
+            ))
+        return placements
+
+    @staticmethod
+    def _drawer_faces_from_graph(graph):
+        by_role = getattr(graph, "_by_role", {}) or {}
+        candidates = []
+        for role_key, nodes in by_role.items():
+            role_name = getattr(role_key, "name", None)
+            role_value = getattr(role_key, "value", None)
+            role_text = str(role_key).split(".")[-1]
+            if role_name == "DRAWER_FACE" or role_value == "DRAWER_FACE" or role_text == "DRAWER_FACE":
+                candidates.extend(nodes or [])
+        return candidates
+
 class HardwarePlacementEngine:
     """المحرك الذي يطبق جميع القواعد ويحقن النوايا (Intents) في المشروع"""
     def __init__(self, context: RuleContext = None):
@@ -120,7 +154,8 @@ class HardwarePlacementEngine:
         self.rules: List[HardwareRule] = [
             HingeRule(),
             System32JoineryRule(),
-            ShelfSupportRule()
+            ShelfSupportRule(),
+            DrawerSlideRule()
         ]
 
     def process(self, project: CabinetProject):

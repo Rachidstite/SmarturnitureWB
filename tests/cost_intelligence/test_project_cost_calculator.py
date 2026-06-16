@@ -157,6 +157,226 @@ class TestProjectCostCalculator(unittest.TestCase):
             hardware_estimate=hardware_estimate,
         )
 
+    def test_project_context_path_uses_hardware_report_cost_service_from_project(
+        self,
+    ):
+
+        from cost_intelligence.cost_estimate import CostEstimate
+        from cost_intelligence.project_cost_calculator import (
+            ProjectCostCalculator,
+        )
+
+        project = object()
+        context = object()
+        pricing_catalog = {"HINGE_BLUM_110_V1": {"unit_price": 6.0}}
+        material_estimate = CostEstimate(material_cost=50)
+        sheet_estimate = CostEstimate(sheet_cost=560)
+        waste_estimate = CostEstimate(waste_cost=84)
+        hardware_estimate = CostEstimate(hardware_cost=48)
+        summary = CostEstimate(hardware_cost=48, total_cost=608)
+
+        with patch(
+            "cost_intelligence.project_cost_calculator.MaterialCostCalculator"
+        ) as material_calculator, patch(
+            "cost_intelligence.project_cost_calculator.SheetCostCalculator"
+        ) as sheet_calculator, patch(
+            "cost_intelligence.project_cost_calculator.WasteCostCalculator"
+        ) as waste_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareCostCalculator"
+        ) as hardware_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareReportCostService"
+        ) as hardware_report_cost_service, patch(
+            "cost_intelligence.project_cost_calculator.CostSummaryCalculator"
+        ) as summary_calculator:
+            material_calculator.return_value.estimate.return_value = (
+                material_estimate
+            )
+            sheet_calculator.return_value.estimate.return_value = sheet_estimate
+            waste_calculator.return_value.estimate.return_value = waste_estimate
+            hardware_report_cost_service.estimate_from_project.return_value = (
+                hardware_estimate
+            )
+            summary_calculator.return_value.estimate.return_value = summary
+
+            ProjectCostCalculator().estimate(
+                pricing_catalog=pricing_catalog,
+                project=project,
+                context=context,
+            )
+
+        hardware_report_cost_service.estimate_from_project.assert_called_once_with(
+            project,
+            context,
+            pricing_catalog=pricing_catalog,
+        )
+        hardware_report_cost_service.estimate.assert_not_called()
+        hardware_calculator.assert_not_called()
+        summary_calculator.return_value.estimate.assert_called_once_with(
+            material_estimate=material_estimate,
+            sheet_estimate=sheet_estimate,
+            waste_estimate=waste_estimate,
+            hardware_estimate=hardware_estimate,
+        )
+
+    def test_project_context_path_prices_drawer_slides(self):
+        from cost_intelligence.cost_estimate import CostEstimate
+        from cost_intelligence.project_cost_calculator import (
+            ProjectCostCalculator,
+        )
+
+        project = object()
+        context = object()
+        pricing_catalog = {
+            "DRAWER_SLIDE_SOFTCLOSE_450": {"unit_price": 20.0},
+        }
+        material_estimate = CostEstimate(material_cost=50)
+        sheet_estimate = CostEstimate(sheet_cost=560)
+        waste_estimate = CostEstimate(waste_cost=84)
+        hardware_estimate = CostEstimate(hardware_cost=40)
+        summary = CostEstimate(hardware_cost=40, total_cost=640)
+
+        with patch(
+            "cost_intelligence.project_cost_calculator.MaterialCostCalculator"
+        ) as material_calculator, patch(
+            "cost_intelligence.project_cost_calculator.SheetCostCalculator"
+        ) as sheet_calculator, patch(
+            "cost_intelligence.project_cost_calculator.WasteCostCalculator"
+        ) as waste_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareCostCalculator"
+        ) as hardware_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareReportCostService"
+        ) as hardware_report_cost_service, patch(
+            "cost_intelligence.project_cost_calculator.CostSummaryCalculator"
+        ) as summary_calculator:
+            material_calculator.return_value.estimate.return_value = (
+                material_estimate
+            )
+            sheet_calculator.return_value.estimate.return_value = sheet_estimate
+            waste_calculator.return_value.estimate.return_value = waste_estimate
+            hardware_report_cost_service.estimate_from_project.return_value = (
+                hardware_estimate
+            )
+            summary_calculator.return_value.estimate.return_value = summary
+
+            ProjectCostCalculator().estimate(
+                pricing_catalog=pricing_catalog,
+                project=project,
+                context=context,
+            )
+
+        hardware_report_cost_service.estimate_from_project.assert_called_once_with(
+            project,
+            context,
+            pricing_catalog=pricing_catalog,
+        )
+        passed_pricing_catalog = (
+            hardware_report_cost_service.estimate_from_project.call_args.kwargs[
+                "pricing_catalog"
+            ]
+        )
+        self.assertIs(passed_pricing_catalog, pricing_catalog)
+        hardware_calculator.assert_not_called()
+        summary_calculator.return_value.estimate.assert_called_once_with(
+            material_estimate=material_estimate,
+            sheet_estimate=sheet_estimate,
+            waste_estimate=waste_estimate,
+            hardware_estimate=hardware_estimate,
+        )
+
+    def test_project_without_context_raises_value_error_before_costing(self):
+        from cost_intelligence.project_cost_calculator import (
+            ProjectCostCalculator,
+        )
+
+        with patch(
+            "cost_intelligence.project_cost_calculator.MaterialCostCalculator"
+        ) as material_calculator, patch(
+            "cost_intelligence.project_cost_calculator.SheetCostCalculator"
+        ) as sheet_calculator, patch(
+            "cost_intelligence.project_cost_calculator.WasteCostCalculator"
+        ) as waste_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareCostCalculator"
+        ) as hardware_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareReportCostService"
+        ) as hardware_report_cost_service:
+            with self.assertRaisesRegex(
+                ValueError,
+                "^project requires context$",
+            ):
+                ProjectCostCalculator().estimate(
+                    project=object(),
+                )
+
+        material_calculator.assert_not_called()
+        sheet_calculator.assert_not_called()
+        waste_calculator.assert_not_called()
+        hardware_calculator.assert_not_called()
+        hardware_report_cost_service.estimate.assert_not_called()
+
+    def test_project_and_scene_graph_raise_value_error_before_costing(self):
+        from cost_intelligence.project_cost_calculator import (
+            ProjectCostCalculator,
+        )
+
+        with patch(
+            "cost_intelligence.project_cost_calculator.MaterialCostCalculator"
+        ) as material_calculator, patch(
+            "cost_intelligence.project_cost_calculator.SheetCostCalculator"
+        ) as sheet_calculator, patch(
+            "cost_intelligence.project_cost_calculator.WasteCostCalculator"
+        ) as waste_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareCostCalculator"
+        ) as hardware_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareReportCostService"
+        ) as hardware_report_cost_service:
+            with self.assertRaisesRegex(
+                ValueError,
+                "^project and scene_graph are mutually exclusive$",
+            ):
+                ProjectCostCalculator().estimate(
+                    project=object(),
+                    context=object(),
+                    scene_graph=object(),
+                )
+
+        material_calculator.assert_not_called()
+        sheet_calculator.assert_not_called()
+        waste_calculator.assert_not_called()
+        hardware_calculator.assert_not_called()
+        hardware_report_cost_service.estimate.assert_not_called()
+
+    def test_project_and_hardware_items_raise_value_error_before_costing(self):
+        from cost_intelligence.project_cost_calculator import (
+            ProjectCostCalculator,
+        )
+
+        with patch(
+            "cost_intelligence.project_cost_calculator.MaterialCostCalculator"
+        ) as material_calculator, patch(
+            "cost_intelligence.project_cost_calculator.SheetCostCalculator"
+        ) as sheet_calculator, patch(
+            "cost_intelligence.project_cost_calculator.WasteCostCalculator"
+        ) as waste_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareCostCalculator"
+        ) as hardware_calculator, patch(
+            "cost_intelligence.project_cost_calculator.HardwareReportCostService"
+        ) as hardware_report_cost_service:
+            with self.assertRaisesRegex(
+                ValueError,
+                "^project and hardware_items are mutually exclusive$",
+            ):
+                ProjectCostCalculator().estimate(
+                    project=object(),
+                    context=object(),
+                    hardware_items=[{"sku": "HINGE_BLUM_110_V1", "quantity": 4}],
+                )
+
+        material_calculator.assert_not_called()
+        sheet_calculator.assert_not_called()
+        waste_calculator.assert_not_called()
+        hardware_calculator.assert_not_called()
+        hardware_report_cost_service.estimate.assert_not_called()
+
     def test_scene_graph_and_hardware_items_raise_value_error_before_costing(self):
         self._assert_hardware_source_conflict_raises(
             hardware_items=[{"sku": "HINGE_BLUM_110_V1", "quantity": 4}]

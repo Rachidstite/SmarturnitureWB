@@ -44,6 +44,14 @@ class TestHardwareReportItemsAdapter(unittest.TestCase):
             [{"sku": "SHELF_PIN_5MM", "quantity": 8}],
         )
 
+    def test_converts_drawer_slide_to_drawer_slide_sku(self):
+        result = self._adapt({"DRAWER_SLIDE": 6})
+
+        self.assertEqual(
+            result,
+            [{"sku": "DRAWER_SLIDE_SOFTCLOSE_450", "quantity": 6}],
+        )
+
     def test_ignores_dowel(self):
         result = self._adapt({"DOWEL": 12})
 
@@ -112,6 +120,7 @@ class TestHardwareReportItemsAdapter(unittest.TestCase):
                 "CONFIRMAT": 6,
                 "HINGE": 4,
                 "MINIFIX": 8,
+                "DRAWER_SLIDE": 10,
             }
         )
 
@@ -122,6 +131,7 @@ class TestHardwareReportItemsAdapter(unittest.TestCase):
                 {"sku": "HINGE_BLUM_110_V1", "quantity": 4},
                 {"sku": "CONFIRMAT_50_V1", "quantity": 6},
                 {"sku": "SHELF_PIN_5MM", "quantity": 8},
+                {"sku": "DRAWER_SLIDE_SOFTCLOSE_450", "quantity": 10},
             ],
         )
 
