@@ -16,6 +16,15 @@ from cost_intelligence.furniture_project_quotation_builder import (
 from manufacturing.furniture_project_manufacturing_package_builder import (
     FurnitureProjectManufacturingPackageBuilder,
 )
+from manufacturing.manufacturing_capacity_builder import (
+    ManufacturingCapacityBuilder,
+)
+from manufacturing.manufacturing_complexity_builder import (
+    ManufacturingComplexityBuilder,
+)
+from manufacturing.manufacturing_duration_builder import (
+    ManufacturingDurationBuilder,
+)
 from manufacturing.manufacturing_metrics_builder import ManufacturingMetricsBuilder
 from manufacturing.manufacturing_production_package_builder import (
     ManufacturingProductionPackageBuilder,
@@ -79,6 +88,15 @@ class FurnitureProjectBusinessReportBuilder:
         manufacturing_metrics_report = ManufacturingMetricsBuilder().build(
             manufacturing_production_package
         )
+        manufacturing_complexity_report = ManufacturingComplexityBuilder().build(
+            manufacturing_metrics_report
+        )
+        manufacturing_duration_report = ManufacturingDurationBuilder().build(
+            manufacturing_metrics_report
+        )
+        manufacturing_capacity_report = ManufacturingCapacityBuilder().build(
+            manufacturing_duration_report
+        )
         factory_decision_report = FurnitureProjectFactoryDecisionBuilder().build(
             furniture_project,
             markup_rate=markup_rate,
@@ -90,6 +108,9 @@ class FurnitureProjectBusinessReportBuilder:
             quotation_document=quotation_document,
             quotation_breakdowns=quotation_breakdowns,
             manufacturing_metrics_report=manufacturing_metrics_report,
+            manufacturing_complexity_report=manufacturing_complexity_report,
+            manufacturing_duration_report=manufacturing_duration_report,
+            manufacturing_capacity_report=manufacturing_capacity_report,
             profitability_report=profitability_report,
             executive_report=None,
             factory_decision_report=factory_decision_report,
