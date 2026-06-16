@@ -28,6 +28,22 @@ class TestHardwareReportItemsAdapter(unittest.TestCase):
             [{"sku": "HINGE_BLUM_110_V1", "quantity": 4}],
         )
 
+    def test_converts_confirmat_to_confirmat_sku(self):
+        result = self._adapt({"CONFIRMAT": 6})
+
+        self.assertEqual(
+            result,
+            [{"sku": "CONFIRMAT_50_V1", "quantity": 6}],
+        )
+
+    def test_converts_shelf_pin_to_shelf_pin_sku(self):
+        result = self._adapt({"SHELF_PIN": 8})
+
+        self.assertEqual(
+            result,
+            [{"sku": "SHELF_PIN_5MM", "quantity": 8}],
+        )
+
     def test_ignores_dowel(self):
         result = self._adapt({"DOWEL": 12})
 
@@ -86,6 +102,26 @@ class TestHardwareReportItemsAdapter(unittest.TestCase):
             [
                 {"sku": "MINIFIX_15_V1", "quantity": 8},
                 {"sku": "HINGE_BLUM_110_V1", "quantity": 4},
+            ],
+        )
+
+    def test_preserves_extended_output_order(self):
+        result = self._adapt(
+            {
+                "SHELF_PIN": 8,
+                "CONFIRMAT": 6,
+                "HINGE": 4,
+                "MINIFIX": 8,
+            }
+        )
+
+        self.assertEqual(
+            result,
+            [
+                {"sku": "MINIFIX_15_V1", "quantity": 8},
+                {"sku": "HINGE_BLUM_110_V1", "quantity": 4},
+                {"sku": "CONFIRMAT_50_V1", "quantity": 6},
+                {"sku": "SHELF_PIN_5MM", "quantity": 8},
             ],
         )
 

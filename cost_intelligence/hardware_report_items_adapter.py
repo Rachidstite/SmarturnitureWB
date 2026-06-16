@@ -3,6 +3,8 @@ class HardwareReportItemsAdapter:
     HARDWARE_SKU_MAP = (
         ("MINIFIX", "MINIFIX_15_V1"),
         ("HINGE", "HINGE_BLUM_110_V1"),
+        ("CONFIRMAT", "CONFIRMAT_50_V1"),
+        ("SHELF_PIN", "SHELF_PIN_5MM"),
     )
 
     @staticmethod

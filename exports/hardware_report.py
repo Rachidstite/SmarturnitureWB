@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict
 
@@ -51,5 +52,46 @@ class HardwareReportEngine:
         report.hardware_items["MINIFIX"] = report.minifix_count
         report.hardware_items["DOWEL"] = report.dowel_count
         report.hardware_items["HINGE"] = report.hinge_count
+
+        return report
+
+    @staticmethod
+    def generate_from_project(project, context):
+        report = HardwareReport()
+        placements = getattr(project, "placements", []) or []
+        hardware_profile = getattr(context, "hardware_profile", {}) or {}
+
+        family_by_sku = {
+            "HINGE_BLUM_110_V1": "HINGE",
+            "MINIFIX_15_V1": "MINIFIX",
+            "CONFIRMAT_50_V1": "CONFIRMAT",
+            "SHELF_PIN_5MM": "SHELF_PIN",
+        }
+
+        counts = defaultdict(int)
+
+        for placement in placements:
+            intent = getattr(placement, "hardware_intent", None)
+            if not intent:
+                continue
+
+            sku = hardware_profile.get(intent)
+            if not sku:
+                continue
+
+            family = family_by_sku.get(sku)
+            if not family:
+                continue
+
+            counts[family] += 1
+
+        report.hinge_count = counts.get("HINGE", 0)
+        report.minifix_count = counts.get("MINIFIX", 0)
+        report.dowel_count = counts.get("DOWEL", 0)
+        report.hardware_items["HINGE"] = report.hinge_count
+        report.hardware_items["MINIFIX"] = report.minifix_count
+        report.hardware_items["CONFIRMAT"] = counts.get("CONFIRMAT", 0)
+        report.hardware_items["SHELF_PIN"] = counts.get("SHELF_PIN", 0)
+        report.hardware_items["DOWEL"] = report.dowel_count
 
         return report

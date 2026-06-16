@@ -15,3 +15,12 @@ class HardwareReportCostService:
             hardware_items=items,
             pricing_catalog=pricing_catalog,
         )
+
+    @staticmethod
+    def estimate_from_project(project, context, pricing_catalog=None):
+        report = HardwareReportEngine.generate_from_project(project, context)
+        items = HardwareReportItemsAdapter.from_report(report)
+        return HardwareCostCalculator().estimate(
+            hardware_items=items,
+            pricing_catalog=pricing_catalog,
+        )
