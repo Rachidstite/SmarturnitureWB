@@ -5,7 +5,9 @@ from dataclasses import fields, is_dataclass
 class TestFactoryDecisionReportContract(unittest.TestCase):
 
     def test_report_is_dataclass_with_exact_field_order(self):
-        from cost_intelligence.factory_decision_report import FactoryDecisionReport
+        from cost_intelligence.factory_decision_report import (
+            FactoryDecisionReport,
+        )
 
         self.assertTrue(is_dataclass(FactoryDecisionReport))
         self.assertEqual(
@@ -19,6 +21,9 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
                 "nesting_risk_level",
                 "quotation_risk_level",
                 "margin_status",
+                "factory_capacity_status",
+                "factory_load_status",
+                "factory_bottleneck",
                 "blocking_issues",
                 "warnings",
                 "recommendations",
@@ -26,7 +31,9 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
         )
 
     def test_report_has_safe_defaults(self):
-        from cost_intelligence.factory_decision_report import FactoryDecisionReport
+        from cost_intelligence.factory_decision_report import (
+            FactoryDecisionReport,
+        )
 
         report = FactoryDecisionReport()
 
@@ -38,12 +45,17 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
         self.assertEqual(report.nesting_risk_level, "LOW")
         self.assertEqual(report.quotation_risk_level, "UNKNOWN")
         self.assertEqual(report.margin_status, "UNKNOWN")
+        self.assertEqual(report.factory_capacity_status, "UNKNOWN")
+        self.assertEqual(report.factory_load_status, "LOW")
+        self.assertEqual(report.factory_bottleneck, "")
         self.assertEqual(report.blocking_issues, [])
         self.assertEqual(report.warnings, [])
         self.assertEqual(report.recommendations, [])
 
     def test_report_list_defaults_are_independent(self):
-        from cost_intelligence.factory_decision_report import FactoryDecisionReport
+        from cost_intelligence.factory_decision_report import (
+            FactoryDecisionReport,
+        )
 
         first = FactoryDecisionReport()
         second = FactoryDecisionReport()

@@ -11,6 +11,9 @@ class FactoryDecisionReport:
     nesting_risk_level: str = "LOW"
     quotation_risk_level: str = "UNKNOWN"
     margin_status: str = "UNKNOWN"
+    factory_capacity_status: str = "UNKNOWN"
+    factory_load_status: str = "LOW"
+    factory_bottleneck: str = ""
     blocking_issues: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     recommendations: list = field(default_factory=list)
