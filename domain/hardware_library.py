@@ -98,7 +98,24 @@ class HardwareRegistry:
             manufacturer="GENERIC",
             model="HANDLE_128_BLACK",
             revision="1.0",
-            category="HANDLES", price=6.0
+            category="HANDLES",
+            price=6.0,
+            host_holes=[
+                HoleSpec(
+                    diameter=5.0,
+                    depth=18.0,
+                    face=MountFace.FRONT,
+                    offset_x=0.0,
+                    offset_y=-64.0,
+                ),
+                HoleSpec(
+                    diameter=5.0,
+                    depth=18.0,
+                    face=MountFace.FRONT,
+                    offset_x=0.0,
+                    offset_y=64.0,
+                ),
+            ],
         )
 
         self._catalog["CLOTHES_RAIL_1000"] = HardwareSpec(

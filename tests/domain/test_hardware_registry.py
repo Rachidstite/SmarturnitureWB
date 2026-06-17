@@ -60,6 +60,20 @@ class TestHardwareRegistry(unittest.TestCase):
         self.assertEqual(len(hardware.host_holes), 2)
         self._assert_drawer_slide_holes(hardware.host_holes)
 
+    def test_handle_128_black_has_basic_host_holes(self):
+        hardware = self.registry.get_hardware("HANDLE_128_BLACK")
+
+        self.assertEqual(len(hardware.host_holes), 2)
+        self.assertEqual(
+            {hole.offset_y for hole in hardware.host_holes},
+            {-64.0, 64.0},
+        )
+        for hole in hardware.host_holes:
+            self.assertEqual(hole.diameter, 5.0)
+            self.assertEqual(hole.depth, 18.0)
+            self.assertEqual(hole.face, MountFace.FRONT)
+            self.assertEqual(hole.offset_x, 0.0)
+
     def _assert_drawer_slide_holes(self, holes):
         self.assertEqual(
             {hole.offset_y for hole in holes},

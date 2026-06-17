@@ -1,11 +1,16 @@
 import unittest
 from types import SimpleNamespace
 
-from domain.anchors import HardwarePlacement
+from domain.anchors import HardwarePlacement, MountFace
 from domain.builders import CabinetProject, Identity, SceneGraph, SceneNode
 from domain.core_types import NodeCategory, NodeRole
 from domain.manufacturing_compiler import ManufacturingCompiler
-from domain.rules_engine import DrawerSlideRule, HardwarePlacementEngine, RuleContext
+from domain.rules_engine import (
+    DrawerSlideRule,
+    HandleRule,
+    HardwarePlacementEngine,
+    RuleContext,
+)
 
 
 class TestHardwarePlacementEngine(unittest.TestCase):
@@ -62,6 +67,20 @@ class TestHardwarePlacementEngine(unittest.TestCase):
             "DrawerSlideRule",
         )
 
+    def test_handle_rule_generates_placements_for_doors_and_drawer_fronts(self):
+        project = self._project_with_handle_panels()
+
+        placements = HandleRule().apply(project, RuleContext())
+
+        self.assertEqual(len(placements), 2)
+        self.assertTrue(all(p.hardware_intent == "INTENT_HANDLE" for p in placements))
+        self.assertEqual(
+            {p.host_node_id for p in placements},
+            {"DOOR_1", "DRAWER_FRONT_1"},
+        )
+        self.assertTrue(all(p.anchor.face == MountFace.FRONT for p in placements))
+        self.assertTrue(all(p.anchor.edge.name == "CENTER" for p in placements))
+
     def test_drawer_slide_placements_compile_into_machining_ops(self):
         project = self._project_with_one_drawer_face()
         context = RuleContext()
@@ -81,6 +100,31 @@ class TestHardwarePlacementEngine(unittest.TestCase):
             {op.local_y for op in drawer_face.machining_ops},
             {50.0, 350.0},
         )
+
+    def test_handle_placements_compile_into_machining_ops(self):
+        project = self._project_with_handle_panels()
+        context = RuleContext()
+
+        HardwarePlacementEngine(context).process(project)
+        ManufacturingCompiler().compile(project, context)
+
+        door = project.graph.get_node("DOOR_1")
+        drawer_front = project.graph.get_node("DRAWER_FRONT_1")
+
+        for node in [door, drawer_front]:
+            handle_ops = [
+                op for op in node.machining_ops
+                if op.diameter == 5.0
+                and op.depth == 18.0
+                and op.face == "FRONT"
+            ]
+
+            self.assertEqual(len(handle_ops), 2)
+            self.assertTrue(all(op.op_type == "DRILL" for op in handle_ops))
+            self.assertEqual(
+                {op.local_y for op in handle_ops},
+                {node.height / 2.0 - 64.0, node.height / 2.0 + 64.0},
+            )
 
     @staticmethod
     def _project_with_drawer_faces(count):
@@ -140,6 +184,36 @@ class TestHardwarePlacementEngine(unittest.TestCase):
             },
         )()
         graph._by_role[drawer_role] = [drawer_face]
+        return project
+
+    @staticmethod
+    def _project_with_handle_panels():
+        graph = SceneGraph()
+        project = CabinetProject(
+            graph=graph,
+            joinery=SimpleNamespace(edges=[]),
+            topology=SimpleNamespace(),
+            placements=[],
+        )
+
+        door = SceneNode(
+            Identity("DOOR_1"),
+            NodeRole.DOOR_PANEL,
+            500.0,
+            700.0,
+            18.0,
+            "MDF_18_WHITE",
+        )
+        drawer_front = SceneNode(
+            Identity("DRAWER_FRONT_1"),
+            NodeRole.DRAWER_FRONT,
+            500.0,
+            180.0,
+            18.0,
+            "MDF_18_WHITE",
+        )
+        graph.add_node(door)
+        graph.add_node(drawer_front)
         return project
 
 

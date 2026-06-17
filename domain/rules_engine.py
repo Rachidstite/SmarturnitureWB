@@ -17,7 +17,8 @@ class RuleContext:
         "INTENT_MINIFIX_15": "MINIFIX_15_V1",
         "INTENT_CONFIRMAT_50": "CONFIRMAT_50_V1",
         "INTENT_SHELF_PIN": "SHELF_PIN_5MM",
-        "INTENT_DRAWER_SLIDE": "DRAWER_SLIDE_SOFTCLOSE_450"
+        "INTENT_DRAWER_SLIDE": "DRAWER_SLIDE_SOFTCLOSE_450",
+        "INTENT_HANDLE": "HANDLE_128_BLACK",
     })
 
 
@@ -174,6 +175,36 @@ class DrawerSlideRule(HardwareRule):
                 candidates.extend(nodes or [])
         return candidates
 
+class HandleRule(HardwareRule):
+    """قاعدة توزيع المقابض الأساسية لكل باب أو واجهة درج"""
+    def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
+        placements = []
+        for panel in self._handle_panels_from_graph(project.graph):
+            placements.append(HardwarePlacement(
+                host_node_id=panel.identity.key,
+                hardware_intent="INTENT_HANDLE",
+                anchor=AnchorCoordinate(
+                    MountFace.FRONT,
+                    EdgeRef.CENTER,
+                    offset_x=0.0,
+                    offset_y=0.0,
+                ),
+                description="Handle",
+            ))
+        return placements
+
+    @staticmethod
+    def _handle_panels_from_graph(graph):
+        by_role = getattr(graph, "_by_role", {}) or {}
+        candidates = []
+        for role_key, nodes in by_role.items():
+            role_name = getattr(role_key, "name", None)
+            role_value = getattr(role_key, "value", None)
+            role_text = str(role_key).split(".")[-1]
+            if role_name in ("DOOR_PANEL", "DRAWER_FRONT") or role_value in ("DOOR_PANEL", "DRAWER_FRONT") or role_text in ("DOOR_PANEL", "DRAWER_FRONT"):
+                candidates.extend(nodes or [])
+        return candidates
+
 class HardwarePlacementEngine:
     """المحرك الذي يطبق جميع القواعد ويحقن النوايا (Intents) في المشروع"""
     def __init__(self, context: RuleContext = None):
@@ -182,6 +213,7 @@ class HardwarePlacementEngine:
             HingeRule(),
             System32JoineryRule(),
             ShelfSupportRule(),
+            HandleRule(),
             DrawerSlideRule()
         ]
 
