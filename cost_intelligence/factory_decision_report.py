@@ -14,6 +14,7 @@ class FactoryDecisionReport:
     factory_capacity_status: str = "UNKNOWN"
     factory_load_status: str = "LOW"
     factory_bottleneck: str = ""
+    profitability_status: str = "UNKNOWN"
     blocking_issues: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     recommendations: list = field(default_factory=list)

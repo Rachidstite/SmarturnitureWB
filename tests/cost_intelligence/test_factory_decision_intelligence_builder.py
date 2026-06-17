@@ -54,6 +54,7 @@ class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
         self.assertEqual(report.factory_capacity_status, "OVERLOADED")
         self.assertEqual(report.factory_load_status, "HIGH")
         self.assertEqual(report.factory_bottleneck, "CNC")
+        self.assertEqual(report.profitability_status, "UNKNOWN")
 
     def test_blocked_base_decision_remains_blocked(self):
         report = self.builder.build(
@@ -89,12 +90,49 @@ class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
 
         self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
 
+    def test_low_profitability_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                profitability_status="LOW",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_medium_profitability_does_not_block(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                profitability_status="MEDIUM",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "APPROVED")
+
+    def test_high_profitability_does_not_block(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                profitability_status="HIGH",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "APPROVED")
+
     def test_capacity_and_load_defaults_preserved_when_absent(self):
         report = self.builder.build(*self._inputs())
 
         self.assertEqual(report.factory_capacity_status, "UNKNOWN")
         self.assertEqual(report.factory_load_status, "LOW")
         self.assertEqual(report.factory_bottleneck, "")
+        self.assertEqual(report.profitability_status, "UNKNOWN")
 
     def test_builder_does_not_mutate_inputs(self):
         base_decision_report, factory_intelligence_report = self._inputs(
@@ -136,6 +174,7 @@ class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
         factory_capacity_status="UNKNOWN",
         factory_load_status="LOW",
         factory_bottleneck="",
+        profitability_status="UNKNOWN",
     ):
         from cost_intelligence.factory_decision_report import (
             FactoryDecisionReport,
@@ -161,6 +200,7 @@ class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
                 blocking_issues=list(blocking_issues or []),
                 warnings=list(warnings or []),
                 recommendations=list(recommendations or []),
+                profitability_status=profitability_status,
             ),
             FactoryIntelligenceReport(
                 factory_resource_report=object(),

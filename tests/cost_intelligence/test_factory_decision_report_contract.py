@@ -24,6 +24,7 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
                 "factory_capacity_status",
                 "factory_load_status",
                 "factory_bottleneck",
+                "profitability_status",
                 "blocking_issues",
                 "warnings",
                 "recommendations",
@@ -48,6 +49,7 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
         self.assertEqual(report.factory_capacity_status, "UNKNOWN")
         self.assertEqual(report.factory_load_status, "LOW")
         self.assertEqual(report.factory_bottleneck, "")
+        self.assertEqual(report.profitability_status, "UNKNOWN")
         self.assertEqual(report.blocking_issues, [])
         self.assertEqual(report.warnings, [])
         self.assertEqual(report.recommendations, [])
