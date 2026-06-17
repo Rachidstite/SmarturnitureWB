@@ -1,0 +1,8 @@
+{
+  "workers": 3,
+  "cnc_machines": 1,
+  "edge_banding_machines": 1,
+  "assembly_stations": 2,
+  "daily_work_hours": 8,
+  "workdays_per_week": 5
+}
