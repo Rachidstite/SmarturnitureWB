@@ -79,6 +79,7 @@ class HingeRule(HardwareRule):
             for i, offset_z in enumerate(offsets):
                 placements.append(HardwarePlacement(
                     host_node_id=door.identity.key,
+                    target_node_id=door.identity.key,
                     hardware_intent="INTENT_HINGE",
                     anchor=AnchorCoordinate(
                         face=MountFace.BACK, 
