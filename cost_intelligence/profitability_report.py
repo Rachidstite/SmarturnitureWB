@@ -15,6 +15,8 @@ class ProfitabilityReport:
 
     gross_margin_rate: float = 0.0
 
+    profitability_status: str = "UNKNOWN"
+
     currency: str = "MAD"
 
     warnings: list = field(

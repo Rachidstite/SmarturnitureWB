@@ -37,6 +37,7 @@ class TestProfitabilityReportContract(unittest.TestCase):
                 "selling_price",
                 "gross_profit",
                 "gross_margin_rate",
+                "profitability_status",
                 "currency",
                 "warnings",
             },
@@ -54,6 +55,7 @@ class TestProfitabilityReportContract(unittest.TestCase):
         self.assertEqual(report.selling_price, 0.0)
         self.assertEqual(report.gross_profit, 0.0)
         self.assertEqual(report.gross_margin_rate, 0.0)
+        self.assertEqual(report.profitability_status, "UNKNOWN")
         self.assertEqual(report.currency, "MAD")
         self.assertEqual(report.warnings, [])
 
