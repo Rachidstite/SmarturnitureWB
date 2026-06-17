@@ -1,5 +1,8 @@
 from manufacturing.extractor import ManufacturingExtractor
 from manufacturing.manufacturing_package_builder import ManufacturingPackageBuilder
+from manufacturing.manufacturing_operation_adapter import (
+    ManufacturingOperationAdapter,
+)
 from manufacturing.manufacturing_production_package_builder import (
     ManufacturingProductionPackageBuilder,
 )
@@ -13,11 +16,11 @@ class ManufacturingRuntimePipelineBuilder:
 
     def build(self, scene_graph):
         panel_specs = ManufacturingExtractor.extract(scene_graph)
-        machining_operations = [
+        machining_operations = ManufacturingOperationAdapter.to_unified_list(
             operation
             for panel in panel_specs
             for operation in panel.cnc_operations
-        ]
+        )
         edge_operations = [
             UnifiedManufacturingOperation(operation_type="EDGE_BANDING")
             for panel in panel_specs

@@ -49,8 +49,21 @@ class TestManufacturingRuntimePipelineBuilder(unittest.TestCase):
             UnifiedManufacturingOperation,
         )
 
-        first_cnc_operation = object()
-        second_cnc_operation = object()
+        first_cnc_operation = self._cnc_operation(
+            op_type="DRILL",
+            diameter=5.0,
+            depth=10.0,
+            face="TOP",
+            local_x=1.0,
+            local_y=2.0,
+        )
+        second_cnc_operation = self._cnc_operation(
+            operation_type="GROOVE",
+            depth=6.0,
+            x=3.0,
+            y=4.0,
+            z=5.0,
+        )
         panel_specs = [
             self._panel(
                 cnc_operations=[first_cnc_operation],
@@ -80,9 +93,30 @@ class TestManufacturingRuntimePipelineBuilder(unittest.TestCase):
         build_kwargs = package_builder_class.return_value.build.call_args.kwargs
         self.assertIs(build_kwargs["panels"], panel_specs)
         self.assertEqual(build_kwargs["materials"], [])
+        self.assertTrue(
+            all(
+                isinstance(operation, UnifiedManufacturingOperation)
+                for operation in build_kwargs["machining_operations"]
+            )
+        )
         self.assertEqual(
-            build_kwargs["machining_operations"],
-            [first_cnc_operation, second_cnc_operation],
+            [
+                operation.operation_type
+                for operation in build_kwargs["machining_operations"]
+            ],
+            ["DRILL", "GROOVE"],
+        )
+        self.assertEqual(
+            build_kwargs["machining_operations"][0].metadata[
+                "original_operation_type"
+            ],
+            "DRILL",
+        )
+        self.assertEqual(
+            build_kwargs["machining_operations"][1].metadata[
+                "original_operation_type"
+            ],
+            "GROOVE",
         )
         self.assertEqual(build_kwargs["warnings"], [])
         self.assertEqual(len(build_kwargs["edge_operations"]), 3)
@@ -152,6 +186,12 @@ class TestManufacturingRuntimePipelineBuilder(unittest.TestCase):
             cnc_operations=cnc_operations,
             edge_spec=edge_spec,
         )
+
+    @staticmethod
+    def _cnc_operation(**kwargs):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(**kwargs)
 
 
 if __name__ == "__main__":
