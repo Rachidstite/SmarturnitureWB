@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
+from pathlib import Path
 from domain.anchors import MountFace
+from domain.hardware_catalog_loader import HardwareCatalogLoader
 
 @dataclass
 class HoleSpec:
@@ -32,6 +34,14 @@ class HardwareRegistry:
     def __init__(self):
         self._catalog: Dict[str, HardwareSpec] = {}
         self._seed_catalog()
+        self._catalog.update(
+            HardwareCatalogLoader.load(
+                Path(__file__).resolve().parent.parent
+                / "data"
+                / "hardware"
+                / "drawer_slides.json"
+            )
+        )
 
     def get_hardware(self, sku: str) -> HardwareSpec:
         return self._catalog.get(sku)

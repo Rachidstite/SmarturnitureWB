@@ -1,0 +1,60 @@
+{
+  "items": [
+    {
+      "sku": "DRAWER_SLIDE_SOFTCLOSE_450",
+      "manufacturer": "GENERIC",
+      "model": "SOFT_CLOSE_450",
+      "revision": "1.0",
+      "category": "DRAWER_SLIDES",
+      "price": 20.0,
+      "host_holes": [
+        {
+          "diameter": 3.0,
+          "depth": 12.0,
+          "face": "LEFT",
+          "axis": "Z",
+          "offset_x": 32.0,
+          "offset_y": 50.0,
+          "is_through_hole": false
+        },
+        {
+          "diameter": 3.0,
+          "depth": 12.0,
+          "face": "LEFT",
+          "axis": "Z",
+          "offset_x": 32.0,
+          "offset_y": 350.0,
+          "is_through_hole": false
+        }
+      ]
+    },
+    {
+      "sku": "DRAWER_SLIDE_STANDARD_450",
+      "manufacturer": "GENERIC",
+      "model": "STANDARD_SLIDE_450",
+      "revision": "1.0",
+      "category": "DRAWER_SLIDES",
+      "price": 20.0,
+      "host_holes": [
+        {
+          "diameter": 3.0,
+          "depth": 12.0,
+          "face": "LEFT",
+          "axis": "Z",
+          "offset_x": 32.0,
+          "offset_y": 50.0,
+          "is_through_hole": false
+        },
+        {
+          "diameter": 3.0,
+          "depth": 12.0,
+          "face": "LEFT",
+          "axis": "Z",
+          "offset_x": 32.0,
+          "offset_y": 350.0,
+          "is_through_hole": false
+        }
+      ]
+    }
+  ]
+}
