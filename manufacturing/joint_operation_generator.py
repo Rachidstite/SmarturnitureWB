@@ -1,4 +1,9 @@
+from copy import deepcopy
+
 from domain.manufacturing_ops import FaceDrill, EdgeDrill
+from manufacturing.hardware_operation_adapter import (
+    HardwareOperationAdapter,
+)
 
 class JointOperationGenerator:
 
@@ -30,3 +35,9 @@ class JointOperationGenerator:
         )
 
         return ops
+
+    @staticmethod
+    def minifix_joint_from_hardware(parent_node, child_node, hardware_spec):
+        return HardwareOperationAdapter.to_unified(
+            deepcopy(hardware_spec.target_holes)
+        )
