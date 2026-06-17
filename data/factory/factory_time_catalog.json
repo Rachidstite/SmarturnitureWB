@@ -1,0 +1,6 @@
+{
+  "drill_minutes_per_operation": 0.5,
+  "edge_banding_minutes_per_meter": 0.5,
+  "assembly_minutes_per_panel": 6.0,
+  "cnc_minutes_per_panel": 1.0
+}

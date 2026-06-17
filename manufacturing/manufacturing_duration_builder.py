@@ -1,4 +1,7 @@
 from manufacturing.manufacturing_duration_report import ManufacturingDurationReport
+from manufacturing.factory_time_catalog_service import (
+    FactoryTimeCatalogService,
+)
 
 
 class ManufacturingDurationBuilder:
@@ -13,14 +16,34 @@ class ManufacturingDurationBuilder:
     """
 
     def build(self, metrics_report):
-        estimated_cnc_minutes = metrics_report.total_panels * 1.0
+        catalog = FactoryTimeCatalogService().load()
+        cnc_minutes_per_panel = catalog.get("cnc_minutes_per_panel", 1.0)
+        drill_minutes_per_operation = catalog.get(
+            "drill_minutes_per_operation",
+            0.5,
+        )
+        edge_banding_minutes_per_meter = catalog.get(
+            "edge_banding_minutes_per_meter",
+            0.5,
+        )
+        assembly_minutes_per_panel = catalog.get(
+            "assembly_minutes_per_panel",
+            6.0,
+        )
+
+        estimated_cnc_minutes = (
+            metrics_report.total_panels * cnc_minutes_per_panel
+        )
         estimated_drilling_minutes = (
-            metrics_report.total_drilling_operations * 0.5
+            metrics_report.total_drilling_operations
+            * drill_minutes_per_operation
         )
         estimated_edge_banding_minutes = (
-            metrics_report.total_edge_meters * 0.5
+            metrics_report.total_edge_meters * edge_banding_minutes_per_meter
         )
-        estimated_assembly_minutes = metrics_report.total_panels * 6.0
+        estimated_assembly_minutes = (
+            metrics_report.total_panels * assembly_minutes_per_panel
+        )
 
         total_production_minutes = (
             estimated_cnc_minutes
