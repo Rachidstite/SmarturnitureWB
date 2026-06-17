@@ -2,6 +2,9 @@ import unittest
 from types import SimpleNamespace
 
 from domain.anchors import HardwarePlacement
+from domain.builders import CabinetProject, Identity, SceneGraph, SceneNode
+from domain.core_types import NodeCategory, NodeRole
+from domain.manufacturing_compiler import ManufacturingCompiler
 from domain.rules_engine import DrawerSlideRule, HardwarePlacementEngine, RuleContext
 
 
@@ -59,6 +62,26 @@ class TestHardwarePlacementEngine(unittest.TestCase):
             "DrawerSlideRule",
         )
 
+    def test_drawer_slide_placements_compile_into_machining_ops(self):
+        project = self._project_with_one_drawer_face()
+        context = RuleContext()
+
+        HardwarePlacementEngine(context).process(project)
+        self.assertEqual(len(project.placements), 2)
+
+        ManufacturingCompiler().compile(project, context)
+
+        drawer_face = project.graph.get_node("DRAWER_FACE_1")
+        self.assertEqual(len(drawer_face.machining_ops), 2)
+        self.assertTrue(all(op.op_type == "DRILL" for op in drawer_face.machining_ops))
+        self.assertTrue(all(op.diameter == 3.0 for op in drawer_face.machining_ops))
+        self.assertTrue(all(op.depth == 12.0 for op in drawer_face.machining_ops))
+        self.assertEqual({op.face for op in drawer_face.machining_ops}, {"LEFT"})
+        self.assertEqual(
+            {op.local_y for op in drawer_face.machining_ops},
+            {50.0, 350.0},
+        )
+
     @staticmethod
     def _project_with_drawer_faces(count):
         faces = [
@@ -84,6 +107,40 @@ class TestHardwarePlacementEngine(unittest.TestCase):
                 "__hash__": object.__hash__,
             },
         )()
+
+    @staticmethod
+    def _project_with_one_drawer_face():
+        graph = SceneGraph()
+        project = CabinetProject(
+            graph=graph,
+            joinery=SimpleNamespace(edges=[]),
+            topology=SimpleNamespace(),
+            placements=[],
+        )
+
+        drawer_face = SceneNode(
+            Identity("DRAWER_FACE_1"),
+            NodeRole.UNKNOWN,
+            400.0,
+            200.0,
+            18.0,
+            "MDF_18_WHITE",
+        )
+        graph.nodes.append(drawer_face)
+        graph._by_id[drawer_face.identity.key] = drawer_face
+        graph._by_category[NodeCategory.PHYSICAL].append(drawer_face)
+
+        drawer_role = type(
+            "DrawerFaceRole",
+            (),
+            {
+                "name": "DRAWER_FACE",
+                "value": "DRAWER_FACE",
+                "__hash__": object.__hash__,
+            },
+        )()
+        graph._by_role[drawer_role] = [drawer_face]
+        return project
 
 
 if __name__ == "__main__":

@@ -73,7 +73,24 @@ class HardwareRegistry:
             manufacturer="GENERIC",
             model="SOFT_CLOSE_450",
             revision="1.0",
-            category="DRAWER_SLIDES", price=20.0
+            category="DRAWER_SLIDES",
+            price=20.0,
+            host_holes=[
+                HoleSpec(
+                    diameter=3.0,
+                    depth=12.0,
+                    face=MountFace.LEFT,
+                    offset_x=32.0,
+                    offset_y=50.0,
+                ),
+                HoleSpec(
+                    diameter=3.0,
+                    depth=12.0,
+                    face=MountFace.LEFT,
+                    offset_x=32.0,
+                    offset_y=350.0,
+                ),
+            ],
         )
 
         self._catalog["HANDLE_128_BLACK"] = HardwareSpec(
@@ -106,7 +123,23 @@ class HardwareRegistry:
             model="STANDARD_SLIDE_450",
             revision="1.0",
             category="DRAWER_SLIDES",
-            price=20.0
+            price=20.0,
+            host_holes=[
+                HoleSpec(
+                    diameter=3.0,
+                    depth=12.0,
+                    face=MountFace.LEFT,
+                    offset_x=32.0,
+                    offset_y=50.0,
+                ),
+                HoleSpec(
+                    diameter=3.0,
+                    depth=12.0,
+                    face=MountFace.LEFT,
+                    offset_x=32.0,
+                    offset_y=350.0,
+                ),
+            ],
         )
 
         self._catalog["TOUCH_LATCH_STANDARD"] = HardwareSpec(

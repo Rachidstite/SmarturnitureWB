@@ -1,5 +1,6 @@
 import unittest
 
+from domain.anchors import MountFace
 from domain.hardware_library import HardwareRegistry
 
 
@@ -46,6 +47,29 @@ class TestHardwareRegistry(unittest.TestCase):
         hardware = self.registry.get_hardware("DRAWER_SLIDE_STANDARD_450")
 
         self.assertEqual(hardware.display_name, "GENERIC STANDARD_SLIDE_450")
+
+    def test_drawer_slide_softclose_has_basic_host_holes(self):
+        hardware = self.registry.get_hardware("DRAWER_SLIDE_SOFTCLOSE_450")
+
+        self.assertEqual(len(hardware.host_holes), 2)
+        self._assert_drawer_slide_holes(hardware.host_holes)
+
+    def test_drawer_slide_standard_has_basic_host_holes(self):
+        hardware = self.registry.get_hardware("DRAWER_SLIDE_STANDARD_450")
+
+        self.assertEqual(len(hardware.host_holes), 2)
+        self._assert_drawer_slide_holes(hardware.host_holes)
+
+    def _assert_drawer_slide_holes(self, holes):
+        self.assertEqual(
+            {hole.offset_y for hole in holes},
+            {50.0, 350.0},
+        )
+        for hole in holes:
+            self.assertEqual(hole.diameter, 3.0)
+            self.assertEqual(hole.depth, 12.0)
+            self.assertEqual(hole.face, MountFace.LEFT)
+            self.assertEqual(hole.offset_x, 32.0)
 
 
 if __name__ == "__main__":
