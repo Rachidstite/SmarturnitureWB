@@ -8,8 +8,9 @@ from core.material_manager import MaterialManager
 
 from core.logging_config import logger
 class SceneRenderer:
-    def __init__(self, doc, mat: MaterialManager, hw: HardwareBuilder, groups: dict, cnc_engine=None):
+    def __init__(self, doc, mat: MaterialManager, hw: HardwareBuilder, groups: dict, cnc_engine=None, placements=None):
         self.doc = doc; self.mat = mat; self.hw = hw; self.groups = groups; self.cnc_engine = cnc_engine
+        self.placements = list(placements or [])
 
     def render(self, node: SceneNode):
         # استخدام الـ Registry
@@ -28,6 +29,22 @@ class SceneRenderer:
     def _ensure_group(self, group_name):
         if group_name not in self.groups:
             self.groups[group_name] = self.doc.addObject("App::DocumentObjectGroup", group_name)
+
+    def hinge_offsets_for(self, door_id):
+        offsets = []
+        for placement in self.placements:
+            if getattr(placement, "hardware_intent", None) != "INTENT_HINGE":
+                continue
+            if (
+                getattr(placement, "host_node_id", None) != door_id
+                and getattr(placement, "target_node_id", None) != door_id
+            ):
+                continue
+            anchor = getattr(placement, "anchor", None)
+            if anchor is None:
+                continue
+            offsets.append(anchor.offset_y)
+        return sorted(offsets)
 
     def _render_simple_panel(self, node: SceneNode):
         print("[RENDER PANEL]", node.role, node.identity.key)
@@ -72,7 +89,8 @@ def _door_strategy(node, renderer):
         renderer.mat, door_type_str,
         cnc, hw_b, renderer.groups.get("Hardware"),
         meta.hinge_side,
-        meta.layer
+        meta.layer,
+        hinge_offsets=renderer.hinge_offsets_for(node.identity.key) or None
     )
 
 def _shelf_strategy(node, renderer):

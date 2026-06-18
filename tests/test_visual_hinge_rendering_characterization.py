@@ -141,7 +141,6 @@ class TestVisualHingeRenderingCharacterization(unittest.TestCase):
             len(System32Engine.hinge_positions(1800.0)),
         )
 
-    @unittest.expectedFailure
     def test_supplied_hinge_offsets_should_override_system32_positions(self):
         from builders import door_builder
 
@@ -169,7 +168,6 @@ class TestVisualHingeRenderingCharacterization(unittest.TestCase):
             [100.0, 633.3333333333334, 1166.6666666666667, 1700.0],
         )
 
-    @unittest.expectedFailure
     def test_scene_renderer_should_map_hinge_placements_to_door_ids(self):
         from builders.hardware_builder import HardwareBuilder
         from core.material_manager import MaterialManager

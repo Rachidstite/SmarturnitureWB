@@ -4,7 +4,8 @@ from core.logging_config import logger
 class DoorBuilder:
     @staticmethod
     def build(doc, group, name, fw, fh, px, py, pz, mat, door_type_str,
-              cnc_engine=None, hw_builder=None, hw_group=None, hinge_side="LEFT", door_layer=0):
+              cnc_engine=None, hw_builder=None, hw_group=None, hinge_side="LEFT", door_layer=0,
+              hinge_offsets=None):
         is_glass = "Glass" in door_type_str; base_type = "Inset"
         if "Overlay" in door_type_str: base_type = "Overlay"
         elif "Sliding" in door_type_str: base_type = "Sliding"
@@ -49,7 +50,9 @@ class DoorBuilder:
             print(f"[HINGE SIDE] {name} hinge_side={hinge_side}")
             print(f"[HINGE SIDE] {name} hinge_side={hinge_side}")
 
-            hinge_positions = System32Engine.hinge_positions(fh)
+            hinge_positions = hinge_offsets
+            if hinge_positions is None:
+                hinge_positions = System32Engine.hinge_positions(fh)
 
             for idx, pos in enumerate(hinge_positions, start=1):
                 hw_builder.add_hinge(
