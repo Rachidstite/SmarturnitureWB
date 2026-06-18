@@ -40,6 +40,39 @@ class AssemblyManualExporter:
             html += f"<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px;'><b>{lbl}</b></td><td style='padding: 8px;'>{uid}</td><td style='padding: 8px;'>{int(w)} x {int(h)} x {int(t)}</td></tr>"
         html += "</table></div>"
 
+        # 2. علامات الثقب والتجهيزات المولدة مسبقاً
+        machining_rows = []
+        for uid in sequence:
+            node = nodes_dict[uid]
+            ops = getattr(node, "machining_ops", []) or []
+            if not ops:
+                continue
+
+            lbl = labeler.assign_label(node)
+            for op in ops:
+                machining_rows.append((lbl, op))
+
+        if machining_rows:
+            html += "<div style='background: #fff; padding: 15px; border-radius: 5px; margin-bottom: 30px; border: 1px solid #ddd;'>"
+            html += "<h2>Hardware Drilling / Marking</h2>"
+            html += "<table style='width: 100%; border-collapse: collapse;'>"
+            html += "<tr style='background: #e9ecef; border-bottom: 2px solid #ccc;'><th style='padding: 8px; text-align: left;'>Part</th><th style='padding: 8px; text-align: left;'>Operation</th><th style='padding: 8px; text-align: left;'>Face</th><th style='padding: 8px; text-align: left;'>X</th><th style='padding: 8px; text-align: left;'>Y</th><th style='padding: 8px; text-align: left;'>Diameter</th><th style='padding: 8px; text-align: left;'>Depth</th><th style='padding: 8px; text-align: left;'>Axis</th><th style='padding: 8px; text-align: left;'>Through</th></tr>"
+
+            for lbl, op in machining_rows:
+                html += "<tr style='border-bottom: 1px solid #eee;'>"
+                html += f"<td style='padding: 8px;'><b>{lbl}</b></td>"
+                html += f"<td style='padding: 8px;'>{op.op_type}</td>"
+                html += f"<td style='padding: 8px;'>{op.face}</td>"
+                html += f"<td style='padding: 8px;'>X={op.local_x}</td>"
+                html += f"<td style='padding: 8px;'>Y={op.local_y}</td>"
+                html += f"<td style='padding: 8px;'>{op.diameter}mm</td>"
+                html += f"<td style='padding: 8px;'>{op.depth}mm</td>"
+                html += f"<td style='padding: 8px;'>{getattr(op, 'axis', 'Z')}</td>"
+                html += f"<td style='padding: 8px;'>{bool(getattr(op, 'is_through', False))}</td>"
+                html += "</tr>"
+
+            html += "</table></div>"
+
         # 2. خطوات التجميع
         html += "<h2>⚙️ Assembly Steps</h2>"
         step_counter = 1
