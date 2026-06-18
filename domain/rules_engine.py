@@ -129,19 +129,37 @@ class ShelfSupportRule(HardwareRule):
     """قاعدة توزيع مسامير الأرفف (4 مسامير لكل رف)"""
     def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
         placements = []
+        side_panels = project.graph._by_role.get(NodeRole.SIDE_PANEL, [])
+        left_side_panel = self._panel_by_suffix(side_panels, "_SIDE_L")
+        right_side_panel = self._panel_by_suffix(side_panels, "_SIDE_R")
+        panel_by_face = {
+            MountFace.LEFT: left_side_panel,
+            MountFace.RIGHT: right_side_panel,
+        }
+
         for edge in project.joinery.edges:
             if edge.connector == JoineryType.SHELF_PIN_5MM.value:
                 # 4 مسامير لكل رف (أمام وخلف، يمين ويسار)
-                # للتبسيط، نعتبر أن الـ Host هو الـ Virtual Anchor
                 for face in [MountFace.LEFT, MountFace.RIGHT]:
+                    host_panel = panel_by_face.get(face)
+                    if not host_panel:
+                        continue
+
                     for edge_ref in [EdgeRef.FRONT, EdgeRef.BACK]:
                         placements.append(HardwarePlacement(
-                            host_node_id=edge.source_id,
+                            host_node_id=host_panel.identity.key,
                             target_node_id=edge.target_id,
                             hardware_intent="INTENT_SHELF_PIN",
                             anchor=AnchorCoordinate(face, edge_ref, offset_x=0, offset_y=50.0)
                         ))
         return placements
+
+    @staticmethod
+    def _panel_by_suffix(panels, suffix):
+        for panel in panels:
+            if panel.identity.key.endswith(suffix):
+                return panel
+        return None
 
 class DrawerSlideRule(HardwareRule):
     """قاعدة توزيع شرائح الأدراج (شريحتان لكل واجهة درج)"""
