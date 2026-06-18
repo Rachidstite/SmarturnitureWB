@@ -6,6 +6,12 @@ class HardwareReportItemsAdapter:
         ("CONFIRMAT", "CONFIRMAT_50_V1"),
         ("SHELF_PIN", "SHELF_PIN_5MM"),
         ("DRAWER_SLIDE", "DRAWER_SLIDE_SOFTCLOSE_450"),
+        ("HANDLE", "HANDLE_128_BLACK"),
+    )
+
+    DIRECT_SKUS = (
+        "DRAWER_SLIDE_SOFTCLOSE_450",
+        "DRAWER_SLIDE_STANDARD_450",
     )
 
     @staticmethod
@@ -14,6 +20,14 @@ class HardwareReportItemsAdapter:
         items = []
 
         for hardware_key, sku in HardwareReportItemsAdapter.HARDWARE_SKU_MAP:
+            if hardware_key == "DRAWER_SLIDE":
+                direct_items = HardwareReportItemsAdapter._direct_drawer_slide_items(
+                    hardware_items
+                )
+                if direct_items:
+                    items.extend(direct_items)
+                    continue
+
             quantity = hardware_items.get(hardware_key)
             if quantity is None or quantity <= 0:
                 continue
@@ -25,4 +39,20 @@ class HardwareReportItemsAdapter:
                 }
             )
 
+        return items
+
+    @staticmethod
+    def _direct_drawer_slide_items(hardware_items):
+        items = []
+        for sku in HardwareReportItemsAdapter.DIRECT_SKUS:
+            quantity = hardware_items.get(sku)
+            if quantity is None or quantity <= 0:
+                continue
+
+            items.append(
+                {
+                    "sku": sku,
+                    "quantity": quantity,
+                }
+            )
         return items

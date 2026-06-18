@@ -12,8 +12,24 @@
         "unit_price": 1.5,
         "currency": "MAD"
     },
+    "CONFIRMAT_50_V1": {
+        "unit_price": 2.0,
+        "currency": "MAD"
+    },
+    "SHELF_PIN_5MM": {
+        "unit_price": 0.5,
+        "currency": "MAD"
+    },
+    "DRAWER_SLIDE_SOFTCLOSE_450": {
+        "unit_price": 20.0,
+        "currency": "MAD"
+    },
     "DRAWER_SLIDE_STANDARD_450": {
         "unit_price": 20.0,
+        "currency": "MAD"
+    },
+    "HANDLE_128_BLACK": {
+        "unit_price": 6.0,
         "currency": "MAD"
     },
     "TOUCH_LATCH_STANDARD": {

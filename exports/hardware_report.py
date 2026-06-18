@@ -68,9 +68,11 @@ class HardwareReportEngine:
             "SHELF_PIN_5MM": "SHELF_PIN",
             "DRAWER_SLIDE_SOFTCLOSE_450": "DRAWER_SLIDE",
             "DRAWER_SLIDE_STANDARD_450": "DRAWER_SLIDE",
+            "HANDLE_128_BLACK": "HANDLE",
         }
 
         counts = defaultdict(int)
+        sku_counts = defaultdict(int)
 
         for placement in placements:
             intent = getattr(placement, "hardware_intent", None)
@@ -86,6 +88,7 @@ class HardwareReportEngine:
                 continue
 
             counts[family] += 1
+            sku_counts[sku] += 1
 
         report.hinge_count = counts.get("HINGE", 0)
         report.minifix_count = counts.get("MINIFIX", 0)
@@ -95,6 +98,14 @@ class HardwareReportEngine:
         report.hardware_items["CONFIRMAT"] = counts.get("CONFIRMAT", 0)
         report.hardware_items["SHELF_PIN"] = counts.get("SHELF_PIN", 0)
         report.hardware_items["DRAWER_SLIDE"] = counts.get("DRAWER_SLIDE", 0)
+        if counts.get("HANDLE", 0) > 0:
+            report.hardware_items["HANDLE"] = counts["HANDLE"]
         report.hardware_items["DOWEL"] = report.dowel_count
+        for sku in (
+            "DRAWER_SLIDE_SOFTCLOSE_450",
+            "DRAWER_SLIDE_STANDARD_450",
+        ):
+            if sku_counts.get(sku, 0) > 0:
+                report.hardware_items[sku] = sku_counts[sku]
 
         return report
