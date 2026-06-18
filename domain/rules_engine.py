@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
 from domain.builders import CabinetProject
-from domain.core_types import NodeRole, JoineryType
+from domain.core_types import MachiningOperation, NodeRole, JoineryType
 from domain.anchors import HardwarePlacement, AnchorCoordinate, MountFace, EdgeRef
+from domain.system32 import FRONT_SETBACK, System32Engine
 
 @dataclass
 class RuleContext:
@@ -129,6 +130,10 @@ class ShelfSupportRule(HardwareRule):
     """قاعدة توزيع مسامير الأرفف (4 مسامير لكل رف)"""
     def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
         placements = []
+        has_shelf_pin_joinery = any(
+            edge.connector == JoineryType.SHELF_PIN_5MM.value
+            for edge in project.joinery.edges
+        )
         side_panels = project.graph._by_role.get(NodeRole.SIDE_PANEL, [])
         left_side_panel = self._panel_by_suffix(side_panels, "_SIDE_L")
         right_side_panel = self._panel_by_suffix(side_panels, "_SIDE_R")
@@ -136,6 +141,9 @@ class ShelfSupportRule(HardwareRule):
             MountFace.LEFT: left_side_panel,
             MountFace.RIGHT: right_side_panel,
         }
+
+        if has_shelf_pin_joinery:
+            self._inject_system32_shelf_rows(panel_by_face)
 
         for edge in project.joinery.edges:
             if edge.connector == JoineryType.SHELF_PIN_5MM.value:
@@ -153,6 +161,44 @@ class ShelfSupportRule(HardwareRule):
                             anchor=AnchorCoordinate(face, edge_ref, offset_x=0, offset_y=50.0)
                         ))
         return placements
+
+    @staticmethod
+    def _inject_system32_shelf_rows(panel_by_face):
+        for face, panel in panel_by_face.items():
+            if not panel:
+                continue
+            if not hasattr(panel, "machining_ops"):
+                panel.machining_ops = []
+
+            face_value = face.value if hasattr(face, "value") else str(face)
+            face_name = str(face_value).split(".")[-1]
+            for position in System32Engine.shelf_pin_positions(panel.height):
+                op = MachiningOperation(
+                    op_type="DRILL",
+                    diameter=5.0,
+                    depth=12.0,
+                    face=face_name,
+                    local_x=FRONT_SETBACK,
+                    local_y=position,
+                    axis="Z",
+                    is_through=False,
+                )
+                if not ShelfSupportRule._has_matching_operation(panel, op):
+                    panel.machining_ops.append(op)
+
+    @staticmethod
+    def _has_matching_operation(panel, operation):
+        for existing in getattr(panel, "machining_ops", []) or []:
+            if (
+                getattr(existing, "op_type", None) == operation.op_type
+                and str(getattr(existing, "face", "")).split(".")[-1] == operation.face
+                and abs(getattr(existing, "local_x", 0.0) - operation.local_x) < 0.1
+                and abs(getattr(existing, "local_y", 0.0) - operation.local_y) < 0.1
+                and abs(getattr(existing, "diameter", 0.0) - operation.diameter) < 0.1
+                and abs(getattr(existing, "depth", 0.0) - operation.depth) < 0.1
+            ):
+                return True
+        return False
 
     @staticmethod
     def _panel_by_suffix(panels, suffix):
