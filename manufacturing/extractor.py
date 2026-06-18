@@ -10,6 +10,52 @@ class ManufacturingExtractor:
     """تحويل SceneGraph الهندسي إلى PanelSpecs تصنيعية."""
 
     @staticmethod
+    def _operation_key(operation):
+        operation_type = getattr(
+            operation,
+            "op_type",
+            getattr(operation, "operation_type", operation.__class__.__name__),
+        )
+        face = getattr(
+            operation,
+            "face",
+            getattr(operation, "edge", ""),
+        )
+        x = getattr(
+            operation,
+            "local_x",
+            getattr(operation, "x", getattr(operation, "start_x", None)),
+        )
+        y = getattr(
+            operation,
+            "local_y",
+            getattr(operation, "y", getattr(operation, "z", None)),
+        )
+        return (
+            operation_type,
+            face,
+            x,
+            y,
+            getattr(operation, "diameter", None),
+            getattr(operation, "depth", None),
+            getattr(operation, "axis", None),
+            getattr(operation, "is_through", None),
+        )
+
+    @staticmethod
+    def _merge_operations(*operation_groups):
+        merged = []
+        seen = set()
+        for operations in operation_groups:
+            for operation in operations or []:
+                key = ManufacturingExtractor._operation_key(operation)
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(operation)
+        return merged
+
+    @staticmethod
     def _resolve_cut_dimensions(node):
         """
         تحويل أبعاد XYZ إلى أبعاد تصنيع حقيقية
@@ -63,6 +109,11 @@ class ManufacturingExtractor:
                 )
             )
 
+            cnc_operations = ManufacturingExtractor._merge_operations(
+                getattr(node, "machining_ops", []),
+                panel_operations.get(node.identity.key, []),
+            )
+
             spec = PanelSpec(
                 identity=node.identity.key,
                 role=node.role,
@@ -74,10 +125,7 @@ class ManufacturingExtractor:
                 edge_spec=node.edge_spec
                 if hasattr(node, "edge_spec")
                 else None,
-                cnc_operations=panel_operations.get(
-                    node.identity.key,
-                    []
-                )
+                cnc_operations=cnc_operations
             )
 
             specs.append(spec)
