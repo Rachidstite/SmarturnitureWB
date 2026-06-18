@@ -1,5 +1,6 @@
 from typing import List
 from scene_graph.scene_graph import SceneGraph
+from manufacturing.edge_spec import EdgeBandRegistry
 from manufacturing.panel_spec import PanelSpec
 from manufacturing.panel_operation_engine import PanelOperationEngine
 from shared.roles import NodeRole
@@ -113,6 +114,9 @@ class ManufacturingExtractor:
                 getattr(node, "machining_ops", []),
                 panel_operations.get(node.identity.key, []),
             )
+            edge_spec = getattr(node, "edge_spec", None)
+            if edge_spec is None:
+                edge_spec = EdgeBandRegistry.get_edges(node.role)
 
             spec = PanelSpec(
                 identity=node.identity.key,
@@ -122,9 +126,7 @@ class ManufacturingExtractor:
                 thickness=node.thickness,
                 material=node.material,
                 group=node.group,
-                edge_spec=node.edge_spec
-                if hasattr(node, "edge_spec")
-                else None,
+                edge_spec=edge_spec,
                 cnc_operations=cnc_operations
             )
 
