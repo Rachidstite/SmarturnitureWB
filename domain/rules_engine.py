@@ -148,21 +148,47 @@ class DrawerSlideRule(HardwareRule):
     def apply(self, project: CabinetProject, context: RuleContext) -> List[HardwarePlacement]:
         placements = []
         drawers = self._drawer_faces_from_graph(project.graph)
+        side_panels = project.graph._by_role.get(NodeRole.SIDE_PANEL, [])
+        left_side_panel = self._panel_by_suffix(side_panels, "_SIDE_L")
+        right_side_panel = self._panel_by_suffix(side_panels, "_SIDE_R")
 
         for drawer in drawers:
-            placements.append(HardwarePlacement(
-                host_node_id=drawer.identity.key,
-                hardware_intent="INTENT_DRAWER_SLIDE",
-                anchor=AnchorCoordinate(MountFace.LEFT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
-                description="Left drawer slide"
-            ))
-            placements.append(HardwarePlacement(
-                host_node_id=drawer.identity.key,
-                hardware_intent="INTENT_DRAWER_SLIDE",
-                anchor=AnchorCoordinate(MountFace.RIGHT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
-                description="Right drawer slide"
-            ))
+            if left_side_panel and right_side_panel:
+                placements.append(HardwarePlacement(
+                    host_node_id=left_side_panel.identity.key,
+                    target_node_id=drawer.identity.key,
+                    hardware_intent="INTENT_DRAWER_SLIDE",
+                    anchor=AnchorCoordinate(MountFace.LEFT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
+                    description="Left cabinet-side drawer slide"
+                ))
+                placements.append(HardwarePlacement(
+                    host_node_id=right_side_panel.identity.key,
+                    target_node_id=drawer.identity.key,
+                    hardware_intent="INTENT_DRAWER_SLIDE",
+                    anchor=AnchorCoordinate(MountFace.RIGHT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
+                    description="Right cabinet-side drawer slide"
+                ))
+            else:
+                placements.append(HardwarePlacement(
+                    host_node_id=drawer.identity.key,
+                    hardware_intent="INTENT_DRAWER_SLIDE",
+                    anchor=AnchorCoordinate(MountFace.LEFT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
+                    description="Left drawer slide"
+                ))
+                placements.append(HardwarePlacement(
+                    host_node_id=drawer.identity.key,
+                    hardware_intent="INTENT_DRAWER_SLIDE",
+                    anchor=AnchorCoordinate(MountFace.RIGHT, EdgeRef.FRONT, offset_x=0, offset_y=0.0),
+                    description="Right drawer slide"
+                ))
         return placements
+
+    @staticmethod
+    def _panel_by_suffix(panels, suffix):
+        for panel in panels:
+            if panel.identity.key.endswith(suffix):
+                return panel
+        return None
 
     @staticmethod
     def _drawer_faces_from_graph(graph):
