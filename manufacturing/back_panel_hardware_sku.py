@@ -1,0 +1,7 @@
+from enum import Enum
+
+
+class BackPanelHardwareSku(str, Enum):
+    BACK_PANEL_SCREW = "BACK_PANEL_SCREW"
+    BACK_PANEL_CONFIRMAT = "BACK_PANEL_CONFIRMAT"
+    BACK_PANEL_STAPLE = "BACK_PANEL_STAPLE"
