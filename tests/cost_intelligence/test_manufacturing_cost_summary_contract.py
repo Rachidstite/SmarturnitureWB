@@ -23,6 +23,7 @@ class TestManufacturingCostSummaryContract(unittest.TestCase):
                 "risk_report",
                 "insights",
                 "total_manufacturing_cost",
+                "hardware_cost",
                 "risk_level",
                 "warnings",
             ],
@@ -39,6 +40,7 @@ class TestManufacturingCostSummaryContract(unittest.TestCase):
         self.assertIsNone(summary.risk_report)
         self.assertIsNone(summary.insights)
         self.assertEqual(summary.total_manufacturing_cost, 0.0)
+        self.assertEqual(summary.hardware_cost, 0.0)
         self.assertEqual(summary.risk_level, "LOW")
         self.assertEqual(summary.warnings, [])
 

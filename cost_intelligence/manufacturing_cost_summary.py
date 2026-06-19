@@ -8,5 +8,6 @@ class ManufacturingCostSummary:
     risk_report: Any = None
     insights: Any = None
     total_manufacturing_cost: float = 0.0
+    hardware_cost: float = 0.0
     risk_level: str = "LOW"
     warnings: list = field(default_factory=list)

@@ -9,6 +9,7 @@ class ManufacturingCostSummaryBuilder:
             risk_report=risk_report,
             insights=insights,
             total_manufacturing_cost=cost_report.total_manufacturing_cost,
+            hardware_cost=cost_report.hardware_cost,
             risk_level=risk_report.risk_level,
             warnings=risk_report.warnings,
         )

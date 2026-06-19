@@ -18,12 +18,15 @@ from manufacturing.manufacturing_metrics_builder import ManufacturingMetricsBuil
 
 class ManufacturingCostPipelineBuilder:
 
-    def build(self, production_package):
+    def build(self, production_package, hardware_cost=0.0):
         metrics_report = ManufacturingMetricsBuilder().build(production_package)
         context = ManufacturingCostContextBuilder().build(metrics_report)
         insights = ManufacturingCostInsightsBuilder().build(context)
         risk_report = ManufacturingCostRiskReportBuilder().build(insights)
-        cost_report = ManufacturingCostCalculator().calculate(context)
+        cost_report = ManufacturingCostCalculator().calculate(
+            context,
+            hardware_cost=hardware_cost,
+        )
         return ManufacturingCostSummaryBuilder().build(
             cost_report, risk_report, insights
         )

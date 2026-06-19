@@ -9,7 +9,8 @@ class ManufacturingCostCalculator:
     def __init__(self, rules=None):
         self.rules = rules or ManufacturingCostRulesBuilder().default()
 
-    def calculate(self, context, *, pricing_catalog=None):
+    def calculate(self, context, *, pricing_catalog=None, hardware_cost=0.0):
+        hardware_cost = hardware_cost or 0.0
         material_cost = context.total_panel_area_m2 * self.rules.material_area_rate
         edge_banding_cost = self._calculate_edge_banding_cost(
             context,
@@ -30,12 +31,14 @@ class ManufacturingCostCalculator:
             material_cost=material_cost,
             edge_banding_cost=edge_banding_cost,
             drilling_cost=drilling_cost,
+            hardware_cost=hardware_cost,
             complexity_cost=complexity_cost,
             panel_handling_cost=panel_handling_cost,
             total_manufacturing_cost=(
                 material_cost
                 + edge_banding_cost
                 + drilling_cost
+                + hardware_cost
                 + complexity_cost
                 + panel_handling_cost
             ),
