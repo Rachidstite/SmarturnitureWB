@@ -11,5 +11,9 @@ class ManufacturingExecutiveReport:
     utilization_rate: float = 0.0
     waste_rate: float = 0.0
     recovery_score: int = 0
+    governance_state: str = ""
+    legacy_decision_status: str = ""
+    dominant_authority: str = ""
+    reason_code: str = ""
     warnings: list = field(default_factory=list)
     recommendations: list = field(default_factory=list)

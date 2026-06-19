@@ -28,10 +28,28 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
                 "utilization_rate",
                 "waste_rate",
                 "recovery_score",
+                "governance_state",
+                "legacy_decision_status",
+                "dominant_authority",
+                "reason_code",
                 "warnings",
                 "recommendations",
             ],
         )
+
+    def test_build_includes_governance_visibility(self):
+        kpi_report, readiness_report, optimization_result = self._inputs()
+
+        report = self.builder.build(
+            kpi_report,
+            readiness_report,
+            optimization_result,
+        )
+
+        self.assertEqual(report.governance_state, "APPROVED")
+        self.assertEqual(report.legacy_decision_status, "APPROVED")
+        self.assertEqual(report.dominant_authority, "FactoryGovernancePolicyBuilder")
+        self.assertEqual(report.reason_code, "POLICY_CLEAR")
 
     def test_build_maps_kpi_fields(self):
         kpi_report, readiness_report, optimization_result = self._inputs()
