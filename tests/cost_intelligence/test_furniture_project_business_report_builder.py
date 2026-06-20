@@ -55,8 +55,13 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         "cost_intelligence.furniture_project_business_report_builder."
         "FurnitureProjectSummaryBuilder"
     )
+    @patch(
+        "cost_intelligence.furniture_project_business_report_builder."
+        "JoineryIntelligenceBuilder"
+    )
     def test_builder_aggregates_existing_project_outputs(
         self,
+        joinery_builder_class,
         summary_builder_class,
         quotation_builder_class,
         breakdown_builder_class,
@@ -88,6 +93,7 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         manufacturing_production_package = object()
         manufacturing_metrics_report = object()
         factory_decision_report = object()
+        joinery_report = object()
         call_manager = MagicMock()
 
         summary_builder_class.return_value.build.return_value = project_summary
@@ -131,6 +137,7 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         decision_builder_class.return_value.build.return_value = (
             factory_decision_report
         )
+        joinery_builder_class.return_value.build.return_value = joinery_report
 
         result = FurnitureProjectBusinessReportBuilder().build(
             furniture_project,
@@ -206,7 +213,8 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
             manufacturing_production_package
         )
         complexity_builder_class.return_value.build.assert_called_once_with(
-            manufacturing_metrics_report
+            manufacturing_metrics_report,
+            joinery_report=joinery_report,
         )
         duration_builder_class.return_value.build.assert_called_once_with(
             manufacturing_metrics_report
@@ -219,11 +227,17 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
             markup_rate=0.25,
             currency="EUR",
         )
+        joinery_builder_class.return_value.build.assert_called_once_with(
+            furniture_project
+        )
 
         self.assertEqual(
             call_manager.mock_calls[:3],
             [
-                call.complexity_build(manufacturing_metrics_report),
+                call.complexity_build(
+                    manufacturing_metrics_report,
+                    joinery_report=joinery_report,
+                ),
                 call.duration_build(manufacturing_metrics_report),
                 call.capacity_build(manufacturing_duration_report),
             ],

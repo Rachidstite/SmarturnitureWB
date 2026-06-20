@@ -26,6 +26,7 @@ from manufacturing.manufacturing_duration_builder import (
     ManufacturingDurationBuilder,
 )
 from manufacturing.manufacturing_metrics_builder import ManufacturingMetricsBuilder
+from manufacturing.joinery_intelligence_builder import JoineryIntelligenceBuilder
 from manufacturing.manufacturing_production_package_builder import (
     ManufacturingProductionPackageBuilder,
 )
@@ -88,8 +89,10 @@ class FurnitureProjectBusinessReportBuilder:
         manufacturing_metrics_report = ManufacturingMetricsBuilder().build(
             manufacturing_production_package
         )
+        joinery_report = JoineryIntelligenceBuilder().build(furniture_project)
         manufacturing_complexity_report = ManufacturingComplexityBuilder().build(
-            manufacturing_metrics_report
+            manufacturing_metrics_report,
+            joinery_report=joinery_report,
         )
         manufacturing_duration_report = ManufacturingDurationBuilder().build(
             manufacturing_metrics_report
