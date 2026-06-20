@@ -14,6 +14,12 @@ from cost_intelligence.factory_governance_recommendation_builder import (
     FactoryGovernanceRecommendationBuilder,
 )
 from cost_intelligence.legacy_three_state_adapter import LegacyThreeStateAdapter
+from manufacturing.factory_bottleneck_intelligence_report import (
+    FactoryBottleneckIntelligenceReport,
+)
+from manufacturing.factory_bottleneck_recommendation_builder import (
+    FactoryBottleneckRecommendationBuilder,
+)
 
 
 class FactoryGovernanceRuntimeService:
@@ -26,11 +32,15 @@ class FactoryGovernanceRuntimeService:
         "REJECTED": "Stop release and do not manufacture",
     }
 
-    def build(self, context: FactoryGovernancePolicyContext):
+    def build(self, context: FactoryGovernancePolicyContext, factory_bottleneck=""):
         policy_report = FactoryGovernancePolicyBuilder().build(context)
         recommendation_report = FactoryGovernanceRecommendationBuilder().build(
             policy_report,
             FactoryGovernanceAuthorityReport(),
+        )
+        manufacturing_recommendation_report = self._build_manufacturing_recommendation(
+            policy_report.reason_code,
+            factory_bottleneck,
         )
         legacy_decision_status = LegacyThreeStateAdapter().adapt(
             policy_report.governance_state
@@ -54,6 +64,12 @@ class FactoryGovernanceRuntimeService:
         report.secondary_recommendations = (
             recommendation_report.secondary_recommendations
         )
+        report.manufacturing_recommendation = (
+            manufacturing_recommendation_report.primary_recommendation
+        )
+        report.manufacturing_secondary_recommendations = (
+            manufacturing_recommendation_report.secondary_recommendations
+        )
         return report
 
     @staticmethod
@@ -65,3 +81,16 @@ class FactoryGovernanceRuntimeService:
             list(recommendation_report.secondary_recommendations)
         )
         return recommendations
+
+    @staticmethod
+    def _build_manufacturing_recommendation(reason_code, factory_bottleneck):
+        if reason_code != "HIGH_LOAD" or not factory_bottleneck:
+            return FactoryBottleneckRecommendationBuilder().build(
+                FactoryBottleneckIntelligenceReport()
+            )
+        return FactoryBottleneckRecommendationBuilder().build(
+            FactoryBottleneckIntelligenceReport(
+                bottleneck=factory_bottleneck,
+                severity="HIGH",
+            )
+        )

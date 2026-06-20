@@ -111,7 +111,12 @@ class ManufacturingExecutiveReportBuilder:
             factory_decision_report,
         )
         governance_report = FactoryGovernanceRuntimeService().build(
-            governance_context
+            governance_context,
+            factory_bottleneck=(
+                factory_decision_report.factory_bottleneck
+                if factory_decision_report
+                else ""
+            ),
         )
 
         report = ManufacturingExecutiveReport(
@@ -145,6 +150,12 @@ class ManufacturingExecutiveReportBuilder:
         )
         report.governance_secondary_recommendations = (
             governance_report.secondary_recommendations
+        )
+        report.governance_manufacturing_recommendation = (
+            governance_report.manufacturing_recommendation
+        )
+        report.governance_manufacturing_secondary_recommendations = (
+            governance_report.manufacturing_secondary_recommendations
         )
         return report
 

@@ -41,3 +41,23 @@ class ManufacturingExecutiveReport:
     @governance_secondary_recommendations.setter
     def governance_secondary_recommendations(self, value):
         self._governance_secondary_recommendations = list(value)
+
+    @property
+    def governance_manufacturing_recommendation(self):
+        return getattr(self, "_governance_manufacturing_recommendation", "")
+
+    @governance_manufacturing_recommendation.setter
+    def governance_manufacturing_recommendation(self, value):
+        self._governance_manufacturing_recommendation = value
+
+    @property
+    def governance_manufacturing_secondary_recommendations(self):
+        return getattr(
+            self,
+            "_governance_manufacturing_secondary_recommendations",
+            [],
+        )
+
+    @governance_manufacturing_secondary_recommendations.setter
+    def governance_manufacturing_secondary_recommendations(self, value):
+        self._governance_manufacturing_secondary_recommendations = list(value)

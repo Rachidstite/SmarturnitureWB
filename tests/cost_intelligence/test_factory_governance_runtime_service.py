@@ -48,6 +48,33 @@ class TestFactoryGovernanceRuntimeService(unittest.TestCase):
         self.assertEqual(report.governance_state, "REVIEW_REQUIRED")
         self.assertEqual(report.legacy_decision_status, "REVIEW_REQUIRED")
 
+    def test_high_load_can_expose_bottleneck_specific_details(self):
+        from cost_intelligence.factory_governance_policy_context import (
+            FactoryGovernancePolicyContext,
+        )
+        from cost_intelligence.factory_governance_runtime_service import (
+            FactoryGovernanceRuntimeService,
+        )
+
+        report = FactoryGovernanceRuntimeService().build(
+            FactoryGovernancePolicyContext(load_status="HIGH"),
+            factory_bottleneck="ASSEMBLY",
+        )
+
+        self.assertEqual(report.primary_recommendation, "Balance workload")
+        self.assertEqual(
+            report.manufacturing_recommendation,
+            "Increase assembly capacity",
+        )
+        self.assertEqual(
+            report.manufacturing_secondary_recommendations,
+            [
+                "Add assembly station",
+                "Split project into smaller batches",
+                "Reduce assembly minutes per panel",
+            ],
+        )
+
     def test_no_legacy_builder_imports(self):
         from cost_intelligence import factory_governance_runtime_service
 

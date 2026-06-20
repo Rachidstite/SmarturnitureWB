@@ -35,3 +35,19 @@ class FactoryGovernanceDecisionReport:
     @secondary_recommendations.setter
     def secondary_recommendations(self, value):
         self._secondary_recommendations = list(value)
+
+    @property
+    def manufacturing_recommendation(self):
+        return getattr(self, "_manufacturing_recommendation", "")
+
+    @manufacturing_recommendation.setter
+    def manufacturing_recommendation(self, value):
+        self._manufacturing_recommendation = value
+
+    @property
+    def manufacturing_secondary_recommendations(self):
+        return getattr(self, "_manufacturing_secondary_recommendations", [])
+
+    @manufacturing_secondary_recommendations.setter
+    def manufacturing_secondary_recommendations(self, value):
+        self._manufacturing_secondary_recommendations = list(value)
