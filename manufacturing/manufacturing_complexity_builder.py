@@ -5,7 +5,7 @@ from manufacturing.manufacturing_complexity_report import (
 
 class ManufacturingComplexityBuilder:
 
-    def build(self, metrics_report):
+    def build(self, metrics_report, joinery_report=None):
         score = 0
         main_drivers = []
         recommendations = []
@@ -61,9 +61,30 @@ class ManufacturingComplexityBuilder:
         else:
             complexity_level = "LOW"
 
+        if joinery_report is not None:
+            engineering_score = (
+                joinery_report.joinery_complexity_score
+                + metrics_report.total_panels
+            )
+        else:
+            engineering_score = (
+                metrics_report.total_drilling_operations * 0.5
+                + metrics_report.total_panels
+            )
+
+        if engineering_score >= 86:
+            engineering_complexity = "EXTREME"
+        elif engineering_score >= 61:
+            engineering_complexity = "HIGH"
+        elif engineering_score >= 31:
+            engineering_complexity = "MEDIUM"
+        else:
+            engineering_complexity = "LOW"
+
         return ManufacturingComplexityReport(
             complexity_level=complexity_level,
             complexity_score=score,
+            engineering_complexity=engineering_complexity,
             main_drivers=main_drivers,
             recommendations=recommendations,
             warnings=list(metrics_report.warnings),
