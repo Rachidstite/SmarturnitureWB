@@ -51,6 +51,35 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
         self.assertEqual(report.dominant_authority, "FactoryGovernancePolicyBuilder")
         self.assertEqual(report.reason_code, "POLICY_CLEAR")
 
+    def test_factory_decision_overloaded_capacity_maps_to_schedule_later(self):
+        report = self.builder.build(
+            *self._inputs(),
+            factory_decision_report=self._factory_decision_report(
+                factory_capacity_status="OVERLOADED",
+            ),
+        )
+
+        self.assertEqual(report.governance_state, "SCHEDULE_LATER")
+        self.assertEqual(report.legacy_decision_status, "REVIEW_REQUIRED")
+        self.assertEqual(
+            report.dominant_authority,
+            "FactoryCapacityIntelligenceBuilder",
+        )
+        self.assertEqual(report.reason_code, "OVER_CAPACITY")
+
+    def test_factory_decision_high_load_maps_to_schedule_later(self):
+        report = self.builder.build(
+            *self._inputs(),
+            factory_decision_report=self._factory_decision_report(
+                factory_load_status="HIGH",
+            ),
+        )
+
+        self.assertEqual(report.governance_state, "SCHEDULE_LATER")
+        self.assertEqual(report.legacy_decision_status, "REVIEW_REQUIRED")
+        self.assertEqual(report.dominant_authority, "FactoryLoadBuilder")
+        self.assertEqual(report.reason_code, "HIGH_LOAD")
+
     def test_build_maps_kpi_fields(self):
         kpi_report, readiness_report, optimization_result = self._inputs()
 
@@ -320,6 +349,12 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
         )
 
         return ManufacturingComplexityReport(**values)
+
+    @staticmethod
+    def _factory_decision_report(**values):
+        from cost_intelligence.factory_decision_report import FactoryDecisionReport
+
+        return FactoryDecisionReport(**values)
 
 
 if __name__ == "__main__":

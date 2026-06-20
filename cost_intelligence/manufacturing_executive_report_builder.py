@@ -21,6 +21,7 @@ class ManufacturingExecutiveReportBuilder:
         production_schedule_report=None,
         factory_workload_report=None,
         manufacturing_complexity_report=None,
+        factory_decision_report=None,
     ):
         recovery_score = (
             manufacturing_optimization_result.nesting_intelligence_report
@@ -107,6 +108,7 @@ class ManufacturingExecutiveReportBuilder:
             capacity_report,
             production_schedule_report,
             factory_workload_report,
+            factory_decision_report,
         )
         governance_report = FactoryGovernanceRuntimeService().build(
             governance_context
@@ -145,6 +147,7 @@ class ManufacturingExecutiveReportBuilder:
         capacity_report=None,
         production_schedule_report=None,
         factory_workload_report=None,
+        factory_decision_report=None,
     ):
         gross_margin_rate = manufacturing_kpi_report.gross_margin_rate
         if production_readiness_report.status == "BLOCKED":
@@ -153,11 +156,25 @@ class ManufacturingExecutiveReportBuilder:
             readiness_status = production_readiness_report.status
 
         profitability_status = "LOW" if gross_margin_rate < 0.10 else ""
-        capacity_status = (
-            capacity_report.capacity_status if capacity_report else ""
-        )
+        capacity_status = ""
+        if (
+            factory_decision_report
+            and factory_decision_report.factory_capacity_status not in ("", "UNKNOWN")
+        ):
+            capacity_status = factory_decision_report.factory_capacity_status
+        elif capacity_report:
+            capacity_status = capacity_report.capacity_status
+
         load_status = ""
-        if factory_workload_report and factory_workload_report.factory_workload_status == "OVERLOADED":
+        if (
+            factory_decision_report
+            and factory_decision_report.factory_load_status == "HIGH"
+        ):
+            load_status = "HIGH"
+        elif (
+            factory_workload_report
+            and factory_workload_report.factory_workload_status == "OVERLOADED"
+        ):
             load_status = "HIGH"
         schedule_status = (
             production_schedule_report.schedule_risk_level
