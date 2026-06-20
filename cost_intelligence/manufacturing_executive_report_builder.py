@@ -114,7 +114,7 @@ class ManufacturingExecutiveReportBuilder:
             governance_context
         )
 
-        return ManufacturingExecutiveReport(
+        report = ManufacturingExecutiveReport(
             overall_score=score,
             overall_grade=grade,
             production_status=manufacturing_kpi_report.production_status,
@@ -139,6 +139,14 @@ class ManufacturingExecutiveReportBuilder:
                 )
             ),
         )
+        report.governance_explanation = governance_report.explanation
+        report.governance_primary_recommendation = (
+            governance_report.primary_recommendation
+        )
+        report.governance_secondary_recommendations = (
+            governance_report.secondary_recommendations
+        )
+        return report
 
     @staticmethod
     def _build_governance_context(
