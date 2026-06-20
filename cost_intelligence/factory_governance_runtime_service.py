@@ -84,7 +84,7 @@ class FactoryGovernanceRuntimeService:
 
     @staticmethod
     def _build_manufacturing_recommendation(reason_code, factory_bottleneck):
-        if reason_code != "HIGH_LOAD" or not factory_bottleneck:
+        if reason_code not in ("HIGH_LOAD", "OVER_CAPACITY") or not factory_bottleneck:
             return FactoryBottleneckRecommendationBuilder().build(
                 FactoryBottleneckIntelligenceReport()
             )

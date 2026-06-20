@@ -75,6 +75,33 @@ class TestFactoryGovernanceRuntimeService(unittest.TestCase):
             ],
         )
 
+    def test_over_capacity_can_expose_bottleneck_specific_details(self):
+        from cost_intelligence.factory_governance_policy_context import (
+            FactoryGovernancePolicyContext,
+        )
+        from cost_intelligence.factory_governance_runtime_service import (
+            FactoryGovernanceRuntimeService,
+        )
+
+        report = FactoryGovernanceRuntimeService().build(
+            FactoryGovernancePolicyContext(capacity_status="OVERLOADED"),
+            factory_bottleneck="ASSEMBLY",
+        )
+
+        self.assertEqual(report.primary_recommendation, "Delay production start")
+        self.assertEqual(
+            report.manufacturing_recommendation,
+            "Increase assembly capacity",
+        )
+        self.assertEqual(
+            report.manufacturing_secondary_recommendations,
+            [
+                "Add assembly station",
+                "Split project into smaller batches",
+                "Reduce assembly minutes per panel",
+            ],
+        )
+
     def test_no_legacy_builder_imports(self):
         from cost_intelligence import factory_governance_runtime_service
 
