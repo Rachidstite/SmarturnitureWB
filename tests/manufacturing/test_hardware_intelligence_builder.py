@@ -113,6 +113,113 @@ class TestHardwareIntelligenceBuilder(unittest.TestCase):
             "Register hardware SKU in HardwareRegistry",
         )
 
+    def test_builder_flags_missing_hardware_profile_mapping(self):
+        from domain.anchors import AnchorCoordinate, EdgeRef, HardwarePlacement, MountFace
+        from manufacturing.hardware_intelligence_builder import (
+            HardwareIntelligenceBuilder,
+        )
+
+        anchor = AnchorCoordinate(MountFace.LEFT, EdgeRef.FRONT, 0.0, 0.0)
+        project = SimpleNamespace(
+            placements=[
+                HardwarePlacement("HOST_A", "INTENT_MINIFIX_15", anchor, "TARGET_A")
+            ]
+        )
+        context = SimpleNamespace(hardware_profile={})
+
+        reports = HardwareIntelligenceBuilder().build(project, context)
+
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0].hardware_family, "MINIFIX_15")
+        self.assertEqual(reports[0].total_hardware_items, 1)
+        self.assertEqual(reports[0].total_host_holes, 0)
+        self.assertEqual(reports[0].total_target_holes, 0)
+        self.assertTrue(reports[0].requires_review)
+        self.assertEqual(
+            reports[0].manufacturing_warning,
+            "Missing hardware profile mapping for INTENT_MINIFIX_15",
+        )
+        self.assertEqual(
+            reports[0].recommended_action,
+            "Map hardware intent to SKU in RuleContext.hardware_profile",
+        )
+
+    def test_builder_returns_empty_reports_for_empty_inputs(self):
+        from manufacturing.hardware_intelligence_builder import (
+            HardwareIntelligenceBuilder,
+        )
+
+        builder = HardwareIntelligenceBuilder()
+
+        self.assertEqual(
+            builder.build(SimpleNamespace(placements=[]), SimpleNamespace(hardware_profile={})),
+            [],
+        )
+        self.assertEqual(
+            builder.build(SimpleNamespace(), SimpleNamespace()),
+            [],
+        )
+
+    def test_builder_falls_back_to_sku_when_family_mapping_is_unknown(self):
+        from domain.anchors import AnchorCoordinate, EdgeRef, HardwarePlacement, MountFace
+        from manufacturing.hardware_intelligence_builder import (
+            HardwareIntelligenceBuilder,
+        )
+
+        anchor = AnchorCoordinate(MountFace.LEFT, EdgeRef.FRONT, 0.0, 0.0)
+        project = SimpleNamespace(
+            placements=[
+                HardwarePlacement("HOST_A", "INTENT_LATCH", anchor, ""),
+            ]
+        )
+        context = SimpleNamespace(
+            hardware_profile={
+                "INTENT_LATCH": "TOUCH_LATCH_STANDARD",
+            }
+        )
+
+        reports = HardwareIntelligenceBuilder().build(project, context)
+
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0].hardware_family, "TOUCH_LATCH_STANDARD")
+        self.assertEqual(reports[0].total_hardware_items, 1)
+        self.assertEqual(reports[0].total_host_holes, 0)
+        self.assertEqual(reports[0].total_target_holes, 0)
+        self.assertEqual(reports[0].total_face_holes, 0)
+        self.assertEqual(reports[0].total_edge_holes, 0)
+        self.assertFalse(reports[0].requires_review)
+
+    def test_builder_uses_custom_family_mapping_injection(self):
+        from domain.anchors import AnchorCoordinate, EdgeRef, HardwarePlacement, MountFace
+        from manufacturing.hardware_intelligence_builder import (
+            HardwareIntelligenceBuilder,
+        )
+
+        anchor = AnchorCoordinate(MountFace.LEFT, EdgeRef.FRONT, 0.0, 0.0)
+        project = SimpleNamespace(
+            placements=[
+                HardwarePlacement("HOST_A", "INTENT_HANDLE", anchor, ""),
+            ]
+        )
+        context = SimpleNamespace(
+            hardware_profile={
+                "INTENT_HANDLE": "HANDLE_128_BLACK",
+            }
+        )
+
+        reports = HardwareIntelligenceBuilder(
+            family_by_sku={"HANDLE_128_BLACK": "PULL"}
+        ).build(project, context)
+
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0].hardware_family, "PULL")
+        self.assertEqual(reports[0].total_hardware_items, 1)
+        self.assertEqual(reports[0].total_host_holes, 2)
+        self.assertEqual(reports[0].total_target_holes, 0)
+        self.assertEqual(reports[0].total_face_holes, 2)
+        self.assertEqual(reports[0].total_edge_holes, 0)
+        self.assertFalse(reports[0].requires_review)
+
     def test_builder_does_not_mutate_project_or_context(self):
         from domain.anchors import AnchorCoordinate, EdgeRef, HardwarePlacement, MountFace
         from manufacturing.hardware_intelligence_builder import (
