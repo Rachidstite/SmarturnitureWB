@@ -7,6 +7,8 @@ from cost_intelligence.manufacturing_cost_pipeline_builder import (
 from cost_intelligence.manufacturing_executive_report_builder import (
     ManufacturingExecutiveReportBuilder,
 )
+from cost_intelligence.consumption_report import ConsumptionReport
+from cost_intelligence.cost_estimate import CostEstimate
 from cost_intelligence.manufacturing_factory_intelligence_result import (
     ManufacturingFactoryIntelligenceResult,
 )
@@ -40,13 +42,21 @@ class ManufacturingFactoryIntelligencePipelineBuilder:
         manufacturing_production_package,
         markup_rate=0.0,
         currency="MAD",
+        sheet_results=None,
+        consumption_report=None,
+        cost_estimate=None,
     ):
+        sheet_results = sheet_results or []
+        consumption_report = consumption_report or ConsumptionReport()
+        cost_estimate = cost_estimate or CostEstimate()
         manufacturing_cost_summary = ManufacturingCostPipelineBuilder().build(
             manufacturing_production_package
         )
         manufacturing_optimization_result = (
             ManufacturingOptimizationPipelineBuilder().build(
-                manufacturing_production_package
+                sheet_results,
+                consumption_report,
+                cost_estimate,
             )
         )
         manufacturing_commercial_result = (

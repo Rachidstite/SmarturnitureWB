@@ -167,9 +167,14 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
         cost_builder_class.return_value.build.assert_called_once_with(
             production_package
         )
-        optimization_builder_class.return_value.build.assert_called_once_with(
-            production_package
+        optimization_builder_class.return_value.build.assert_called_once()
+        optimization_args, optimization_kwargs = (
+            optimization_builder_class.return_value.build.call_args
         )
+        self.assertEqual(optimization_args[0], [])
+        self.assertEqual(optimization_args[1].waste_ratio, 0.0)
+        self.assertEqual(optimization_args[2].waste_cost, 0.0)
+        self.assertEqual(optimization_kwargs, {})
         commercial_builder_class.return_value.build.assert_called_once_with(
             production_package,
             0.25,
@@ -308,6 +313,14 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
             0.0,
             "MAD",
         )
+        optimization_builder_class.return_value.build.assert_called_once()
+        optimization_args, optimization_kwargs = (
+            optimization_builder_class.return_value.build.call_args
+        )
+        self.assertEqual(optimization_args[0], [])
+        self.assertEqual(optimization_args[1].waste_ratio, 0.0)
+        self.assertEqual(optimization_args[2].waste_cost, 0.0)
+        self.assertEqual(optimization_kwargs, {})
         self.assertTrue(production_package.release_ready)
         self.assertIs(production_package.warnings, warnings)
         self.assertEqual(production_package.warnings, ["Package warning"])
