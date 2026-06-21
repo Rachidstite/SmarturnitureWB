@@ -1,16 +1,21 @@
-import FreeCAD as App, Part
+try:
+    import FreeCAD as App, Part
+except ImportError:  # pragma: no cover - test environment fallback
+    App = None
+    Part = None
 from scene_graph.node import SceneNode
 from shared.roles import NodeRole
-from builders.door_builder import DoorBuilder
-from builders.drawer_builder import DrawerBuilder
-from builders.hardware_builder import HardwareBuilder
 from core.material_manager import MaterialManager
 
 from core.logging_config import logger
 class SceneRenderer:
-    def __init__(self, doc, mat: MaterialManager, hw: HardwareBuilder, groups: dict, cnc_engine=None, placements=None):
+    def __init__(self, doc, mat: MaterialManager, hw, groups: dict, cnc_engine=None, placements=None):
         self.doc = doc; self.mat = mat; self.hw = hw; self.groups = groups; self.cnc_engine = cnc_engine
         self.placements = list(placements or [])
+
+    @staticmethod
+    def build_manufacturing_overlays(markers):
+        return list(markers or [])
 
     def render(self, node: SceneNode):
         # استخدام الـ Registry
@@ -65,6 +70,8 @@ class SceneRenderer:
 from scene_graph.registry import RendererRegistry
 
 def _drawer_strategy(node, renderer):
+    from builders.drawer_builder import DrawerBuilder
+
     meta = node.metadata
     renderer._ensure_group(node.group)
     DrawerBuilder.build(
@@ -77,6 +84,8 @@ def _drawer_strategy(node, renderer):
     )
 
 def _door_strategy(node, renderer):
+    from builders.door_builder import DoorBuilder
+
     meta = node.metadata
     renderer._ensure_group(node.group)
     door_type_str = meta.door_type.replace("_", " ").title()
