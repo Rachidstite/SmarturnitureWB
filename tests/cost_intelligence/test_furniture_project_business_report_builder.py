@@ -57,11 +57,16 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
     )
     @patch(
         "cost_intelligence.furniture_project_business_report_builder."
+        "FurnitureProjectExecutiveReportBuilder"
+    )
+    @patch(
+        "cost_intelligence.furniture_project_business_report_builder."
         "JoineryIntelligenceBuilder"
     )
     def test_builder_aggregates_existing_project_outputs(
         self,
         joinery_builder_class,
+        executive_builder_class,
         summary_builder_class,
         quotation_builder_class,
         breakdown_builder_class,
@@ -92,6 +97,8 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         manufacturing_package = object()
         manufacturing_production_package = object()
         manufacturing_metrics_report = object()
+        manufacturing_executive_report = object()
+        furniture_project_executive_report = object()
         factory_decision_report = object()
         joinery_report = object()
         call_manager = MagicMock()
@@ -134,6 +141,9 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         metrics_builder_class.return_value.build.return_value = (
             manufacturing_metrics_report
         )
+        executive_builder_class.return_value.build.return_value = (
+            furniture_project_executive_report
+        )
         decision_builder_class.return_value.build.return_value = (
             factory_decision_report
         )
@@ -151,6 +161,7 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
             currency="EUR",
             notes="Installation included",
             payment_terms="50% deposit",
+            manufacturing_executive_report=manufacturing_executive_report,
         )
 
         self.assertIsInstance(result, FurnitureProjectBusinessReport)
@@ -174,7 +185,7 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
             manufacturing_capacity_report,
         )
         self.assertIs(result.profitability_report, profitability_report)
-        self.assertIsNone(result.executive_report)
+        self.assertIs(result.executive_report, furniture_project_executive_report)
         self.assertIs(result.factory_decision_report, factory_decision_report)
 
         summary_builder_class.return_value.build.assert_called_once_with(
@@ -215,6 +226,11 @@ class TestFurnitureProjectBusinessReportBuilder(unittest.TestCase):
         complexity_builder_class.return_value.build.assert_called_once_with(
             manufacturing_metrics_report,
             joinery_report=joinery_report,
+        )
+        executive_builder_class.return_value.build.assert_called_once_with(
+            project_summary,
+            manufacturing_executive_report,
+            factory_decision_report,
         )
         duration_builder_class.return_value.build.assert_called_once_with(
             manufacturing_metrics_report

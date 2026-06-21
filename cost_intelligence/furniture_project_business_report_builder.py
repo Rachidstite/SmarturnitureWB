@@ -1,6 +1,9 @@
 from cost_intelligence.furniture_project_business_report import (
     FurnitureProjectBusinessReport,
 )
+from cost_intelligence.furniture_project_executive_report_builder import (
+    FurnitureProjectExecutiveReportBuilder,
+)
 from cost_intelligence.furniture_project_factory_decision_builder import (
     FurnitureProjectFactoryDecisionBuilder,
 )
@@ -51,6 +54,8 @@ class FurnitureProjectBusinessReportBuilder:
         currency="MAD",
         notes="",
         payment_terms="",
+        manufacturing_executive_report=None,
+        factory_decision_report=None,
     ):
         project_summary = FurnitureProjectSummaryBuilder().build(
             furniture_project
@@ -100,11 +105,20 @@ class FurnitureProjectBusinessReportBuilder:
         manufacturing_capacity_report = ManufacturingCapacityBuilder().build(
             manufacturing_duration_report
         )
-        factory_decision_report = FurnitureProjectFactoryDecisionBuilder().build(
-            furniture_project,
-            markup_rate=markup_rate,
-            currency=currency,
-        )
+        if factory_decision_report is None:
+            factory_decision_report = FurnitureProjectFactoryDecisionBuilder().build(
+                furniture_project,
+                markup_rate=markup_rate,
+                currency=currency,
+            )
+
+        executive_report = None
+        if manufacturing_executive_report is not None:
+            executive_report = FurnitureProjectExecutiveReportBuilder().build(
+                project_summary,
+                manufacturing_executive_report,
+                factory_decision_report,
+            )
 
         return FurnitureProjectBusinessReport(
             project_summary=project_summary,
@@ -115,6 +129,6 @@ class FurnitureProjectBusinessReportBuilder:
             manufacturing_duration_report=manufacturing_duration_report,
             manufacturing_capacity_report=manufacturing_capacity_report,
             profitability_report=profitability_report,
-            executive_report=None,
+            executive_report=executive_report,
             factory_decision_report=factory_decision_report,
         )
