@@ -55,7 +55,6 @@ class TestBackPanelGrooveEmissionContract(unittest.TestCase):
         self.assertEqual(cnc_data["BACK_PANEL_TEST"].grooves[0].face, "BACK")
         self.assertEqual(cnc_data["BACK_PANEL_TEST"].grooves[0].depth, 8.0)
 
-    @unittest.expectedFailure
     def test_future_runtime_pipeline_emits_back_panel_groove_operation(self):
         from domain.builders import WardrobeBuilder
         from manufacturing.manufacturing_runtime_pipeline_builder import (

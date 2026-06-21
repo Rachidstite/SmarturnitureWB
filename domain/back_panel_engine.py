@@ -10,6 +10,10 @@ class BackPanelRule:
 class BackPanelEngine:
 
     @staticmethod
+    def requires_groove(rule: BackPanelRule):
+        return rule.thickness <= 3.5
+
+    @staticmethod
     def groove_width(rule: BackPanelRule):
         return rule.thickness + rule.groove_clearance
 

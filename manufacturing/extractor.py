@@ -1,4 +1,6 @@
 from typing import List
+from domain.back_panel_engine import BackPanelEngine, BackPanelRule
+from domain.manufacturing_ops import Groove
 from scene_graph.scene_graph import SceneGraph
 from manufacturing.edge_spec import EdgeBandRegistry
 from manufacturing.panel_spec import PanelSpec
@@ -114,6 +116,21 @@ class ManufacturingExtractor:
                 getattr(node, "machining_ops", []),
                 panel_operations.get(node.identity.key, []),
             )
+
+            role_value = getattr(node.role, "value", node.role)
+            groove_rule = BackPanelRule(thickness=node.thickness)
+            if role_value == "BACK_PANEL" and BackPanelEngine.requires_groove(groove_rule):
+                cnc_operations.append(
+                    Groove(
+                        start_x=BackPanelEngine.offset(groove_rule),
+                        start_y=0.0,
+                        width=BackPanelEngine.groove_width(groove_rule),
+                        depth=BackPanelEngine.insertion_depth(groove_rule),
+                        length=cut_width,
+                        face="BACK",
+                    )
+                )
+
             edge_spec = getattr(node, "edge_spec", None)
             if edge_spec is None:
                 edge_spec = EdgeBandRegistry.get_edges(node.role)
