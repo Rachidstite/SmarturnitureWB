@@ -27,6 +27,8 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
                 "gross_margin_rate",
                 "utilization_rate",
                 "waste_rate",
+                "engineering_complexity",
+                "estimated_engineering_minutes",
                 "recovery_score",
                 "governance_state",
                 "legacy_decision_status",
@@ -50,6 +52,22 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
         self.assertEqual(report.legacy_decision_status, "APPROVED")
         self.assertEqual(report.dominant_authority, "FactoryGovernancePolicyBuilder")
         self.assertEqual(report.reason_code, "POLICY_CLEAR")
+
+    def test_build_projects_engineering_intelligence_from_complexity_report(self):
+        kpi_report, readiness_report, optimization_result = self._inputs()
+
+        report = self.builder.build(
+            kpi_report,
+            readiness_report,
+            optimization_result,
+            manufacturing_complexity_report=self._complexity_report(
+                engineering_complexity="EXTREME",
+                estimated_engineering_minutes=143.5,
+            ),
+        )
+
+        self.assertEqual(report.engineering_complexity, "EXTREME")
+        self.assertEqual(report.estimated_engineering_minutes, 143.5)
 
     def test_factory_decision_overloaded_capacity_maps_to_schedule_later(self):
         report = self.builder.build(

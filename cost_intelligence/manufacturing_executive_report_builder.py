@@ -129,6 +129,16 @@ class ManufacturingExecutiveReportBuilder:
             gross_margin_rate=manufacturing_kpi_report.gross_margin_rate,
             utilization_rate=manufacturing_kpi_report.utilization_rate,
             waste_rate=manufacturing_kpi_report.waste_rate,
+            engineering_complexity=(
+                manufacturing_complexity_report.engineering_complexity
+                if manufacturing_complexity_report
+                else "LOW"
+            ),
+            estimated_engineering_minutes=(
+                manufacturing_complexity_report.estimated_engineering_minutes
+                if manufacturing_complexity_report
+                else 0.0
+            ),
             recovery_score=recovery_score,
             governance_state=governance_report.governance_state,
             legacy_decision_status=governance_report.legacy_decision_status,

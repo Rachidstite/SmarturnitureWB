@@ -10,6 +10,8 @@ class ManufacturingExecutiveReport:
     gross_margin_rate: float = 0.0
     utilization_rate: float = 0.0
     waste_rate: float = 0.0
+    engineering_complexity: str = "LOW"
+    estimated_engineering_minutes: float = 0.0
     recovery_score: int = 0
     governance_state: str = ""
     legacy_decision_status: str = ""
