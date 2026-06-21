@@ -44,14 +44,18 @@ class HardwareIntelligenceBuilder:
                 )
                 continue
 
-            family = self.family_by_sku.get(sku) or sku
+            hardware_spec = self.registry.get_hardware(sku)
+            family = (
+                str(getattr(hardware_spec, "hardware_family", "") or "").strip()
+                or self.family_by_sku.get(sku)
+                or sku
+            )
             report = reports_by_family.setdefault(
                 family,
                 HardwareIntelligenceReport(hardware_family=family),
             )
             report.total_hardware_items += 1
 
-            hardware_spec = self.registry.get_hardware(sku)
             if hardware_spec is None:
                 report.requires_review = True
                 report.manufacturing_warning = f"Missing hardware specification for {sku}"

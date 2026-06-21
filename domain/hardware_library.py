@@ -21,6 +21,7 @@ class HardwareSpec:
     model: str
     revision: str
     category: str
+    hardware_family: str = ""
     price: float = 0.0
     host_holes: List[HoleSpec] = field(default_factory=list)
     target_holes: List[HoleSpec] = field(default_factory=list)
@@ -48,7 +49,7 @@ class HardwareRegistry:
 
     def _seed_catalog(self):
         self._catalog["HINGE_BLUM_110_V1"] = HardwareSpec(
-            sku="HINGE_BLUM_110_V1", manufacturer="BLUM", model="CLIP_TOP_110", revision="1.0", category="HINGES", price=6.0,
+            sku="HINGE_BLUM_110_V1", manufacturer="BLUM", model="CLIP_TOP_110", revision="1.0", category="HINGES", hardware_family="HINGE", price=6.0,
             host_holes=[
                 HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, offset_x=37, offset_y=16),
                 HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, offset_x=37, offset_y=-16)
@@ -60,7 +61,7 @@ class HardwareRegistry:
             ]
         )
         self._catalog["MINIFIX_15_V1"] = HardwareSpec(
-            sku="MINIFIX_15_V1", manufacturer="HAFELE", model="MINIFIX_15", revision="1.0", category="CONNECTORS", price=1.5,
+            sku="MINIFIX_15_V1", manufacturer="HAFELE", model="MINIFIX_15", revision="1.0", category="CONNECTORS", hardware_family="MINIFIX", price=1.5,
             host_holes=[HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, offset_x=0, offset_y=0)],
             target_holes=[
                 HoleSpec(diameter=15, depth=14, face=MountFace.FRONT, offset_x=34, offset_y=0),
@@ -68,12 +69,12 @@ class HardwareRegistry:
             ]
         )
         self._catalog["CONFIRMAT_50_V1"] = HardwareSpec(
-            sku="CONFIRMAT_50_V1", manufacturer="GENERIC", model="CONFIRMAT_5x50", revision="1.0", category="CONNECTORS",
+            sku="CONFIRMAT_50_V1", manufacturer="GENERIC", model="CONFIRMAT_5x50", revision="1.0", category="CONNECTORS", hardware_family="CONFIRMAT",
             host_holes=[HoleSpec(diameter=7, depth=18, face=MountFace.LEFT, is_through_hole=True)],
             target_holes=[HoleSpec(diameter=5, depth=34, face=MountFace.LEFT, axis="X")]
         )
         self._catalog["SHELF_PIN_5MM"] = HardwareSpec(
-            sku="SHELF_PIN_5MM", manufacturer="GENERIC", model="STEEL_PIN_5MM", revision="1.0", category="ACCESSORIES",
+            sku="SHELF_PIN_5MM", manufacturer="GENERIC", model="STEEL_PIN_5MM", revision="1.0", category="ACCESSORIES", hardware_family="SHELF_PIN",
             host_holes=[HoleSpec(diameter=5, depth=12, face=MountFace.LEFT, is_through_hole=False)],
             target_holes=[]
         )
@@ -84,6 +85,7 @@ class HardwareRegistry:
             model="SOFT_CLOSE_450",
             revision="1.0",
             category="DRAWER_SLIDES",
+            hardware_family="DRAWER_SLIDE",
             price=20.0,
             host_holes=[
                 HoleSpec(
@@ -166,6 +168,7 @@ class HardwareRegistry:
             model="STANDARD_SLIDE_450",
             revision="1.0",
             category="DRAWER_SLIDES",
+            hardware_family="DRAWER_SLIDE",
             price=20.0,
             host_holes=[
                 HoleSpec(

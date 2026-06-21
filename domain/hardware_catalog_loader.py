@@ -54,6 +54,7 @@ class HardwareCatalogLoader:
             model=item.get("model", ""),
             revision=item.get("revision", ""),
             category=item.get("category", ""),
+            hardware_family=item.get("hardware_family", ""),
             price=item.get("price", 0.0),
             host_holes=host_holes,
             target_holes=target_holes,

@@ -2,6 +2,7 @@
   "items": [
     {
       "sku": "DRAWER_SLIDE_SOFTCLOSE_450",
+      "hardware_family": "DRAWER_SLIDE",
       "manufacturer": "GENERIC",
       "model": "SOFT_CLOSE_450",
       "revision": "1.0",
@@ -50,6 +51,7 @@
     },
     {
       "sku": "DRAWER_SLIDE_STANDARD_450",
+      "hardware_family": "DRAWER_SLIDE",
       "manufacturer": "GENERIC",
       "model": "STANDARD_SLIDE_450",
       "revision": "1.0",
