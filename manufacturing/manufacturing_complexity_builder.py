@@ -5,6 +5,20 @@ from manufacturing.manufacturing_complexity_report import (
 
 class ManufacturingComplexityBuilder:
 
+    _ENGINEERING_MINUTES_BASE_BY_LEVEL = {
+        "LOW": 10.0,
+        "MEDIUM": 25.0,
+        "HIGH": 45.0,
+        "EXTREME": 70.0,
+    }
+
+    _ENGINEERING_MINUTES_MULTIPLIER_BY_LEVEL = {
+        "LOW": 0.50,
+        "MEDIUM": 0.75,
+        "HIGH": 1.00,
+        "EXTREME": 1.25,
+    }
+
     def build(self, metrics_report, joinery_report=None):
         score = 0
         main_drivers = []
@@ -81,11 +95,48 @@ class ManufacturingComplexityBuilder:
         else:
             engineering_complexity = "LOW"
 
+        estimated_engineering_minutes = self._estimate_engineering_minutes(
+            metrics_report,
+            engineering_complexity,
+            joinery_report=joinery_report,
+        )
+
         return ManufacturingComplexityReport(
             complexity_level=complexity_level,
             complexity_score=score,
             engineering_complexity=engineering_complexity,
+            estimated_engineering_minutes=estimated_engineering_minutes,
             main_drivers=main_drivers,
             recommendations=recommendations,
             warnings=list(metrics_report.warnings),
         )
+
+    def _estimate_engineering_minutes(
+        self,
+        metrics_report,
+        engineering_complexity,
+        joinery_report=None,
+    ):
+        base_minutes = self._ENGINEERING_MINUTES_BASE_BY_LEVEL.get(
+            engineering_complexity,
+            self._ENGINEERING_MINUTES_BASE_BY_LEVEL["LOW"],
+        )
+        multiplier = self._ENGINEERING_MINUTES_MULTIPLIER_BY_LEVEL.get(
+            engineering_complexity,
+            self._ENGINEERING_MINUTES_MULTIPLIER_BY_LEVEL["LOW"],
+        )
+
+        if joinery_report is not None:
+            joinery_complexity_score = float(
+                getattr(joinery_report, "joinery_complexity_score", 0.0)
+            )
+            estimated_minutes = base_minutes + (
+                joinery_complexity_score * multiplier
+            )
+        else:
+            estimated_minutes = base_minutes + (
+                float(metrics_report.total_panels) * 0.5
+                + float(metrics_report.total_drilling_operations) * 0.25
+            )
+
+        return round(max(0.0, estimated_minutes), 2)
