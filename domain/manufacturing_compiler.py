@@ -20,20 +20,36 @@ class ManufacturingCompiler:
             hardware_spec = self.registry.get_hardware(sku)
             if not hardware_spec: 
                 continue
+
+            identity_metadata = {
+                "hardware_family": getattr(hardware_spec, "hardware_family", ""),
+                "hardware_sku": sku,
+                "hardware_intent": getattr(placement, "hardware_intent", ""),
+            }
             
             # Host Processing (مثال: جانب الخزانة)
             host_node = project.graph.get_node(placement.host_node_id)
             if host_node and hardware_spec.host_holes:
-                self._inject_operations(host_node, placement.anchor, hardware_spec.host_holes)
+                self._inject_operations(
+                    host_node,
+                    placement.anchor,
+                    hardware_spec.host_holes,
+                    identity_metadata,
+                )
                 
             # Target Processing (مثال: الرف)
             target_node_id = getattr(placement, 'target_node_id', None)
             if target_node_id:
                 target_node = project.graph.get_node(target_node_id)
                 if target_node and hardware_spec.target_holes:
-                    self._inject_operations(target_node, placement.anchor, hardware_spec.target_holes)
+                    self._inject_operations(
+                        target_node,
+                        placement.anchor,
+                        hardware_spec.target_holes,
+                        identity_metadata,
+                    )
 
-    def _inject_operations(self, node, anchor, hole_specs):
+    def _inject_operations(self, node, anchor, hole_specs, identity_metadata=None):
         if not hasattr(node, 'machining_ops'):
             node.machining_ops = []
             
@@ -60,6 +76,7 @@ class ManufacturingCompiler:
                 op = MachiningOperation(
                     op_type="DRILL", diameter=hole.diameter, depth=hole.depth, face=f_face,
                     local_x=resolved.local_x, local_y=resolved.local_y, 
-                    axis=getattr(hole, 'axis', 'Z'), is_through=getattr(hole, 'is_through_hole', False)
+                    axis=getattr(hole, 'axis', 'Z'), is_through=getattr(hole, 'is_through_hole', False),
+                    metadata=dict(identity_metadata or {}),
                 )
                 node.machining_ops.append(op)

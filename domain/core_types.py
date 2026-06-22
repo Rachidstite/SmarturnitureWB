@@ -1,5 +1,6 @@
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any, Dict
 
 class NodeCategory(str, Enum):
     PHYSICAL = "PHYSICAL"
@@ -36,6 +37,7 @@ class MachiningOperation:
     local_y: float
     axis: str = "Z" # ⚡ Ensure Axis is always present for Save/Load
     is_through: bool = False
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self):
         return self.__dict__

@@ -13,11 +13,11 @@ class ManufacturingOperationAdapter:
         operation_type = ManufacturingOperationAdapter._operation_type(
             operation
         )
-        metadata = {}
+        metadata = dict(getattr(operation, "metadata", None) or {})
         original_operation_type = (
             ManufacturingOperationAdapter._original_operation_type(operation)
         )
-        if original_operation_type is not None:
+        if original_operation_type is not None and "original_operation_type" not in metadata:
             metadata["original_operation_type"] = original_operation_type
 
         return UnifiedManufacturingOperation(
