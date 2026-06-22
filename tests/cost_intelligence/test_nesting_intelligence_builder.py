@@ -26,8 +26,61 @@ class TestNestingIntelligenceBuilder(unittest.TestCase):
                 "risk_level",
                 "recommendation",
                 "warnings",
+                "reuse_rate",
+                "reusable_area",
+                "estimated_recovered_value",
             ],
         )
+
+    def test_offcut_values_are_copied_from_waste_report(self):
+        report = self.builder.build(
+            self._sheet_utilization_report(),
+            self._offcut_intelligence_report(
+                reuse_rate=0.11,
+                reusable_area=2.5,
+                estimated_recovered_value=14.0,
+            ),
+            self._waste_intelligence_report(
+                reuse_rate=0.33,
+                reusable_area=7.5,
+                estimated_recovered_value=28.0,
+            ),
+        )
+
+        self.assertEqual(report.reuse_rate, 0.33)
+        self.assertEqual(report.reusable_area, 7.5)
+        self.assertEqual(report.estimated_recovered_value, 28.0)
+
+    def test_falls_back_to_offcut_report_when_waste_report_lacks_fields(self):
+        waste_report = self._waste_intelligence_report()
+        delattr(waste_report, "reuse_rate")
+        delattr(waste_report, "reusable_area")
+        delattr(waste_report, "estimated_recovered_value")
+
+        report = self.builder.build(
+            self._sheet_utilization_report(),
+            self._offcut_intelligence_report(
+                reuse_rate=0.19,
+                reusable_area=4.5,
+                estimated_recovered_value=9.75,
+            ),
+            waste_report,
+        )
+
+        self.assertEqual(report.reuse_rate, 0.19)
+        self.assertEqual(report.reusable_area, 4.5)
+        self.assertEqual(report.estimated_recovered_value, 9.75)
+
+    def test_missing_offcut_values_keep_safe_defaults(self):
+        report = self.builder.build(
+            self._sheet_utilization_report(),
+            self._offcut_intelligence_report(),
+            self._waste_intelligence_report(),
+        )
+
+        self.assertEqual(report.reuse_rate, 0.0)
+        self.assertEqual(report.reusable_area, 0.0)
+        self.assertEqual(report.estimated_recovered_value, 0.0)
 
     def test_high_waste_risk_has_precedence(self):
         report = self.builder.build(

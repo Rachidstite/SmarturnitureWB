@@ -5,12 +5,49 @@ from cost_intelligence.nesting_intelligence_report import (
 
 class NestingIntelligenceBuilder:
 
+    @staticmethod
+    def _get_instance_field(instance, field_name, default=None):
+        instance_dict = getattr(instance, "__dict__", {})
+        if field_name in instance_dict:
+            return instance_dict[field_name]
+        return default
+
     def build(
         self,
         sheet_utilization_report,
         offcut_intelligence_report,
         waste_intelligence_report,
     ):
+        reuse_rate = self._get_instance_field(waste_intelligence_report, "reuse_rate")
+        if reuse_rate is None:
+            reuse_rate = self._get_instance_field(
+                offcut_intelligence_report,
+                "reuse_rate",
+                0.0,
+            )
+
+        reusable_area = self._get_instance_field(
+            waste_intelligence_report,
+            "reusable_area",
+        )
+        if reusable_area is None:
+            reusable_area = self._get_instance_field(
+                offcut_intelligence_report,
+                "reusable_area",
+                0.0,
+            )
+
+        estimated_recovered_value = self._get_instance_field(
+            waste_intelligence_report,
+            "estimated_recovered_value",
+        )
+        if estimated_recovered_value is None:
+            estimated_recovered_value = self._get_instance_field(
+                offcut_intelligence_report,
+                "estimated_recovered_value",
+                0.0,
+            )
+
         if waste_intelligence_report.risk_level == "HIGH":
             risk_level = "HIGH"
             recommendation = (
@@ -34,4 +71,7 @@ class NestingIntelligenceBuilder:
             risk_level=risk_level,
             recommendation=recommendation,
             warnings=warnings,
+            reuse_rate=reuse_rate,
+            reusable_area=reusable_area,
+            estimated_recovered_value=estimated_recovered_value,
         )
