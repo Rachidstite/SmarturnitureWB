@@ -26,8 +26,40 @@ class TestWasteIntelligenceBuilder(unittest.TestCase):
                 "risk_level",
                 "recommendation",
                 "warnings",
+                "reuse_rate",
+                "reusable_area",
+                "largest_reusable_area",
+                "estimated_recovered_value",
             ],
         )
+
+    def test_offcut_values_are_copied_into_waste_report(self):
+        report = self.builder.build(
+            self._consumption_report(),
+            self._cost_estimate(),
+            self._offcut_intelligence_report(
+                reuse_rate=0.42,
+                reusable_area=3.5,
+                largest_reusable_area=2.25,
+                estimated_recovered_value=18.75,
+            ),
+        )
+
+        self.assertEqual(report.reuse_rate, 0.42)
+        self.assertEqual(report.reusable_area, 3.5)
+        self.assertEqual(report.largest_reusable_area, 2.25)
+        self.assertEqual(report.estimated_recovered_value, 18.75)
+
+    def test_missing_offcut_report_keeps_safe_defaults(self):
+        report = self.builder.build(
+            self._consumption_report(),
+            self._cost_estimate(),
+        )
+
+        self.assertEqual(report.reuse_rate, 0.0)
+        self.assertEqual(report.reusable_area, 0.0)
+        self.assertEqual(report.largest_reusable_area, 0.0)
+        self.assertEqual(report.estimated_recovered_value, 0.0)
 
     def test_high_waste_and_low_recovery_is_high_risk(self):
         report = self.builder.build(

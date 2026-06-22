@@ -9,3 +9,7 @@ class WasteIntelligenceReport:
     risk_level: str = "LOW"
     recommendation: str = ""
     warnings: list = field(default_factory=list)
+    reuse_rate: float = 0.0
+    reusable_area: float = 0.0
+    largest_reusable_area: float = 0.0
+    estimated_recovered_value: float = 0.0
