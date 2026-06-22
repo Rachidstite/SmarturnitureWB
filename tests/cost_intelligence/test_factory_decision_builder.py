@@ -156,12 +156,217 @@ class TestFactoryDecisionBuilder(unittest.TestCase):
             original_values,
         )
 
+    def test_existing_behavior_remains_unchanged_without_manufacturing_decision_reports(self):
+        report = self.builder.build(*self._inputs())
+
+        self.assertEqual(report.decision_status, "APPROVED")
+        self.assertEqual(report.blocking_issues, ["Readiness blocker"])
+        self.assertEqual(
+            report.warnings,
+            [
+                "Readiness warning",
+                "Cost warning",
+                "Waste warning",
+                "Nesting warning",
+            ],
+        )
+        self.assertEqual(
+            report.recommendations,
+            [
+                "Readiness recommendation",
+                "Waste recommendation",
+                "Nesting recommendation",
+                "Quotation recommendation",
+            ],
+        )
+
+    def test_blocked_manufacturing_decision_forces_blocked_status(self):
+        report = self.builder.build(
+            *self._inputs(),
+            manufacturing_decision_reports=[
+                self._manufacturing_decision_report(
+                    decision_status="BLOCKED",
+                    is_blocked=True,
+                    blocking_reason="Back panel is blocked",
+                    warning_reason="Back panel warning",
+                    recommended_fix="Fix the back panel",
+                )
+            ],
+        )
+
+        self.assertEqual(report.decision_status, "BLOCKED")
+
+    def test_review_required_manufacturing_decision_forces_review_when_base_is_approved(self):
+        report = self.builder.build(
+            *self._inputs(),
+            manufacturing_decision_reports=[
+                self._manufacturing_decision_report(
+                    decision_status="REVIEW_REQUIRED",
+                    requires_review=True,
+                    blocking_reason="Minifix needs review",
+                    warning_reason="Minifix warning",
+                    recommended_fix="Review the minifix placement",
+                )
+            ],
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_blocked_base_decision_remains_blocked(self):
+        report = self.builder.build(
+            *self._inputs(readiness_status="BLOCKED"),
+            manufacturing_decision_reports=[
+                self._manufacturing_decision_report(
+                    decision_status="REVIEW_REQUIRED",
+                    requires_review=True,
+                    warning_reason="Confirmat warning",
+                    recommended_fix="Review the confirmat decision",
+                )
+            ],
+        )
+
+        self.assertEqual(report.decision_status, "BLOCKED")
+
+    def test_manufacturing_decision_reasons_are_propagated(self):
+        report = self.builder.build(
+            *self._inputs(),
+            manufacturing_decision_reports=[
+                self._manufacturing_decision_report(
+                    blocking_reason="Back panel blocked",
+                    warning_reason="Back panel warning",
+                    recommended_fix="Back panel fix",
+                ),
+                self._manufacturing_decision_report(
+                    blocking_reason="Minifix blocked",
+                    warning_reason="Minifix warning",
+                    recommended_fix="Minifix fix",
+                ),
+            ],
+        )
+
+        self.assertEqual(
+            report.blocking_issues,
+            [
+                "Readiness blocker",
+                "Back panel blocked",
+                "Minifix blocked",
+            ],
+        )
+        self.assertEqual(
+            report.warnings,
+            [
+                "Readiness warning",
+                "Cost warning",
+                "Waste warning",
+                "Nesting warning",
+                "Back panel warning",
+                "Minifix warning",
+            ],
+        )
+        self.assertEqual(
+            report.recommendations,
+            [
+                "Readiness recommendation",
+                "Waste recommendation",
+                "Nesting recommendation",
+                "Quotation recommendation",
+                "Back panel fix",
+                "Minifix fix",
+            ],
+        )
+
+    def test_builder_does_not_mutate_manufacturing_decision_inputs(self):
+        inputs = self._inputs()
+        manufacturing_decision_reports = [
+            self._manufacturing_decision_report(
+                decision_status="BLOCKED",
+                is_blocked=True,
+                blocking_reason="Back panel blocked",
+                warning_reason="Back panel warning",
+                recommended_fix="Back panel fix",
+            ),
+            self._manufacturing_decision_report(
+                decision_status="REVIEW_REQUIRED",
+                requires_review=True,
+                blocking_reason="Minifix blocked",
+                warning_reason="Minifix warning",
+                recommended_fix="Minifix fix",
+            ),
+        ]
+        original_values = [
+            self._snapshot(report)
+            for report in manufacturing_decision_reports
+        ]
+
+        self.builder.build(
+            *inputs,
+            manufacturing_decision_reports=manufacturing_decision_reports,
+        )
+
+        self.assertEqual(
+            [self._snapshot(report) for report in manufacturing_decision_reports],
+            original_values,
+        )
+
+    def test_empty_manufacturing_decision_reports_preserves_existing_behavior(self):
+        report = self.builder.build(
+            *self._inputs(),
+            manufacturing_decision_reports=[],
+        )
+
+        self.assertEqual(report.decision_status, "APPROVED")
+        self.assertEqual(report.blocking_issues, ["Readiness blocker"])
+        self.assertEqual(
+            report.warnings,
+            [
+                "Readiness warning",
+                "Cost warning",
+                "Waste warning",
+                "Nesting warning",
+            ],
+        )
+        self.assertEqual(
+            report.recommendations,
+            [
+                "Readiness recommendation",
+                "Waste recommendation",
+                "Nesting recommendation",
+                "Quotation recommendation",
+            ],
+        )
+
     @staticmethod
     def _snapshot(report):
         return {
             key: list(value) if isinstance(value, list) else value
             for key, value in report.__dict__.items()
         }
+
+    @staticmethod
+    def _manufacturing_decision_report(
+        decision_status="APPROVED",
+        is_manufacturable=True,
+        is_blocked=False,
+        requires_review=False,
+        blocking_reason="",
+        warning_reason="",
+        recommended_fix="",
+        factory_visibility_message="",
+    ):
+        from manufacturing.back_panel_decision_report import (
+            BackPanelDecisionReport,
+        )
+
+        return BackPanelDecisionReport(
+            decision_status=decision_status,
+            is_manufacturable=is_manufacturable,
+            is_blocked=is_blocked,
+            requires_review=requires_review,
+            blocking_reason=blocking_reason,
+            warning_reason=warning_reason,
+            recommended_fix=recommended_fix,
+            factory_visibility_message=factory_visibility_message,
+        )
 
     @staticmethod
     def _inputs(

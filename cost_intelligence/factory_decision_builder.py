@@ -10,6 +10,7 @@ class FactoryDecisionBuilder:
         waste_intelligence_report,
         nesting_intelligence_report,
         quotation_intelligence_report,
+        manufacturing_decision_reports=None,
     ):
         risk_levels = (
             manufacturing_cost_summary.risk_level,
@@ -39,6 +40,15 @@ class FactoryDecisionBuilder:
             recommendations.append(nesting_intelligence_report.recommendation)
         recommendations.extend(quotation_intelligence_report.recommendations)
 
+        blocking_issues = list(production_readiness_report.blocking_issues)
+        decision_status = self._apply_manufacturing_decision_signals(
+            decision_status,
+            warnings,
+            recommendations,
+            blocking_issues,
+            manufacturing_decision_reports,
+        )
+
         return FactoryDecisionReport(
             decision_status=decision_status,
             manufacturing_ready=production_readiness_report.manufacturing_ready,
@@ -48,7 +58,41 @@ class FactoryDecisionBuilder:
             nesting_risk_level=nesting_intelligence_report.risk_level,
             quotation_risk_level=quotation_intelligence_report.risk_level,
             margin_status=quotation_intelligence_report.margin_status,
-            blocking_issues=list(production_readiness_report.blocking_issues),
+            blocking_issues=blocking_issues,
             warnings=warnings,
             recommendations=recommendations,
         )
+
+    @staticmethod
+    def _apply_manufacturing_decision_signals(
+        decision_status,
+        warnings,
+        recommendations,
+        blocking_issues,
+        manufacturing_decision_reports,
+    ):
+        reports = list(manufacturing_decision_reports or [])
+
+        has_blocked = False
+        has_review = False
+
+        for report in reports:
+            if getattr(report, "blocking_reason", ""):
+                blocking_issues.append(getattr(report, "blocking_reason"))
+            if getattr(report, "warning_reason", ""):
+                warnings.append(getattr(report, "warning_reason"))
+            if getattr(report, "recommended_fix", ""):
+                recommendations.append(getattr(report, "recommended_fix"))
+
+            has_blocked = has_blocked or bool(getattr(report, "is_blocked", False))
+            has_review = has_review or bool(
+                getattr(report, "requires_review", False)
+            )
+
+        if has_blocked:
+            return "BLOCKED"
+
+        if has_review and decision_status != "BLOCKED":
+            return "REVIEW_REQUIRED"
+
+        return decision_status
