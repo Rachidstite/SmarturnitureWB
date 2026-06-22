@@ -1,4 +1,19 @@
 import unittest
+from dataclasses import dataclass
+
+
+@dataclass
+class _ProductionScheduleReport:
+    schedule_risk_level: str = "LOW"
+    warnings: list = None
+
+
+@dataclass
+class _FactoryBottleneckIntelligenceReport:
+    severity: str = "LOW"
+    impact: str = "NO_MAJOR_BOTTLENECK"
+    bottleneck: str = ""
+    recommendation: str = "No bottleneck detected"
 
 
 class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
@@ -68,6 +83,20 @@ class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
 
         self.assertEqual(report.decision_status, "BLOCKED")
 
+    def test_blocked_base_decision_remains_blocked_with_high_schedule_risk(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="BLOCKED",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+            production_schedule_report=_ProductionScheduleReport(
+                schedule_risk_level="HIGH"
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "BLOCKED")
+
     def test_overloaded_capacity_requires_review(self):
         report = self.builder.build(
             *self._inputs(
@@ -78,6 +107,79 @@ class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
         )
 
         self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_high_schedule_risk_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+            production_schedule_report=_ProductionScheduleReport(
+                schedule_risk_level="HIGH"
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_medium_schedule_risk_does_not_change_approved_decision(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+            production_schedule_report=_ProductionScheduleReport(
+                schedule_risk_level="MEDIUM"
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "APPROVED")
+
+    def test_high_bottleneck_severity_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+            factory_bottleneck_intelligence_report=_FactoryBottleneckIntelligenceReport(
+                severity="HIGH",
+                impact="NO_MAJOR_BOTTLENECK",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_delivery_risk_impact_requires_review(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+            factory_bottleneck_intelligence_report=_FactoryBottleneckIntelligenceReport(
+                severity="LOW",
+                impact="DELIVERY_RISK",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+
+    def test_medium_bottleneck_severity_does_not_change_approved_decision(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                factory_capacity_status="AVAILABLE",
+                factory_load_status="LOW",
+            ),
+            factory_bottleneck_intelligence_report=_FactoryBottleneckIntelligenceReport(
+                severity="MEDIUM",
+                impact="CAPACITY_PRESSURE",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "APPROVED")
 
     def test_high_load_requires_review(self):
         report = self.builder.build(
@@ -142,14 +244,53 @@ class TestFactoryDecisionIntelligenceBuilder(unittest.TestCase):
         )
         base_snapshot = self._snapshot(base_decision_report)
         intelligence_snapshot = self._snapshot(factory_intelligence_report)
+        production_schedule_report = _ProductionScheduleReport(
+            schedule_risk_level="HIGH",
+            warnings=["Schedule warning"],
+        )
+        bottleneck_report = _FactoryBottleneckIntelligenceReport(
+            severity="HIGH",
+            impact="DELIVERY_RISK",
+        )
+        production_schedule_snapshot = self._snapshot(production_schedule_report)
+        bottleneck_snapshot = self._snapshot(bottleneck_report)
 
-        self.builder.build(base_decision_report, factory_intelligence_report)
+        self.builder.build(
+            base_decision_report,
+            factory_intelligence_report,
+            production_schedule_report=production_schedule_report,
+            factory_bottleneck_intelligence_report=bottleneck_report,
+        )
 
         self.assertEqual(self._snapshot(base_decision_report), base_snapshot)
         self.assertEqual(
             self._snapshot(factory_intelligence_report),
             intelligence_snapshot,
         )
+        self.assertEqual(
+            self._snapshot(production_schedule_report),
+            production_schedule_snapshot,
+        )
+        self.assertEqual(self._snapshot(bottleneck_report), bottleneck_snapshot)
+
+    def test_existing_capacity_load_profitability_precedence_still_works(self):
+        report = self.builder.build(
+            *self._inputs(
+                decision_status="APPROVED",
+                profitability_status="LOW",
+                factory_capacity_status="OVERLOADED",
+                factory_load_status="HIGH",
+            ),
+            production_schedule_report=_ProductionScheduleReport(
+                schedule_risk_level="HIGH"
+            ),
+            factory_bottleneck_intelligence_report=_FactoryBottleneckIntelligenceReport(
+                severity="HIGH",
+                impact="DELIVERY_RISK",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
 
     @staticmethod
     def _snapshot(report):

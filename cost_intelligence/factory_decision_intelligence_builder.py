@@ -8,6 +8,8 @@ class FactoryDecisionIntelligenceBuilder:
         base_decision_report,
         factory_intelligence_report,
         profitability_report=None,
+        production_schedule_report=None,
+        factory_bottleneck_intelligence_report=None,
     ):
         report = FactoryDecisionReport(
             **{
@@ -37,6 +39,20 @@ class FactoryDecisionIntelligenceBuilder:
         elif report.factory_capacity_status == "OVERLOADED":
             report.decision_status = "REVIEW_REQUIRED"
         elif report.factory_load_status == "HIGH":
+            report.decision_status = "REVIEW_REQUIRED"
+        elif getattr(production_schedule_report, "schedule_risk_level", "LOW") == "HIGH":
+            report.decision_status = "REVIEW_REQUIRED"
+        elif getattr(
+            factory_bottleneck_intelligence_report,
+            "severity",
+            "LOW",
+        ) == "HIGH":
+            report.decision_status = "REVIEW_REQUIRED"
+        elif getattr(
+            factory_bottleneck_intelligence_report,
+            "impact",
+            "NO_MAJOR_BOTTLENECK",
+        ) == "DELIVERY_RISK":
             report.decision_status = "REVIEW_REQUIRED"
         else:
             report.decision_status = base_decision_report.decision_status
