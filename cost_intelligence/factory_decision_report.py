@@ -18,3 +18,7 @@ class FactoryDecisionReport:
     blocking_issues: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     recommendations: list = field(default_factory=list)
+    total_manufacturing_cost: float = 0.0
+    hardware_cost: float = 0.0
+    waste_cost: float = 0.0
+    recovered_value: float = 0.0

@@ -76,6 +76,21 @@ class TestFactoryDecisionBuilder(unittest.TestCase):
         self.assertEqual(report.quotation_risk_level, "LOW")
         self.assertEqual(report.margin_status, "HEALTHY_MARGIN")
 
+    def test_builder_maps_commercial_cost_fields(self):
+        report = self.builder.build(
+            *self._inputs(
+                total_manufacturing_cost=1250.5,
+                hardware_cost=275.25,
+                waste_cost=80.0,
+                recovered_value=12.75,
+            )
+        )
+
+        self.assertEqual(report.total_manufacturing_cost, 1250.5)
+        self.assertEqual(report.hardware_cost, 275.25)
+        self.assertEqual(report.waste_cost, 80.0)
+        self.assertEqual(report.recovered_value, 12.75)
+
     def test_builder_aggregates_lists_in_order_into_new_lists(self):
         (
             readiness,
@@ -380,6 +395,10 @@ class TestFactoryDecisionBuilder(unittest.TestCase):
         margin_status="HEALTHY_MARGIN",
         waste_recommendation="Waste recommendation",
         nesting_recommendation="Nesting recommendation",
+        total_manufacturing_cost=0.0,
+        hardware_cost=0.0,
+        waste_cost=0.0,
+        recovered_value=0.0,
     ):
         from cost_intelligence.manufacturing_cost_summary import (
             ManufacturingCostSummary,
@@ -409,11 +428,15 @@ class TestFactoryDecisionBuilder(unittest.TestCase):
             ManufacturingCostSummary(
                 risk_level=cost_risk_level,
                 warnings=["Cost warning"],
+                total_manufacturing_cost=total_manufacturing_cost,
+                hardware_cost=hardware_cost,
             ),
             WasteIntelligenceReport(
                 risk_level=waste_risk_level,
                 recommendation=waste_recommendation,
                 warnings=["Waste warning"],
+                waste_cost=waste_cost,
+                estimated_recovered_value=recovered_value,
             ),
             NestingIntelligenceReport(
                 risk_level=nesting_risk_level,

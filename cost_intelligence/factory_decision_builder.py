@@ -33,6 +33,19 @@ class FactoryDecisionBuilder:
         warnings.extend(waste_intelligence_report.warnings)
         warnings.extend(nesting_intelligence_report.warnings)
 
+        total_manufacturing_cost = getattr(
+            manufacturing_cost_summary,
+            "total_manufacturing_cost",
+            0.0,
+        )
+        hardware_cost = getattr(manufacturing_cost_summary, "hardware_cost", 0.0)
+        waste_cost = getattr(waste_intelligence_report, "waste_cost", 0.0)
+        recovered_value = getattr(
+            waste_intelligence_report,
+            "estimated_recovered_value",
+            0.0,
+        )
+
         recommendations = list(production_readiness_report.recommendations)
         if waste_intelligence_report.recommendation:
             recommendations.append(waste_intelligence_report.recommendation)
@@ -61,6 +74,10 @@ class FactoryDecisionBuilder:
             blocking_issues=blocking_issues,
             warnings=warnings,
             recommendations=recommendations,
+            total_manufacturing_cost=total_manufacturing_cost,
+            hardware_cost=hardware_cost,
+            waste_cost=waste_cost,
+            recovered_value=recovered_value,
         )
 
     @staticmethod

@@ -28,6 +28,10 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
                 "blocking_issues",
                 "warnings",
                 "recommendations",
+                "total_manufacturing_cost",
+                "hardware_cost",
+                "waste_cost",
+                "recovered_value",
             ],
         )
 
@@ -53,6 +57,10 @@ class TestFactoryDecisionReportContract(unittest.TestCase):
         self.assertEqual(report.blocking_issues, [])
         self.assertEqual(report.warnings, [])
         self.assertEqual(report.recommendations, [])
+        self.assertEqual(report.total_manufacturing_cost, 0.0)
+        self.assertEqual(report.hardware_cost, 0.0)
+        self.assertEqual(report.waste_cost, 0.0)
+        self.assertEqual(report.recovered_value, 0.0)
 
     def test_report_list_defaults_are_independent(self):
         from cost_intelligence.factory_decision_report import (
