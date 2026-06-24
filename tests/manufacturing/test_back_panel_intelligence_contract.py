@@ -16,6 +16,7 @@ def test_back_panel_intelligence_report_field_inventory_is_stable():
         "hole_rules",
         "manufacturing_intent",
         "validation",
+        "structural",
         "decision",
         "commercial_risk",
     ]
@@ -31,6 +32,7 @@ def test_back_panel_intelligence_report_safe_nested_defaults():
     from manufacturing.back_panel_manufacturing_intent_report import (
         BackPanelManufacturingIntentReport,
     )
+    from manufacturing.back_panel_structural_report import BackPanelStructuralReport
     from manufacturing.back_panel_validation_report import BackPanelValidationReport
 
     report = BackPanelIntelligenceReport()
@@ -38,6 +40,7 @@ def test_back_panel_intelligence_report_safe_nested_defaults():
     assert isinstance(report.hole_rules, BackPanelHoleRuleReport)
     assert isinstance(report.manufacturing_intent, BackPanelManufacturingIntentReport)
     assert isinstance(report.validation, BackPanelValidationReport)
+    assert isinstance(report.structural, BackPanelStructuralReport)
     assert isinstance(report.decision, BackPanelDecisionReport)
     assert isinstance(report.commercial_risk, BackPanelCommercialRiskReport)
 
@@ -54,6 +57,7 @@ def test_back_panel_intelligence_report_uses_existing_nested_types():
     from manufacturing.back_panel_manufacturing_intent_report import (
         BackPanelManufacturingIntentReport,
     )
+    from manufacturing.back_panel_structural_report import BackPanelStructuralReport
     from manufacturing.back_panel_validation_report import BackPanelValidationReport
 
     fields_by_name = {field.name: field for field in fields(BackPanelIntelligenceReport)}
@@ -61,12 +65,14 @@ def test_back_panel_intelligence_report_uses_existing_nested_types():
     assert fields_by_name["hole_rules"].default is MISSING
     assert fields_by_name["manufacturing_intent"].default is MISSING
     assert fields_by_name["validation"].default is MISSING
+    assert fields_by_name["structural"].default is MISSING
     assert fields_by_name["decision"].default is MISSING
     assert fields_by_name["commercial_risk"].default is MISSING
 
     assert fields_by_name["hole_rules"].default_factory is BackPanelHoleRuleReport
     assert fields_by_name["manufacturing_intent"].default_factory is BackPanelManufacturingIntentReport
     assert fields_by_name["validation"].default_factory is BackPanelValidationReport
+    assert fields_by_name["structural"].default_factory is BackPanelStructuralReport
     assert fields_by_name["decision"].default_factory is BackPanelDecisionReport
     assert fields_by_name["commercial_risk"].default_factory is BackPanelCommercialRiskReport
 

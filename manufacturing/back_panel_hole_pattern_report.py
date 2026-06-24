@@ -11,3 +11,4 @@ class BackPanelHolePatternReport:
     left_edge_holes: int = 0
     right_edge_holes: int = 0
     pattern_type: str = ""
+    center_hole_count: int = 0

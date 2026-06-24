@@ -29,11 +29,16 @@ class TestBackPanelIntelligenceBuilder(unittest.TestCase):
         self.assertIsInstance(report, BackPanelIntelligenceReport)
 
     @patch("manufacturing.back_panel_intelligence_builder.BackPanelDecisionBuilder")
-    def test_builder_delegates_to_back_panel_decision_builder(self, decision_builder_class):
-        validation = self._validation_report(
-            is_valid=True,
-        )
+    @patch("manufacturing.back_panel_intelligence_builder.BackPanelStructuralBuilder")
+    def test_builder_delegates_to_back_panel_decision_builder(
+        self,
+        structural_builder_class,
+        decision_builder_class,
+    ):
+        validation = self._validation_report(is_valid=True)
         decision_report = self._decision_report(decision_status="APPROVED")
+        structural_report = self._structural_report()
+        structural_builder_class.return_value.build.return_value = structural_report
         decision_builder_class.return_value.build.return_value = decision_report
 
         report = self.builder.build(
@@ -43,12 +48,23 @@ class TestBackPanelIntelligenceBuilder(unittest.TestCase):
             self._commercial_risk_report(),
         )
 
-        decision_builder_class.return_value.build.assert_called_once_with(validation)
+        structural_builder_class.return_value.build.assert_called_once()
+        decision_builder_class.return_value.build.assert_called_once_with(
+            validation,
+            structural_report,
+        )
         self.assertIs(report.decision, decision_report)
+        self.assertIs(report.structural, structural_report)
 
     @patch("manufacturing.back_panel_intelligence_builder.BackPanelDecisionBuilder")
-    def test_builder_uses_back_panel_decision_builder_exactly_once(self, decision_builder_class):
+    @patch("manufacturing.back_panel_intelligence_builder.BackPanelStructuralBuilder")
+    def test_builder_uses_back_panel_decision_builder_exactly_once(
+        self,
+        structural_builder_class,
+        decision_builder_class,
+    ):
         validation = self._validation_report()
+        structural_builder_class.return_value.build.return_value = self._structural_report()
         decision_builder_class.return_value.build.return_value = self._decision_report()
 
         self.builder.build(
@@ -58,8 +74,12 @@ class TestBackPanelIntelligenceBuilder(unittest.TestCase):
             self._commercial_risk_report(),
         )
 
+        structural_builder_class.assert_called_once_with()
         decision_builder_class.assert_called_once_with()
-        decision_builder_class.return_value.build.assert_called_once_with(validation)
+        decision_builder_class.return_value.build.assert_called_once_with(
+            validation,
+            structural_builder_class.return_value.build.return_value,
+        )
 
     def test_builder_preserves_hole_rules_instance(self):
         hole_rules = self._hole_rules_report()
@@ -104,6 +124,97 @@ class TestBackPanelIntelligenceBuilder(unittest.TestCase):
         )
 
         self.assertIs(report.commercial_risk, commercial_risk)
+
+    def test_builder_includes_structural_report_in_intelligence_report(self):
+        validation = self._validation_report(
+            is_valid=True,
+            center_support_required=True,
+        )
+        fixing_report = self._fixing_report(strategy="SCREWED")
+
+        report = self.builder.build(
+            self._hole_rules_report(),
+            self._manufacturing_intent_report(),
+            validation,
+            self._commercial_risk_report(),
+            fixing_report=fixing_report,
+        )
+
+        self.assertEqual(report.structural.structural_risk, "HIGH")
+        self.assertTrue(report.structural.requires_reinforcement)
+        self.assertEqual(
+            report.structural.structural_recommendation,
+            "Add center support or reinforcement",
+        )
+
+    def test_high_structural_risk_triggers_review(self):
+        validation = self._validation_report(
+            is_valid=True,
+            center_support_required=True,
+        )
+
+        report = self.builder.build(
+            self._hole_rules_report(),
+            self._manufacturing_intent_report(),
+            validation,
+            self._commercial_risk_report(),
+            fixing_report=self._fixing_report(strategy="GROOVE"),
+        )
+
+        self.assertEqual(report.decision.decision_status, "REVIEW_REQUIRED")
+
+    def test_reinforcement_triggers_review(self):
+        validation = self._validation_report(
+            is_valid=True,
+            center_support_required=True,
+        )
+
+        report = self.builder.build(
+            self._hole_rules_report(),
+            self._manufacturing_intent_report(),
+            validation,
+            self._commercial_risk_report(),
+        )
+
+        self.assertTrue(report.decision.requires_review)
+        self.assertEqual(report.decision.decision_status, "REVIEW_REQUIRED")
+
+    def test_structural_recommendation_propagates(self):
+        validation = self._validation_report(
+            is_valid=True,
+            center_support_required=True,
+        )
+
+        report = self.builder.build(
+            self._hole_rules_report(),
+            self._manufacturing_intent_report(),
+            validation,
+            self._commercial_risk_report(),
+            fixing_report=self._fixing_report(strategy="SCREWED"),
+        )
+
+        self.assertEqual(
+            report.decision.recommended_fix,
+            "Add center support or reinforcement",
+        )
+
+    def test_existing_blocked_precedence_preserved(self):
+        validation = self._validation_report(
+            is_valid=False,
+            recommended_action="Check back panel design",
+            center_support_required=True,
+        )
+
+        report = self.builder.build(
+            self._hole_rules_report(),
+            self._manufacturing_intent_report(),
+            validation,
+            self._commercial_risk_report(),
+            fixing_report=self._fixing_report(strategy="SCREWED"),
+        )
+
+        self.assertEqual(report.decision.decision_status, "BLOCKED")
+        self.assertFalse(report.decision.requires_review)
 
     def test_builder_stores_returned_decision_report(self):
         validation = self._validation_report(is_valid=True)
@@ -194,6 +305,17 @@ class TestBackPanelIntelligenceBuilder(unittest.TestCase):
         )
 
     @staticmethod
+    def _fixing_report(strategy="GROOVE"):
+        from manufacturing.back_panel_fixing_report import BackPanelFixingReport
+        from manufacturing.back_panel_fixing_strategy import (
+            BackPanelFixingStrategy,
+        )
+
+        return BackPanelFixingReport(
+            strategy=getattr(BackPanelFixingStrategy, strategy),
+        )
+
+    @staticmethod
     def _validation_report(
         is_valid=False,
         validation_status="",
@@ -227,6 +349,26 @@ class TestBackPanelIntelligenceBuilder(unittest.TestCase):
             fixing_method_warning=fixing_method_warning,
             manufacturing_warning=manufacturing_warning,
             recommended_action=recommended_action,
+        )
+
+    @staticmethod
+    def _structural_report(
+        structural_risk="LOW",
+        racking_resistance="UNKNOWN",
+        requires_center_support=False,
+        requires_reinforcement=False,
+        structural_recommendation="",
+    ):
+        from manufacturing.back_panel_structural_report import (
+            BackPanelStructuralReport,
+        )
+
+        return BackPanelStructuralReport(
+            structural_risk=structural_risk,
+            racking_resistance=racking_resistance,
+            requires_center_support=requires_center_support,
+            requires_reinforcement=requires_reinforcement,
+            structural_recommendation=structural_recommendation,
         )
 
     @staticmethod

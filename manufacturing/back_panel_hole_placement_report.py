@@ -1,4 +1,13 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class BackPanelHoleCoordinate:
+    x: float = 0.0
+    y: float = 0.0
+    diameter: float = 0.0
+    depth: float = 0.0
+    face: str = ""
 
 
 @dataclass
@@ -10,3 +19,4 @@ class BackPanelHolePlacementReport:
     default_spacing: float = 0.0
     supports_screws: bool = False
     supports_confirmat: bool = False
+    hole_positions: list = field(default_factory=list)

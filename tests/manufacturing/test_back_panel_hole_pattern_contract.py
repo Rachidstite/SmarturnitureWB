@@ -28,6 +28,7 @@ class TestBackPanelHolePatternContract(unittest.TestCase):
                 "left_edge_holes",
                 "right_edge_holes",
                 "pattern_type",
+                "center_hole_count",
             ],
         )
 
@@ -46,6 +47,7 @@ class TestBackPanelHolePatternContract(unittest.TestCase):
         self.assertEqual(report.left_edge_holes, 0)
         self.assertEqual(report.right_edge_holes, 0)
         self.assertEqual(report.pattern_type, "")
+        self.assertEqual(report.center_hole_count, 0)
 
     def test_no_generation_logic(self):
         import manufacturing.back_panel_hole_pattern_report as module

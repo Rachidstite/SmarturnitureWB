@@ -141,6 +141,51 @@ class TestBackPanelDecisionBuilder(unittest.TestCase):
         self.assertEqual(report.manufacturing_priority, "MEDIUM")
         self.assertEqual(report.factory_visibility_message, "Back panel requires manufacturing review")
 
+    def test_high_structural_risk_triggers_review(self):
+        report = self.builder.build(
+            self._validation_report(is_valid=True),
+            self._structural_report(structural_risk="HIGH"),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+        self.assertTrue(report.requires_review)
+
+    def test_reinforcement_triggers_review(self):
+        report = self.builder.build(
+            self._validation_report(is_valid=True),
+            self._structural_report(requires_reinforcement=True),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+        self.assertTrue(report.requires_review)
+
+    def test_structural_recommendation_propagates(self):
+        report = self.builder.build(
+            self._validation_report(is_valid=True),
+            self._structural_report(
+                structural_risk="HIGH",
+                structural_recommendation="Add center support or reinforcement",
+            ),
+        )
+
+        self.assertEqual(report.decision_status, "REVIEW_REQUIRED")
+        self.assertEqual(
+            report.recommended_fix,
+            "Add center support or reinforcement",
+        )
+
+    def test_blocked_precedence_is_preserved_with_structural_risk(self):
+        report = self.builder.build(
+            self._validation_report(
+                is_valid=False,
+                recommended_action="Check back panel design",
+            ),
+            self._structural_report(structural_risk="HIGH"),
+        )
+
+        self.assertEqual(report.decision_status, "BLOCKED")
+        self.assertFalse(report.requires_review)
+
     def test_valid_ready_back_panel_is_approved(self):
         report = self.builder.build(
             self._validation_report(
@@ -216,6 +261,26 @@ class TestBackPanelDecisionBuilder(unittest.TestCase):
             fixing_method_warning=fixing_method_warning,
             manufacturing_warning=manufacturing_warning,
             recommended_action=recommended_action,
+        )
+
+    @staticmethod
+    def _structural_report(
+        structural_risk="LOW",
+        racking_resistance="UNKNOWN",
+        requires_center_support=False,
+        requires_reinforcement=False,
+        structural_recommendation="",
+    ):
+        from manufacturing.back_panel_structural_report import (
+            BackPanelStructuralReport,
+        )
+
+        return BackPanelStructuralReport(
+            structural_risk=structural_risk,
+            racking_resistance=racking_resistance,
+            requires_center_support=requires_center_support,
+            requires_reinforcement=requires_reinforcement,
+            structural_recommendation=structural_recommendation,
         )
 
 
