@@ -237,4 +237,3 @@ class WardrobeBuilder:
 
     def build(self) -> CabinetProject:
         return CabinetProject(graph=self.graph, joinery=self.joinery, topology=self.topology, placements=[])
-

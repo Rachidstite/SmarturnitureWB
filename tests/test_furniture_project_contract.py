@@ -18,6 +18,7 @@ class TestFurnitureProjectContract(unittest.TestCase):
                 "project_id",
                 "name",
                 "cabinets",
+                "placements",
                 "metadata",
             ],
         )
@@ -30,6 +31,7 @@ class TestFurnitureProjectContract(unittest.TestCase):
         self.assertEqual(project.project_id, "")
         self.assertEqual(project.name, "")
         self.assertEqual(project.cabinets, [])
+        self.assertEqual(project.placements, [])
         self.assertEqual(project.metadata, {})
 
     def test_cabinet_list_defaults_are_independent(self):
@@ -39,6 +41,14 @@ class TestFurnitureProjectContract(unittest.TestCase):
         second = FurnitureProject()
 
         self.assertIsNot(first.cabinets, second.cabinets)
+
+    def test_placements_defaults_are_independent(self):
+        from domain.furniture_project import FurnitureProject
+
+        first = FurnitureProject()
+        second = FurnitureProject()
+
+        self.assertIsNot(first.placements, second.placements)
 
     def test_metadata_dict_defaults_are_independent(self):
         from domain.furniture_project import FurnitureProject
