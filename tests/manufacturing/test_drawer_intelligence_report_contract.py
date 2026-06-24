@@ -14,6 +14,7 @@ def test_drawer_intelligence_report_field_inventory_is_stable():
 
     assert [field.name for field in fields(DrawerIntelligenceReport)] == [
         "validation",
+        "structural",
         "decision",
     ]
 
@@ -22,10 +23,12 @@ def test_drawer_intelligence_report_uses_existing_drawer_report_types():
     from manufacturing.drawer_decision_report import DrawerDecisionReport
     from manufacturing.drawer_intelligence_report import DrawerIntelligenceReport
     from manufacturing.drawer_validation_report import DrawerValidationReport
+    from manufacturing.drawer_structural_report import DrawerStructuralReport
 
     fields_by_name = {field.name: field for field in fields(DrawerIntelligenceReport)}
 
     assert fields_by_name["validation"].default_factory is DrawerValidationReport
+    assert fields_by_name["structural"].default_factory is DrawerStructuralReport
     assert fields_by_name["decision"].default_factory is DrawerDecisionReport
 
 
@@ -35,6 +38,7 @@ def test_drawer_intelligence_report_safe_nested_defaults():
     report = DrawerIntelligenceReport()
 
     assert report.validation is not None
+    assert report.structural is not None
     assert report.decision is not None
 
 
@@ -45,6 +49,7 @@ def test_drawer_intelligence_report_nested_defaults_are_not_shared():
     second = DrawerIntelligenceReport()
 
     assert first.validation is not second.validation
+    assert first.structural is not second.structural
     assert first.decision is not second.decision
 
 
@@ -62,5 +67,4 @@ def test_drawer_intelligence_report_has_no_runtime_or_geometry_logic():
     assert "compiler" not in source.lower()
     assert "runtime" not in source.lower()
     assert "FactoryDecisionBuilder" not in source
-
 

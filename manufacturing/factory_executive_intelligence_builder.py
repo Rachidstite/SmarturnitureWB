@@ -11,6 +11,9 @@ class FactoryExecutiveIntelligenceBuilder:
         factory_load_report,
         factory_bottleneck_report,
         delivery_intelligence_report,
+        factory_capacity_simulation_report=None,
+        production_forecast_report=None,
+        factory_delivery_report=None,
     ):
         capacity_status = factory_capacity_report.status
         load_status = factory_load_report.status
@@ -18,16 +21,37 @@ class FactoryExecutiveIntelligenceBuilder:
         delivery_confidence = delivery_intelligence_report.confidence
         delivery_risk = delivery_intelligence_report.delivery_risk
         priority_action = factory_bottleneck_report.recommendation
+        capacity_simulation_status = getattr(
+            factory_capacity_simulation_report,
+            "capacity_status",
+            "AVAILABLE",
+        )
+        forecast_status = getattr(
+            production_forecast_report,
+            "forecast_status",
+            "ON_SCHEDULE",
+        )
+        factory_delivery_status = getattr(
+            factory_delivery_report,
+            "delivery_status",
+            "ON_TRACK",
+        )
 
         if (
             capacity_status == "OVERLOADED"
             or delivery_risk == "HIGH"
+            or capacity_simulation_status == "OVERLOADED"
+            or forecast_status == "DELAY_RISK"
+            or factory_delivery_status == "DELAYED"
         ):
             factory_status = "CRITICAL"
         elif (
             capacity_status == "LIMITED"
             or load_status == "HIGH"
             or delivery_confidence == "LOW"
+            or capacity_simulation_status == "HIGH_LOAD"
+            or forecast_status == "REVIEW"
+            or factory_delivery_status == "AT_RISK"
         ):
             factory_status = "ATTENTION_REQUIRED"
         else:

@@ -19,6 +19,20 @@ class TestDrawerIntelligenceBuilder(unittest.TestCase):
 
         self.assertIsInstance(report, DrawerIntelligenceReport)
 
+    def test_builder_includes_structural_report(self):
+        report = self.builder.build(
+            self._validation_report(
+                requires_review=True,
+                drawer_width_risk="HIGH",
+                bottom_panel_warning="Check bottom panel",
+            )
+        )
+
+        self.assertEqual(report.structural.structural_risk, "HIGH")
+        self.assertEqual(report.structural.slide_capacity_risk, "HIGH")
+        self.assertEqual(report.structural.bottom_panel_risk, "MEDIUM")
+        self.assertTrue(report.structural.requires_reinforcement)
+
     @patch("manufacturing.drawer_intelligence_builder.DrawerDecisionBuilder")
     def test_builder_delegates_to_drawer_decision_builder(self, decision_builder_class):
         validation = self._validation_report(
@@ -132,12 +146,15 @@ class TestDrawerIntelligenceBuilder(unittest.TestCase):
         slide_installation_valid=False,
         clearance_valid=False,
         hardware_complete=False,
+        requires_review=False,
+        drawer_width_risk="LOW",
+        bottom_panel_warning="",
         blocking_issues=None,
         warnings=None,
     ):
         from manufacturing.drawer_validation_report import DrawerValidationReport
 
-        return DrawerValidationReport(
+        report = DrawerValidationReport(
             is_valid=is_valid,
             manufacturing_ready=manufacturing_ready,
             slide_installation_valid=slide_installation_valid,
@@ -146,6 +163,10 @@ class TestDrawerIntelligenceBuilder(unittest.TestCase):
             blocking_issues=list(blocking_issues or []),
             warnings=list(warnings or []),
         )
+        report.requires_review = requires_review
+        report.drawer_width_risk = drawer_width_risk
+        report.bottom_panel_warning = bottom_panel_warning
+        return report
 
     @staticmethod
     def _decision_report(
