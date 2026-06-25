@@ -71,8 +71,13 @@ class TestManufacturingSnapshot(unittest.TestCase):
 
         self.assertEqual(
             len(report.lines),
-            8,
+            5,
             "Manufacturing regression: report changed"
+        )
+
+        self.assertTrue(
+            any(line.operation_type == "Groove" for line in report.lines),
+            "Manufacturing regression: back panel groove missing from report"
         )
 
 
