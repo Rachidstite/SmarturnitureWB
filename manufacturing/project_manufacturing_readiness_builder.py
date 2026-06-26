@@ -1,6 +1,9 @@
 from manufacturing.project_manufacturing_readiness_report import (
     ProjectManufacturingReadinessReport,
 )
+from project_engineering.project_engineering_readiness_report import (
+    ProjectEngineeringReadinessReport,
+)
 
 
 class ProjectManufacturingReadinessBuilder:
@@ -11,7 +14,31 @@ class ProjectManufacturingReadinessBuilder:
         cabinet_stability_report=None,
         hardware_placement_report=None,
         kitchen_manufacturing_report=None,
+        engineering_readiness_report=None,
     ):
+        if engineering_readiness_report is not None:
+            if engineering_readiness_report.ready_for_manufacturing_handoff:
+                return ProjectManufacturingReadinessReport(
+                    readiness_status="READY",
+                    structural_risk="LOW",
+                    engineering_review_required=False,
+                    manufacturing_recommendation=(
+                        "Project is ready for manufacturing handoff. "
+                        "engineering handoff ready."
+                    ),
+                )
+
+            return ProjectManufacturingReadinessReport(
+                readiness_status="BLOCKED",
+                structural_risk="HIGH",
+                engineering_review_required=True,
+                manufacturing_recommendation=(
+                    "engineering handoff blocked: "
+                    f"blocking_violation_count={engineering_readiness_report.blocking_violation_count}, "
+                    f"warning_count={engineering_readiness_report.warning_count}"
+                ),
+            )
+
         severities = [
             getattr(cabinet_structural_report, "structural_risk", "LOW"),
             getattr(cabinet_structural_report, "stability_risk", "LOW"),
