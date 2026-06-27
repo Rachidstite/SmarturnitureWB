@@ -18,6 +18,8 @@ class TestBaseCabinetProductResultContract(unittest.TestCase):
                 "validation",
                 "manufacturing_outputs",
                 "cost",
+                "commercial",
+                "quotation_document",
                 "metadata",
                 "diagnostics",
             ],
@@ -38,6 +40,8 @@ class TestBaseCabinetProductResultContract(unittest.TestCase):
         self.assertIsNone(result.validation)
         self.assertIsNone(result.manufacturing_outputs)
         self.assertIsNone(result.cost)
+        self.assertIsNone(result.commercial)
+        self.assertIsNone(result.quotation_document)
         self.assertEqual(result.metadata, {})
         self.assertEqual(result.diagnostics, ())
 
@@ -49,6 +53,8 @@ class TestBaseCabinetProductResultContract(unittest.TestCase):
             validation={"kind": "validation"},
             manufacturing_outputs={"kind": "outputs"},
             cost={"kind": "cost"},
+            commercial={"kind": "commercial"},
+            quotation_document={"kind": "quotation_document"},
             metadata={"source": "base-cabinet"},
             diagnostics=("warning-1", "warning-2"),
         )
@@ -61,6 +67,10 @@ class TestBaseCabinetProductResultContract(unittest.TestCase):
         self.assertEqual(data["validation"], {"kind": "validation"})
         self.assertEqual(data["manufacturing_outputs"], {"kind": "outputs"})
         self.assertEqual(data["cost"], {"kind": "cost"})
+        self.assertEqual(data["commercial"], {"kind": "commercial"})
+        self.assertEqual(
+            data["quotation_document"], {"kind": "quotation_document"}
+        )
         self.assertEqual(data["metadata"], {"source": "base-cabinet"})
         self.assertEqual(data["diagnostics"], ("warning-1", "warning-2"))
 
@@ -72,6 +82,8 @@ class TestBaseCabinetProductResultContract(unittest.TestCase):
             validation="validation",
             manufacturing_outputs="outputs",
             cost="cost",
+            commercial="commercial",
+            quotation_document="quotation_document",
             metadata={"source": "base-cabinet"},
             diagnostics=("d1",),
         )
@@ -82,6 +94,8 @@ class TestBaseCabinetProductResultContract(unittest.TestCase):
             validation="validation",
             manufacturing_outputs="outputs",
             cost="cost",
+            commercial="commercial",
+            quotation_document="quotation_document",
             metadata={"source": "base-cabinet"},
             diagnostics=("d1",),
         )

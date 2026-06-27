@@ -52,6 +52,46 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
             },
         )()
 
+    @staticmethod
+    def _fake_commercial_result():
+        return type(
+            "ManufacturingCommercialResult",
+            (),
+            {
+                "manufacturing_cost_summary": object(),
+                "manufacturing_quotation_input": object(),
+                "quotation_report": type(
+                    "QuotationReport",
+                    (),
+                    {
+                        "selling_price": 2500.0,
+                        "currency": "MAD",
+                    },
+                )(),
+                "profitability_report": object(),
+                "quotation_intelligence_report": object(),
+            },
+        )()
+
+    @staticmethod
+    def _fake_quotation_document():
+        return type(
+            "QuotationDocumentV1",
+            (),
+            {
+                "quotation_number": "Q-2026-001",
+                "issue_date": "2026-06-15",
+                "valid_until": "2026-07-15",
+                "seller_name": "Smart Furniture",
+                "customer_name": "Example Customer",
+                "project_description": "Custom base cabinet",
+                "total_amount": 2500.0,
+                "currency": "MAD",
+                "notes": "",
+                "payment_terms": "",
+            },
+        )()
+
     def test_accepts_base_cabinet_specification(self):
         specification = BaseCabinetSpecification()
         scene_graph = object()
@@ -260,9 +300,79 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
         specification = BaseCabinetSpecification()
         scene_graph = object()
         manufacturing_package = object()
-        production_package = object()
         cost_report = object()
         cost_summary = self._fake_cost_summary(cost_report)
+        warnings = ["Missing edge data"]
+
+        from manufacturing.manufacturing_cutlist_report import (
+            ManufacturingCutlistReport,
+        )
+        from manufacturing.manufacturing_edge_report import ManufacturingEdgeReport
+        from manufacturing.manufacturing_machining_report import (
+            ManufacturingMachiningReport,
+        )
+        from manufacturing.manufacturing_production_package import (
+            ManufacturingProductionPackage,
+        )
+        from manufacturing.manufacturing_summary_report import (
+            ManufacturingSummaryReport,
+        )
+
+        production_package = ManufacturingProductionPackage(
+            cutlist_report=ManufacturingCutlistReport(
+                items=[
+                    {
+                        "identity": "panel-01",
+                        "width": 100.0,
+                        "height": 200.0,
+                        "thickness": 18.0,
+                        "material": "MDF",
+                        "quantity": 1,
+                    }
+                ],
+                total_items=1,
+                warnings=warnings,
+            ),
+            edge_report=ManufacturingEdgeReport(
+                items=[
+                    {
+                        "panel_identity": "panel-01",
+                        "edge": "TOP",
+                        "banding": "ABS_1MM",
+                        "linear_meters": 0.1,
+                    }
+                ],
+                total_items=1,
+                total_linear_meters=0.1,
+                warnings=warnings,
+            ),
+            machining_report=ManufacturingMachiningReport(
+                items=[
+                    {
+                        "operation_type": "DRILL",
+                        "diameter": 5.0,
+                        "depth": 12.0,
+                        "is_through": False,
+                        "x": 100.0,
+                        "y": 200.0,
+                        "z": 0.0,
+                        "face": "TOP",
+                        "axis": "Z",
+                        "source": "panel-01",
+                    }
+                ],
+                total_items=1,
+                warnings=warnings,
+            ),
+            summary_report=ManufacturingSummaryReport(
+                total_panels=1,
+                total_materials=1,
+                total_edge_operations=1,
+                total_machining_operations=1,
+                warnings=warnings,
+            ),
+            warnings=warnings,
+        )
 
         with patch.object(
             workflow_module,
@@ -321,6 +431,160 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
         self.assertIs(result.cost.manufacturing_production_package, production_package)
         self.assertIs(result.cost.manufacturing_cost_summary, cost_summary)
         self.assertIs(result.cost.manufacturing_cost_report, cost_report)
+
+    def test_uses_commercial_bridge(self):
+        specification = BaseCabinetSpecification()
+        scene_graph = object()
+        manufacturing_package = object()
+        cost_summary = self._fake_cost_summary(object())
+        commercial_result = self._fake_commercial_result()
+        quotation_document = self._fake_quotation_document()
+        warnings = ["Missing edge data"]
+
+        from manufacturing.manufacturing_cutlist_report import (
+            ManufacturingCutlistReport,
+        )
+        from manufacturing.manufacturing_edge_report import ManufacturingEdgeReport
+        from manufacturing.manufacturing_machining_report import (
+            ManufacturingMachiningReport,
+        )
+        from manufacturing.manufacturing_production_package import (
+            ManufacturingProductionPackage,
+        )
+        from manufacturing.manufacturing_summary_report import (
+            ManufacturingSummaryReport,
+        )
+
+        production_package = ManufacturingProductionPackage(
+            cutlist_report=ManufacturingCutlistReport(
+                items=[
+                    {
+                        "identity": "panel-01",
+                        "width": 100.0,
+                        "height": 200.0,
+                        "thickness": 18.0,
+                        "material": "MDF",
+                        "quantity": 1,
+                    }
+                ],
+                total_items=1,
+                warnings=warnings,
+            ),
+            edge_report=ManufacturingEdgeReport(
+                items=[
+                    {
+                        "panel_identity": "panel-01",
+                        "edge": "TOP",
+                        "banding": "ABS_1MM",
+                        "linear_meters": 0.1,
+                    }
+                ],
+                total_items=1,
+                total_linear_meters=0.1,
+                warnings=warnings,
+            ),
+            machining_report=ManufacturingMachiningReport(
+                items=[
+                    {
+                        "operation_type": "DRILL",
+                        "diameter": 5.0,
+                        "depth": 12.0,
+                        "is_through": False,
+                        "x": 100.0,
+                        "y": 200.0,
+                        "z": 0.0,
+                        "face": "TOP",
+                        "axis": "Z",
+                        "source": "panel-01",
+                    }
+                ],
+                total_items=1,
+                warnings=warnings,
+            ),
+            summary_report=ManufacturingSummaryReport(
+                total_panels=1,
+                total_materials=1,
+                total_edge_operations=1,
+                total_machining_operations=1,
+                warnings=warnings,
+            ),
+            warnings=warnings,
+        )
+
+        with patch.object(
+            workflow_module,
+            "build_base_cabinet_engineering_cabinet",
+            return_value=FakeEngineeringCabinet(scene_graph),
+        ), patch.object(
+            workflow_module,
+            "validate_base_cabinet_specification",
+            return_value=self._fake_engineering_validation_report([]),
+        ), patch.object(
+            workflow_module,
+            "ManufacturingValidationService",
+        ) as manufacturing_validation_service_class, patch.object(
+            workflow_module,
+            "build_manufacturing_validation_report",
+            return_value=self._fake_manufacturing_report(),
+        ), patch.object(
+            workflow_module,
+            "build_manufacturing_validation_summary_report",
+            return_value=self._fake_manufacturing_summary(),
+        ), patch.object(
+            workflow_module,
+            "build_base_cabinet_manufacturing_outputs_entry",
+            return_value=type(
+                "Outputs",
+                (),
+                {
+                    "metadata": {
+                        "quotation_number": "Q-2026-001",
+                        "issue_date": "2026-06-15",
+                        "valid_until": "2026-07-15",
+                        "seller_name": "Smart Furniture",
+                        "customer_name": "Example Customer",
+                        "project_description": "Custom base cabinet",
+                    },
+                    "manufacturing_package": manufacturing_package,
+                },
+            )(),
+        ), patch.object(
+            workflow_module,
+            "ManufacturingProductionPackageBuilder",
+        ) as production_package_builder_class, patch.object(
+            workflow_module,
+            "ManufacturingCostPipelineBuilder",
+        ) as cost_pipeline_builder_class, patch.object(
+            workflow_module,
+            "ManufacturingCommercialPipelineBuilder",
+        ) as commercial_pipeline_builder_class, patch.object(
+            workflow_module,
+            "QuotationDocumentBuilderV1",
+        ) as quotation_document_builder_class:
+            manufacturing_validation_service_class.validate.return_value = (
+                self._fake_manufacturing_state([])
+            )
+            production_package_builder_class.return_value.build.return_value = (
+                production_package
+            )
+            cost_pipeline_builder_class.return_value.build.return_value = (
+                cost_summary
+            )
+            commercial_pipeline_builder_class.return_value.build.return_value = (
+                commercial_result
+            )
+            quotation_document_builder_class.return_value.build.return_value = (
+                quotation_document
+            )
+            result = build_base_cabinet_product_workflow(specification)
+
+        commercial_pipeline_builder_class.return_value.build.assert_called_once_with(
+            production_package
+        )
+        quotation_document_builder_class.return_value.build.assert_called_once()
+        self.assertIs(result.commercial.commercial_result, commercial_result)
+        self.assertIs(result.commercial.quotation_document, quotation_document)
+        self.assertIs(result.quotation_document, quotation_document)
 
     def test_includes_scenario(self):
         specification = BaseCabinetSpecification()
@@ -508,6 +772,9 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
         self.assertNotIn("ManufacturingCostContextBuilder", source)
         self.assertNotIn("ManufacturingCostInsightsBuilder", source)
         self.assertNotIn("ManufacturingCostRiskReportBuilder", source)
+        self.assertNotIn("ManufacturingQuotationInputBuilder", source)
+        self.assertNotIn("ManufacturingQuotationReportBuilder", source)
+        self.assertNotIn("QuotationCalculator", source)
 
     def test_no_freecad_import_in_source(self):
         source = inspect.getsource(workflow_module)

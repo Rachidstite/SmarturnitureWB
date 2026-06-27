@@ -5,6 +5,12 @@ from types import SimpleNamespace
 from cost_intelligence.manufacturing_cost_pipeline_builder import (
     ManufacturingCostPipelineBuilder,
 )
+from cost_intelligence.manufacturing_commercial_pipeline_builder import (
+    ManufacturingCommercialPipelineBuilder,
+)
+from cost_intelligence.quotation_document_builder import (
+    QuotationDocumentBuilderV1,
+)
 from domain.base_cabinet_engineering_entry import (
     build_base_cabinet_engineering_cabinet,
 )
@@ -119,6 +125,40 @@ def _build_cost_bridge(manufacturing_outputs):
     )
 
 
+def _build_commercial_bridge(cost_bridge, metadata):
+    if cost_bridge is None:
+        return None
+
+    commercial_result = ManufacturingCommercialPipelineBuilder().build(
+        cost_bridge.manufacturing_production_package
+    )
+    quotation_report = getattr(commercial_result, "quotation_report", None)
+    if quotation_report is None:
+        return SimpleNamespace(
+            commercial_result=commercial_result,
+            quotation_document=None,
+        )
+
+    quotation_document = QuotationDocumentBuilderV1().build(
+        quotation_report,
+        quotation_number=str(metadata.get("quotation_number", "") or ""),
+        issue_date=str(metadata.get("issue_date", "") or ""),
+        valid_until=str(metadata.get("valid_until", "") or ""),
+        seller_name=str(metadata.get("seller_name", "") or ""),
+        customer_name=str(metadata.get("customer_name", "") or ""),
+        project_description=str(
+            metadata.get("project_description", "") or ""
+        ),
+        notes=str(metadata.get("notes", "") or ""),
+        payment_terms=str(metadata.get("payment_terms", "") or ""),
+    )
+
+    return SimpleNamespace(
+        commercial_result=commercial_result,
+        quotation_document=quotation_document,
+    )
+
+
 def build_base_cabinet_product_workflow(
     specification: BaseCabinetSpecification,
 ) -> BaseCabinetProductResult:
@@ -133,6 +173,10 @@ def build_base_cabinet_product_workflow(
         specification
     )
     cost = _build_cost_bridge(manufacturing_outputs)
+    commercial = _build_commercial_bridge(
+        cost,
+        dict(getattr(manufacturing_outputs, "metadata", {}) or {}),
+    )
 
     return BaseCabinetProductResult(
         specification=specification,
@@ -141,6 +185,10 @@ def build_base_cabinet_product_workflow(
         validation=validation,
         manufacturing_outputs=manufacturing_outputs,
         cost=cost,
+        commercial=commercial,
+        quotation_document=(
+            None if commercial is None else commercial.quotation_document
+        ),
         metadata=dict(getattr(manufacturing_outputs, "metadata", {}) or {}),
         diagnostics=tuple(
             getattr(engineering_validation, "violations", ()) or ()
