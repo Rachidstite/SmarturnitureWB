@@ -36,6 +36,22 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
             {"ready_for_manufacturing": True},
         )()
 
+    @staticmethod
+    def _fake_cost_summary(cost_report):
+        return type(
+            "ManufacturingCostSummary",
+            (),
+            {
+                "cost_report": cost_report,
+                "risk_report": object(),
+                "insights": object(),
+                "total_manufacturing_cost": 123.0,
+                "hardware_cost": 0.0,
+                "risk_level": "LOW",
+                "warnings": [],
+            },
+        )()
+
     def test_accepts_base_cabinet_specification(self):
         specification = BaseCabinetSpecification()
         scene_graph = object()
@@ -240,6 +256,72 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
         outputs_entry.assert_called_once_with(specification)
         self.assertIs(result.manufacturing_outputs, manufacturing_outputs)
 
+    def test_uses_cost_bridge(self):
+        specification = BaseCabinetSpecification()
+        scene_graph = object()
+        manufacturing_package = object()
+        production_package = object()
+        cost_report = object()
+        cost_summary = self._fake_cost_summary(cost_report)
+
+        with patch.object(
+            workflow_module,
+            "build_base_cabinet_engineering_cabinet",
+            return_value=FakeEngineeringCabinet(scene_graph),
+        ), patch.object(
+            workflow_module,
+            "validate_base_cabinet_specification",
+            return_value=self._fake_engineering_validation_report([]),
+        ), patch.object(
+            workflow_module,
+            "ManufacturingValidationService",
+        ) as manufacturing_validation_service_class, patch.object(
+            workflow_module,
+            "build_manufacturing_validation_report",
+            return_value=self._fake_manufacturing_report(),
+        ), patch.object(
+            workflow_module,
+            "build_manufacturing_validation_summary_report",
+            return_value=self._fake_manufacturing_summary(),
+        ), patch.object(
+            workflow_module,
+            "build_base_cabinet_manufacturing_outputs_entry",
+            return_value=type(
+                "Outputs",
+                (),
+                {
+                    "metadata": {},
+                    "manufacturing_package": manufacturing_package,
+                },
+            )(),
+        ), patch.object(
+            workflow_module,
+            "ManufacturingProductionPackageBuilder",
+        ) as production_package_builder_class, patch.object(
+            workflow_module,
+            "ManufacturingCostPipelineBuilder",
+        ) as cost_pipeline_builder_class:
+            manufacturing_validation_service_class.validate.return_value = (
+                self._fake_manufacturing_state([])
+            )
+            production_package_builder_class.return_value.build.return_value = (
+                production_package
+            )
+            cost_pipeline_builder_class.return_value.build.return_value = (
+                cost_summary
+            )
+            result = build_base_cabinet_product_workflow(specification)
+
+        production_package_builder_class.return_value.build.assert_called_once_with(
+            manufacturing_package
+        )
+        cost_pipeline_builder_class.return_value.build.assert_called_once_with(
+            production_package
+        )
+        self.assertIs(result.cost.manufacturing_production_package, production_package)
+        self.assertIs(result.cost.manufacturing_cost_summary, cost_summary)
+        self.assertIs(result.cost.manufacturing_cost_report, cost_report)
+
     def test_includes_scenario(self):
         specification = BaseCabinetSpecification()
         scene_graph = object()
@@ -422,6 +504,10 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
         self.assertNotIn("CabinetBuilder", source)
         self.assertNotIn("ManufacturingRuntimePipelineBuilder", source)
         self.assertNotIn("ManufacturingCutlistBuilder", source)
+        self.assertNotIn("ManufacturingCostCalculator", source)
+        self.assertNotIn("ManufacturingCostContextBuilder", source)
+        self.assertNotIn("ManufacturingCostInsightsBuilder", source)
+        self.assertNotIn("ManufacturingCostRiskReportBuilder", source)
 
     def test_no_freecad_import_in_source(self):
         source = inspect.getsource(workflow_module)

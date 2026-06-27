@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from cost_intelligence.manufacturing_cost_pipeline_builder import (
+    ManufacturingCostPipelineBuilder,
+)
 from domain.base_cabinet_engineering_entry import (
     build_base_cabinet_engineering_cabinet,
 )
@@ -13,6 +16,9 @@ from domain.base_cabinet_scenario import BaseCabinetScenario
 from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.base_cabinet_specification_validation import (
     validate_base_cabinet_specification,
+)
+from manufacturing.manufacturing_production_package_builder import (
+    ManufacturingProductionPackageBuilder,
 )
 from manufacturing.manufacturing_validation_builder import (
     build_manufacturing_validation_report,
@@ -92,6 +98,27 @@ def _build_validation_bridge(
     )
 
 
+def _build_cost_bridge(manufacturing_outputs):
+    manufacturing_package = getattr(manufacturing_outputs, "manufacturing_package", None)
+    if manufacturing_package is None:
+        return None
+
+    manufacturing_production_package = ManufacturingProductionPackageBuilder().build(
+        manufacturing_package
+    )
+    manufacturing_cost_summary = ManufacturingCostPipelineBuilder().build(
+        manufacturing_production_package
+    )
+
+    return SimpleNamespace(
+        manufacturing_production_package=manufacturing_production_package,
+        manufacturing_cost_summary=manufacturing_cost_summary,
+        manufacturing_cost_report=getattr(
+            manufacturing_cost_summary, "cost_report", None
+        ),
+    )
+
+
 def build_base_cabinet_product_workflow(
     specification: BaseCabinetSpecification,
 ) -> BaseCabinetProductResult:
@@ -105,6 +132,7 @@ def build_base_cabinet_product_workflow(
     manufacturing_outputs = build_base_cabinet_manufacturing_outputs_entry(
         specification
     )
+    cost = _build_cost_bridge(manufacturing_outputs)
 
     return BaseCabinetProductResult(
         specification=specification,
@@ -112,6 +140,7 @@ def build_base_cabinet_product_workflow(
         engineering=engineering,
         validation=validation,
         manufacturing_outputs=manufacturing_outputs,
+        cost=cost,
         metadata=dict(getattr(manufacturing_outputs, "metadata", {}) or {}),
         diagnostics=tuple(
             getattr(engineering_validation, "violations", ()) or ()
