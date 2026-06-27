@@ -19,5 +19,10 @@ def build_base_cabinet_engineering_cabinet(
     if CabinetBuilder is None:
         raise RuntimeError("CabinetBuilder is unavailable")
 
-    CabinetBuilder().build(cabinet)
+    builder = CabinetBuilder()
+    builder.build(cabinet)
+    scene_graph = getattr(builder, "scene_graph", None)
+    if scene_graph is not None:
+        cabinet.graph = scene_graph
+        cabinet.scene_graph = scene_graph
     return cabinet
