@@ -49,13 +49,25 @@ class TestBaseCabinetSpecificationAdapterContract(unittest.TestCase):
         self.assertEqual(result.metadata["hinge_family"], "STANDARD_110")
         self.assertEqual(result.metadata["drawer_family"], "NONE")
 
+    def test_unsupported_mappings_are_not_applied_to_cabinet_params(self):
+        specification = BaseCabinetSpecification(
+            door_count=2,
+            edge_banding_required=True,
+            drawer_family="DRAWER_CUSTOM",
+        )
+        result = BaseCabinetSpecificationAdapter.adapt(specification)
+        self.assertNotEqual(result.cabinet_params.sec_count, specification.door_count)
+        self.assertNotEqual(result.cabinet_params.hw_mode, specification.edge_banding_required)
+        self.assertNotEqual(result.cabinet_params.handle_sku, specification.drawer_family)
+
     def test_adapter_output_is_serialization_friendly(self):
         result = BaseCabinetSpecificationAdapter.adapt(BaseCabinetSpecification())
         payload = asdict(result)
         self.assertIn("cabinet_params", payload)
         self.assertIn("metadata", payload)
         self.assertEqual(payload["cabinet_params"]["width"], 600.0)
-        self.assertEqual(payload["metadata"]["cabinet_type"], "Base Cabinet")
+        self.assertEqual(payload["metadata"]["door_count"], 2)
+        self.assertEqual(payload["metadata"]["hinge_family"], "STANDARD_110")
 
     def test_no_runtime_build_execute_methods(self):
         self.assertFalse(hasattr(BaseCabinetSpecificationAdapter, "build"))
