@@ -25,10 +25,13 @@ class ManufacturingCommercialPipelineBuilder:
         manufacturing_production_package,
         markup_rate=0.0,
         currency="MAD",
+        *,
+        manufacturing_cost_summary=None,
     ):
-        manufacturing_cost_summary = ManufacturingCostPipelineBuilder().build(
-            manufacturing_production_package
-        )
+        if manufacturing_cost_summary is None:
+            manufacturing_cost_summary = ManufacturingCostPipelineBuilder().build(
+                manufacturing_production_package
+            )
         manufacturing_quotation_input = (
             ManufacturingQuotationInputBuilder().build(
                 manufacturing_cost_summary,

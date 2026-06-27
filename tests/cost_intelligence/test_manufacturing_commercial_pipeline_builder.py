@@ -139,6 +139,73 @@ class TestManufacturingCommercialPipelineBuilder(unittest.TestCase):
         "cost_intelligence.manufacturing_commercial_pipeline_builder."
         "ManufacturingCostPipelineBuilder"
     )
+    def test_build_reuses_precomputed_cost_summary(
+        self,
+        cost_builder_class,
+        quotation_input_builder_class,
+        quotation_report_builder_class,
+        profitability_report_builder_class,
+        quotation_intelligence_builder_class,
+    ):
+        from cost_intelligence.manufacturing_commercial_pipeline_builder import (
+            ManufacturingCommercialPipelineBuilder,
+        )
+
+        production_package = object()
+        cost_summary = object()
+        quotation_input = object()
+        quotation_report = object()
+        profitability_report = object()
+        quotation_intelligence_report = object()
+
+        quotation_input_builder_class.return_value.build.return_value = (
+            quotation_input
+        )
+        quotation_report_builder_class.return_value.build.return_value = (
+            quotation_report
+        )
+        profitability_report_builder_class.return_value.build.return_value = (
+            profitability_report
+        )
+        quotation_intelligence_builder_class.return_value.build.return_value = (
+            quotation_intelligence_report
+        )
+
+        result = ManufacturingCommercialPipelineBuilder().build(
+            production_package,
+            markup_rate=0.25,
+            currency="EUR",
+            manufacturing_cost_summary=cost_summary,
+        )
+
+        self.assertIs(result.manufacturing_cost_summary, cost_summary)
+        cost_builder_class.return_value.build.assert_not_called()
+        quotation_input_builder_class.return_value.build.assert_called_once_with(
+            cost_summary,
+            markup_rate=0.25,
+            currency="EUR",
+        )
+
+    @patch(
+        "cost_intelligence.manufacturing_commercial_pipeline_builder."
+        "QuotationIntelligenceBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_commercial_pipeline_builder."
+        "ManufacturingProfitabilityReportBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_commercial_pipeline_builder."
+        "ManufacturingQuotationReportBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_commercial_pipeline_builder."
+        "ManufacturingQuotationInputBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_commercial_pipeline_builder."
+        "ManufacturingCostPipelineBuilder"
+    )
     def test_build_uses_commercial_defaults(
         self,
         cost_builder_class,

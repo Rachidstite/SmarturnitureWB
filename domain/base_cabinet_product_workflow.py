@@ -125,12 +125,13 @@ def _build_cost_bridge(manufacturing_outputs):
     )
 
 
-def _build_commercial_bridge(cost_bridge, metadata):
+def _build_commercial_bridge(cost_bridge, quotation_metadata):
     if cost_bridge is None:
         return None
 
     commercial_result = ManufacturingCommercialPipelineBuilder().build(
-        cost_bridge.manufacturing_production_package
+        cost_bridge.manufacturing_production_package,
+        manufacturing_cost_summary=cost_bridge.manufacturing_cost_summary,
     )
     quotation_report = getattr(commercial_result, "quotation_report", None)
     if quotation_report is None:
@@ -141,16 +142,16 @@ def _build_commercial_bridge(cost_bridge, metadata):
 
     quotation_document = QuotationDocumentBuilderV1().build(
         quotation_report,
-        quotation_number=str(metadata.get("quotation_number", "") or ""),
-        issue_date=str(metadata.get("issue_date", "") or ""),
-        valid_until=str(metadata.get("valid_until", "") or ""),
-        seller_name=str(metadata.get("seller_name", "") or ""),
-        customer_name=str(metadata.get("customer_name", "") or ""),
+        quotation_number=str(quotation_metadata.get("quotation_number", "") or ""),
+        issue_date=str(quotation_metadata.get("issue_date", "") or ""),
+        valid_until=str(quotation_metadata.get("valid_until", "") or ""),
+        seller_name=str(quotation_metadata.get("seller_name", "") or ""),
+        customer_name=str(quotation_metadata.get("customer_name", "") or ""),
         project_description=str(
-            metadata.get("project_description", "") or ""
+            quotation_metadata.get("project_description", "") or ""
         ),
-        notes=str(metadata.get("notes", "") or ""),
-        payment_terms=str(metadata.get("payment_terms", "") or ""),
+        notes=str(quotation_metadata.get("notes", "") or ""),
+        payment_terms=str(quotation_metadata.get("payment_terms", "") or ""),
     )
 
     return SimpleNamespace(
@@ -161,7 +162,10 @@ def _build_commercial_bridge(cost_bridge, metadata):
 
 def build_base_cabinet_product_workflow(
     specification: BaseCabinetSpecification,
+    *,
+    quotation_metadata=None,
 ) -> BaseCabinetProductResult:
+    quotation_metadata = dict(quotation_metadata or {})
     scenario = BaseCabinetScenario(specification=specification)
     engineering = build_base_cabinet_engineering_cabinet(specification)
     engineering_validation = validate_base_cabinet_specification(specification)
@@ -175,7 +179,7 @@ def build_base_cabinet_product_workflow(
     cost = _build_cost_bridge(manufacturing_outputs)
     commercial = _build_commercial_bridge(
         cost,
-        dict(getattr(manufacturing_outputs, "metadata", {}) or {}),
+        quotation_metadata,
     )
 
     return BaseCabinetProductResult(
