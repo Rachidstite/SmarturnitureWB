@@ -206,6 +206,7 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
     def test_uses_manufacturing_outputs_entry(self):
         specification = BaseCabinetSpecification()
         scene_graph = object()
+        manufacturing_outputs = type("Outputs", (), {"metadata": {}})()
 
         with patch.object(
             workflow_module,
@@ -229,14 +230,15 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
         ), patch.object(
             workflow_module,
             "build_base_cabinet_manufacturing_outputs_entry",
-            return_value=type("Outputs", (), {"metadata": {}})(),
+            return_value=manufacturing_outputs,
         ) as outputs_entry:
             manufacturing_validation_service_class.validate.return_value = (
                 self._fake_manufacturing_state([])
             )
-            build_base_cabinet_product_workflow(specification)
+            result = build_base_cabinet_product_workflow(specification)
 
         outputs_entry.assert_called_once_with(specification)
+        self.assertIs(result.manufacturing_outputs, manufacturing_outputs)
 
     def test_includes_scenario(self):
         specification = BaseCabinetSpecification()
