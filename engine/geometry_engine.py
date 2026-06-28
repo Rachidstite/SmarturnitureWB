@@ -25,14 +25,15 @@ class GeometryEngine:
             from engine.section import Section
             self.cabinet.sections.append(Section(i, cfg))
         total_inner = params.width - 2 * T
-        section_opening = total_inner / sec_count
+        divider_space = T * (sec_count - 1)
+        section_opening = max((total_inner - divider_space) / sec_count, 0) if sec_count > 1 else total_inner
         global_has_sliding = any(DoorType.from_string(s.config.doors).is_sliding() for s in self.cabinet.sections)
         sliding_track = self.mat.sliding_track_depth if global_has_sliding else 0
         current_x = T
         for i, sec in enumerate(self.cabinet.sections):
             r = self._resolve_one_section(sec, i, section_opening, current_x, sliding_track, params, sec_count)
             self.resolved_sections.append(r)
-            current_x += r.inner_width
+            current_x += r.inner_width + (T if i < sec_count - 1 else 0)
         self.issues.extend(self.constraint_engine.validate(self.resolved_sections, self.mat))
         self.issues.extend(self.validator.validate(self.resolved_sections, self.mat))
         if any(i.level == "ERROR" for i in self.issues): self.is_buildable = False
