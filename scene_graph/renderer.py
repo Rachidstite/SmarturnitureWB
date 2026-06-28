@@ -59,12 +59,45 @@ class SceneRenderer:
         obj = self.doc.addObject("Part::Feature", name)
         obj.Shape = Part.makeBox(node.width, node.depth, node.height)
         obj.Placement = App.Placement(App.Vector(node.x, node.y, node.z), App.Rotation())
-        colors = {"Shelves": (0.85,0.75,0.60), "Drawers": (0.9,0.8,0.7), "Doors": (0.6,0.4,0.2),
-                  "Dividers": (0.85,0.75,0.60), "Carcass": (0.85,0.75,0.60)}
-        obj.ViewObject.ShapeColor = colors.get(node.group, (0.85,0.75,0.60))
+        obj.ViewObject.ShapeColor = self._visual_color_for(node)
+        try:
+            if node.role == NodeRole.BACK_PANEL:
+                obj.ViewObject.Transparency = 35
+            elif node.role == NodeRole.DIVIDER:
+                obj.ViewObject.Transparency = 15
+        except Exception:
+            pass
         obj.addProperty("App::PropertyString", "SmartUUID")
         obj.SmartUUID = name
         self.groups[node.group].addObject(obj)
+
+    @staticmethod
+    def _visual_color_for(node: SceneNode):
+        role_name = getattr(getattr(node, "role", None), "name", str(getattr(node, "role", None)))
+        if role_name == "SIDE_PANEL":
+            return (0.68, 0.49, 0.31)
+        if role_name == "TOP_PANEL":
+            return (0.75, 0.57, 0.36)
+        if role_name == "BOTTOM_PANEL":
+            return (0.72, 0.54, 0.34)
+        if role_name == "BACK_PANEL":
+            return (0.84, 0.85, 0.87)
+        if role_name == "SHELF":
+            return (0.90, 0.81, 0.62)
+        if role_name == "DIVIDER":
+            return (0.74, 0.57, 0.37)
+        if role_name == "DRAWER_FACE":
+            return (0.76, 0.64, 0.46)
+        if role_name == "DOOR_PANEL":
+            return (0.58, 0.41, 0.25)
+        colors = {
+            "Shelves": (0.90, 0.81, 0.62),
+            "Drawers": (0.76, 0.64, 0.46),
+            "Doors": (0.58, 0.41, 0.25),
+            "Dividers": (0.74, 0.57, 0.37),
+            "Carcass": (0.68, 0.49, 0.31),
+        }
+        return colors.get(getattr(node, "group", None), (0.68, 0.49, 0.31))
 
 # --- تسجيل الاستراتيجيات ---
 from scene_graph.registry import RendererRegistry
