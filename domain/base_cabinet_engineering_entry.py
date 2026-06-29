@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.base_cabinet_specification_adapter import BaseCabinetSpecificationAdapter
+from domain.base_cabinet_engineering_model import BaseCabinetEngineeringModelBuilder
+from domain.construction_resolver import ConstructionResolver
 from engine.cabinet import Cabinet
 
 try:
@@ -15,6 +17,10 @@ def build_base_cabinet_engineering_cabinet(
 ) -> Cabinet:
     adapter_result = BaseCabinetSpecificationAdapter.adapt(specification)
     cabinet = Cabinet(params=adapter_result.cabinet_params)
+    cabinet.construction_model = ConstructionResolver.resolve(specification)
+    cabinet.engineering_model = BaseCabinetEngineeringModelBuilder.build(
+        cabinet.construction_model
+    )
 
     if CabinetBuilder is None:
         raise RuntimeError("CabinetBuilder is unavailable")
