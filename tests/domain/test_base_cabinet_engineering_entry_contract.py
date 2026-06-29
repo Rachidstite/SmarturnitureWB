@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import domain.base_cabinet_engineering_entry as engineering_entry_module
 from domain.base_cabinet_engineering_entry import (
+    attach_base_cabinet_engineering_models,
     build_base_cabinet_engineering_cabinet,
 )
 from domain.base_cabinet_engineering_model import BaseCabinetEngineeringModel
@@ -85,6 +86,29 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         engineering_model_cls.build.assert_called_once()
         self.assertEqual(FakeCabinetBuilder.instances_created, 1)
         self.assertEqual(FakeCabinetBuilder.build_calls, 1)
+
+    def test_attach_helper_populates_construction_and_engineering_models(self):
+        from domain.base_cabinet_engineering_model import BaseCabinetEngineeringModelBuilder
+
+        cabinet = Cabinet()
+        spec = BaseCabinetSpecification()
+
+        with patch.object(
+            engineering_entry_module,
+            "ConstructionResolver",
+            wraps=engineering_entry_module.ConstructionResolver,
+        ) as resolver_cls, patch.object(
+            BaseCabinetEngineeringModelBuilder,
+            "build",
+            wraps=BaseCabinetEngineeringModelBuilder.build,
+        ) as engineering_model_build:
+            result = attach_base_cabinet_engineering_models(cabinet, spec)
+
+        self.assertIs(result, cabinet)
+        self.assertIsNotNone(cabinet.construction_model)
+        self.assertIsNotNone(cabinet.engineering_model)
+        resolver_cls.resolve.assert_called_once()
+        engineering_model_build.assert_called_once()
 
     def test_delegates_to_existing_cabinet_builder(self):
         FakeCabinetBuilder.instances_created = 0

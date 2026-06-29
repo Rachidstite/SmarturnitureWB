@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from domain.base_cabinet_engineering_model import BaseCabinetEngineeringModelBuilder
 from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.base_cabinet_specification_adapter import BaseCabinetSpecificationAdapter
-from domain.base_cabinet_engineering_model import BaseCabinetEngineeringModelBuilder
 from domain.construction_resolver import ConstructionResolver
 from engine.cabinet import Cabinet
 
@@ -17,10 +17,7 @@ def build_base_cabinet_engineering_cabinet(
 ) -> Cabinet:
     adapter_result = BaseCabinetSpecificationAdapter.adapt(specification)
     cabinet = Cabinet(params=adapter_result.cabinet_params)
-    cabinet.construction_model = ConstructionResolver.resolve(specification)
-    cabinet.engineering_model = BaseCabinetEngineeringModelBuilder.build(
-        cabinet.construction_model
-    )
+    attach_base_cabinet_engineering_models(cabinet, specification)
 
     if CabinetBuilder is None:
         raise RuntimeError("CabinetBuilder is unavailable")
@@ -31,4 +28,15 @@ def build_base_cabinet_engineering_cabinet(
     if scene_graph is not None:
         cabinet.graph = scene_graph
         cabinet.scene_graph = scene_graph
+    return cabinet
+
+
+def attach_base_cabinet_engineering_models(
+    cabinet: Cabinet,
+    specification: BaseCabinetSpecification,
+) -> Cabinet:
+    cabinet.construction_model = ConstructionResolver.resolve(specification)
+    cabinet.engineering_model = BaseCabinetEngineeringModelBuilder.build(
+        cabinet.construction_model
+    )
     return cabinet

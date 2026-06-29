@@ -157,18 +157,50 @@ class TestConfiguratorPipelineContract(unittest.TestCase):
         manager.builder.build.assert_called_once()
         built_cabinet = manager.builder.build.call_args.args[0]
         self.assertIs(built_cabinet.params, manager.params)
+        self.assertIsNotNone(getattr(built_cabinet, "construction_model", None))
+        self.assertIsNotNone(getattr(built_cabinet, "engineering_model", None))
         self.assertIs(manager.builder.scene_graph, legacy_scene_graph)
 
-    def test_configurator_build_still_does_not_touch_new_engineering_entry(self):
+    def test_configurator_build_uses_engineering_entry_plumbing(self):
         main_window_module = _import_ui_main_window()
         UIManager = main_window_module.UIManager
 
         manager = UIManager.__new__(UIManager)
-        manager.params = CabinetParams()
-        manager.builder = SimpleNamespace(mat=SimpleNamespace(), build=Mock(return_value=SimpleNamespace(scene_graph=object())), scene_graph=None)
+        manager.params = CabinetParams(
+            width=1800.0,
+            height=2200.0,
+            depth=600.0,
+            base_height=80.0,
+            sec_count=3,
+            section_widths=[450.0, 900.0, 450.0],
+            sec_data={
+                0: SimpleNamespace(drawers=0, drawer_type="Inset", shelves=1, doors="None", door_count=2),
+                1: SimpleNamespace(drawers=0, drawer_type="Inset", shelves=1, doors="None", door_count=2),
+                2: SimpleNamespace(drawers=0, drawer_type="Inset", shelves=1, doors="None", door_count=2),
+            },
+        )
+        manager.builder = SimpleNamespace(
+            mat=SimpleNamespace(),
+            build=Mock(return_value=SimpleNamespace(scene_graph=object())),
+            scene_graph=None,
+        )
         manager.val_state = SimpleNamespace(has_errors=False, issues=())
         manager.is_updating_ui = False
         manager.issue_presenter = SimpleNamespace(display_issues=Mock())
+        manager.build_timer = _FakeTimer()
+        manager.inp_w = SimpleNamespace(value=lambda: 1800.0)
+        manager.inp_h = SimpleNamespace(value=lambda: 2200.0)
+        manager.inp_d = SimpleNamespace(value=lambda: 600.0)
+        manager.inp_base = SimpleNamespace(value=lambda: 80.0)
+        manager.inp_back_thickness = SimpleNamespace(value=lambda: 8.0)
+        manager.inp_drawer_depth = SimpleNamespace(value=lambda: 450.0)
+        manager.inp_drawer_bottom = SimpleNamespace(value=lambda: 8.0)
+        manager.inp_sec = SimpleNamespace(value=lambda: 3)
+        manager.chk_cnc = SimpleNamespace(isChecked=lambda: False)
+        manager.chk_hw = SimpleNamespace(isChecked=lambda: False)
+        manager.cmb_hinge = SimpleNamespace(currentData=lambda: "HINGE_BLUM_110_V1")
+        manager.cmb_slide = SimpleNamespace(currentData=lambda: "DRAWER_SLIDE_SOFTCLOSE_450")
+        manager.cmb_handle = SimpleNamespace(currentData=lambda: "HANDLE_128_BLACK")
 
         validation_state = SimpleNamespace(has_errors=False, issues=())
 
@@ -182,6 +214,10 @@ class TestConfiguratorPipelineContract(unittest.TestCase):
 
         validation_service_cls.assert_called_once()
         manager.builder.build.assert_called_once()
+        built_cabinet = manager.builder.build.call_args.args[0]
+        self.assertIsNotNone(getattr(built_cabinet, "construction_model", None))
+        self.assertIsNotNone(getattr(built_cabinet, "engineering_model", None))
+        self.assertEqual(built_cabinet.params.section_widths, [450.0, 900.0, 450.0])
 
     def test_default_section_widths_are_equal(self):
         main_window_module = _import_ui_main_window()
@@ -274,6 +310,27 @@ class TestConfiguratorPipelineContract(unittest.TestCase):
         self.assertEqual(manager.params.section_widths, [450.0, 900.0, 450.0])
         self.assertEqual([spin.value() for spin in manager.section_width_inputs], [450.0, 900.0, 450.0])
         self.assertEqual(manager.build_timer.start_calls, 1)
+
+    def test_trigger_build_attaches_engineering_models_before_builder_call(self):
+        main_window_module = _import_ui_main_window()
+        UIManager = main_window_module.UIManager
+
+        manager = UIManager.__new__(UIManager)
+        _configure_section_width_manager(manager, [450.0, 900.0, 450.0])
+        validation_state = SimpleNamespace(has_errors=False, issues=())
+
+        with patch.object(
+            main_window_module,
+            "ValidationService",
+        ) as validation_service_cls:
+            validation_service_cls.return_value.validate_only.return_value = validation_state
+
+            manager.trigger_build()
+
+        manager.builder.build.assert_called_once()
+        built_cabinet = manager.builder.build.call_args.args[0]
+        self.assertIsNotNone(getattr(built_cabinet, "construction_model", None))
+        self.assertIsNotNone(getattr(built_cabinet, "engineering_model", None))
 
     def test_on_section_width_changed_preserves_manual_values(self):
         main_window_module = _import_ui_main_window()

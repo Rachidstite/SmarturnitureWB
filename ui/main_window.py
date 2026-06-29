@@ -3,6 +3,8 @@ from shared.contracts import CabinetParams, SectionConfig; from shared.enums imp
 from shared.issues import ValidationState, GeometryIssue; from shared.enums import Domain
 from core.logging_config import logger
 from engine.cabinet import Cabinet; from engine.cabinet_builder import CabinetBuilder
+from domain.base_cabinet_specification_adapter import BaseCabinetSpecificationAdapter
+from domain.base_cabinet_engineering_entry import attach_base_cabinet_engineering_models
 from services.validation_service import ValidationService; from ui.issue_presenter import IssuePresenter
 import csv
 from costing.cost_engine import CostEngine
@@ -344,6 +346,8 @@ class UIManager(QtWidgets.QMainWindow):
                 logger.error("Blocked by constraint errors.")
                 return
 
+            specification = BaseCabinetSpecificationAdapter.from_cabinet_params(self.params)
+            attach_base_cabinet_engineering_models(cabinet, specification)
             self.builder.build(cabinet)
             logger.info("Build completed.")
         except Exception as e: logger.error(f"Failure: {e}")
