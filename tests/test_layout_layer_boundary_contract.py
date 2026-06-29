@@ -23,6 +23,7 @@ class TestLayoutLayerBoundaryContract(unittest.TestCase):
                 "drawer_zones",
                 "door_zone",
                 "shelf_zone",
+                "shelf_placement_zone",
                 "diagnostics",
             ],
         )
@@ -66,6 +67,41 @@ class TestLayoutLayerBoundaryContract(unittest.TestCase):
         self.assertIsNot(CabinetPlacement, DrawerZone)
         self.assertIsNot(CabinetPlacement, DoorZone)
         self.assertIsNot(CabinetPlacement, ShelfZone)
+
+    def test_open_section_with_shelves_creates_shelf_zone(self):
+        from layout.layout_engine import LayoutEngine
+        from layout.layout_context import LayoutContext
+        from shared.enums import DoorType, DrawerLayoutMode
+
+        context = LayoutContext(
+            params=SimpleNamespace(),
+            section_config=SimpleNamespace(
+                drawers=0,
+                shelves=1,
+                drawer_layout_mode=DrawerLayoutMode.MANUAL,
+                drawer_heights=[],
+            ),
+            mat=SimpleNamespace(
+                default_drawer_height=100.0,
+                clearance=2.0,
+                door_top_gap=3.0,
+                door_bottom_gap=4.0,
+            ),
+            available_height=500.0,
+            base_z=0.0,
+            door_type=DoorType.NONE,
+            has_sliding=False,
+            sliding_track=0.0,
+        )
+
+        result = LayoutEngine().resolve_zones(context)
+
+        self.assertIsNone(result.door_zone)
+        self.assertIsNone(result.shelf_zone)
+        self.assertIsNotNone(result.shelf_placement_zone)
+        self.assertEqual(result.shelf_placement_zone.__class__.__name__, "ShelfPlacementZone")
+        self.assertAlmostEqual(result.shelf_placement_zone.z_start, 0.0)
+        self.assertAlmostEqual(result.shelf_placement_zone.height, context.available_height)
 
     def test_import_boundaries_are_preserved(self):
         from domain import furniture_project, furniture_project_builder

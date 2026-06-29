@@ -39,6 +39,8 @@ class TestGeometryEngineDividerSpacingContract(unittest.TestCase):
             geo.resolved_sections[0].divider.x + mat.mdf_thickness,
             geo.resolved_sections[1].inner_x,
         )
+        self.assertEqual(len(geo.resolved_sections[0].shelves), 1)
+        self.assertEqual(len(geo.resolved_sections[1].shelves), 1)
 
     def test_manual_section_widths_scale_to_available_openings(self):
         cabinet = Cabinet(

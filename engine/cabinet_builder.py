@@ -1,4 +1,5 @@
 import FreeCAD as App, Part, FreeCADGui as Gui
+from dataclasses import replace
 from types import SimpleNamespace
 from core.material_manager import MaterialManager
 from core.logging_config import logger
@@ -14,6 +15,10 @@ from scene_graph.renderer import SceneRenderer
 from assembly.assembly_graph_builder import AssemblyGraphBuilder
 from domain.system32 import System32Engine
 from manufacturing.visible_geometry_plan import build_visible_geometry_plan
+from domain.base_cabinet_engineering_model import (
+    EngineeringDividerPlacement,
+    EngineeringShelfPlacement,
+)
 
 class CabinetBuilder:
     def __init__(self):
@@ -39,6 +44,7 @@ class CabinetBuilder:
 
         self.geo = GeometryEngine(cabinet, self.mat)
         self.geo.resolve_all()
+        self._attach_section_engineering_components()
 
         sg_builder = SceneGraphBuilder(cabinet, self.mat)
         self.scene_graph = sg_builder.build(self.geo)
@@ -77,6 +83,54 @@ class CabinetBuilder:
             obj = doc.getObject(g_name)
             if obj: self.groups[g_name] = obj
             else: self.groups[g_name] = doc.addObject("App::DocumentObjectGroup", g_name)
+
+    def _attach_section_engineering_components(self):
+        # Transitional bridge: section layout still comes from GeometryEngine.
+        # The long-term contract remains ConstructionModel -> EngineeringModel.
+        engineering_model = getattr(self._cabinet, "engineering_model", None)
+        if engineering_model is None:
+            return
+
+        thickness = self.mat.mdf_thickness
+        shelf_thickness = thickness
+        shelves = []
+        dividers = []
+
+        for index, section in enumerate(getattr(self.geo, "resolved_sections", []) or []):
+            section_id = f"SEC-{index + 1}"
+            for shelf_index, shelf in enumerate(getattr(section, "shelves", []) or []):
+                shelves.append(
+                    EngineeringShelfPlacement(
+                        name=f"{section_id}_Shelf_{shelf_index + 1}",
+                        section_index=index,
+                        section_id=section_id,
+                        source_rule="GeometryEngineResolvedSection:TRANSITIONAL_BRIDGE",
+                        width_mm=shelf.width,
+                        depth_mm=shelf.depth,
+                        thickness_mm=shelf_thickness,
+                        position_mm=(shelf.x, shelf.y, shelf.z),
+                    )
+                )
+            divider = getattr(section, "divider", None)
+            if divider is not None:
+                dividers.append(
+                    EngineeringDividerPlacement(
+                        name=f"{section_id}_Divider",
+                        section_index=index,
+                        section_id=section_id,
+                        source_rule="GeometryEngineResolvedSection:TRANSITIONAL_BRIDGE",
+                        width_mm=divider.width,
+                        depth_mm=divider.depth,
+                        height_mm=divider.height,
+                        position_mm=(divider.x, divider.y, divider.z),
+                    )
+                )
+
+        self._cabinet.engineering_model = replace(
+            engineering_model,
+            shelves=tuple(shelves),
+            dividers=tuple(dividers),
+        )
 
     def _build_geometry(self, doc, cabinet: Cabinet):
         self._cabinet = cabinet; self._doc = doc; self.drilling_z_positions = []

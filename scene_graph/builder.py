@@ -10,6 +10,8 @@ from domain.back_panel_engine import BackPanelRule
 from domain.furniture_construction_model import CabinetConstructionModel
 from domain.base_cabinet_engineering_model import (
     BackPanelInstallationMode,
+    EngineeringDividerPlacement,
+    EngineeringShelfPlacement,
     BaseCabinetEngineeringModel,
 )
 
@@ -372,10 +374,25 @@ class SceneGraphBuilder:
                 material=model.back_panel.material,
             )
         )
-        for index, shelf in enumerate(model.shelves):
+        for divider in getattr(model, "dividers", []) or []:
             self._add(
                 SceneNode(
-                    PanelIdentity.make_shelf(self.cabinet_id, 0, index),
+                    PanelIdentity.make_divider(self.cabinet_id, divider.section_index),
+                    divider.width_mm,
+                    divider.depth_mm,
+                    divider.height_mm,
+                    divider.position_mm[0],
+                    divider.position_mm[1],
+                    divider.position_mm[2],
+                    group="Dividers",
+                    role=NodeRole.DIVIDER,
+                    thickness=divider.depth_mm,
+                )
+            )
+        for shelf in getattr(model, "shelves", []) or []:
+            self._add(
+                SceneNode(
+                    PanelIdentity.make_shelf(self.cabinet_id, shelf.section_index, 0),
                     shelf.width_mm,
                     shelf.depth_mm,
                     shelf.thickness_mm,

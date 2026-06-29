@@ -3,7 +3,7 @@ from typing import Dict, List
 from .enums import DrawerLayoutMode
 @dataclass
 class SectionConfig:
-    drawers: int = 0; shelves: int = 0; doors: str = "None"
+    drawers: int = 0; shelves: int = 1; doors: str = "None"
     door_count: int = 2; drawer_type: str = "Inset"
     drawer_heights: List[float] = field(default_factory=list)
     drawer_layout_mode: DrawerLayoutMode = DrawerLayoutMode.MANUAL

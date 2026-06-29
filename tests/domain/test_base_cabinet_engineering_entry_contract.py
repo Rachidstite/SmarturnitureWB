@@ -1,5 +1,8 @@
 import inspect
 import unittest
+import types
+from dataclasses import FrozenInstanceError
+from importlib import import_module
 from unittest.mock import patch
 
 import domain.base_cabinet_engineering_entry as engineering_entry_module
@@ -12,7 +15,10 @@ from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.base_cabinet_specification_adapter import (
     BaseCabinetSpecificationAdapter,
 )
+from core.material_manager import MaterialManager
 from engine.cabinet import Cabinet
+from scene_graph.builder import SceneGraphBuilder
+from shared.roles import NodeRole
 
 
 class FakeCabinetBuilder:
@@ -109,6 +115,252 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         self.assertIsNotNone(cabinet.engineering_model)
         resolver_cls.resolve.assert_called_once()
         engineering_model_build.assert_called_once()
+
+    def test_base_engineering_model_starts_with_no_dividers(self):
+        from domain.base_cabinet_engineering_model import BaseCabinetEngineeringModelBuilder
+
+        cabinet = Cabinet()
+        spec = BaseCabinetSpecification()
+        attach_base_cabinet_engineering_models(cabinet, spec)
+
+        self.assertEqual(len(getattr(cabinet.engineering_model, "dividers", ())), 0)
+        self.assertEqual(len(getattr(cabinet.engineering_model, "shelves", ())), 1)
+
+    def test_base_engineering_model_remains_frozen_when_enriched(self):
+        cabinet = Cabinet()
+        spec = BaseCabinetSpecification()
+        attach_base_cabinet_engineering_models(cabinet, spec)
+        engineering_model = cabinet.engineering_model
+
+        with self.assertRaises(FrozenInstanceError):
+            engineering_model.shelves = ()
+
+        fake_freecad = types.ModuleType("FreeCAD")
+        fake_part = types.ModuleType("Part")
+        fake_part.makeBox = lambda *args, **kwargs: object()
+        fake_freecad_gui = types.ModuleType("FreeCADGui")
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "FreeCAD": fake_freecad,
+                "Part": fake_part,
+                "FreeCADGui": fake_freecad_gui,
+            },
+        ):
+            cabinet_builder_module = import_module("engine.cabinet_builder")
+            builder = cabinet_builder_module.CabinetBuilder()
+            builder._cabinet = cabinet
+            builder.mat.mdf_thickness = 18.0
+            builder.geo = type(
+                "Geo",
+                (),
+                {
+                    "resolved_sections": [
+                        type(
+                            "Section",
+                            (),
+                            {
+                                "shelves": [
+                                    type(
+                                        "Shelf",
+                                        (),
+                                        {
+                                            "width": 100.0,
+                                            "depth": 300.0,
+                                            "x": 10.0,
+                                            "y": 20.0,
+                                            "z": 30.0,
+                                        },
+                                    )()
+                                ],
+                                "divider": type(
+                                    "Divider",
+                                    (),
+                                    {
+                                        "width": 12.0,
+                                        "depth": 18.0,
+                                        "height": 200.0,
+                                        "x": 50.0,
+                                        "y": 60.0,
+                                        "z": 70.0,
+                                    },
+                                )(),
+                            },
+                        )(),
+                        type(
+                            "Section",
+                            (),
+                            {
+                                "shelves": [
+                                    type(
+                                        "Shelf",
+                                        (),
+                                        {
+                                            "width": 101.0,
+                                            "depth": 301.0,
+                                            "x": 11.0,
+                                            "y": 21.0,
+                                            "z": 31.0,
+                                        },
+                                    )()
+                                ],
+                                "divider": type(
+                                    "Divider",
+                                    (),
+                                    {
+                                        "width": 13.0,
+                                        "depth": 19.0,
+                                        "height": 201.0,
+                                        "x": 51.0,
+                                        "y": 61.0,
+                                        "z": 71.0,
+                                    },
+                                )(),
+                            },
+                        )(),
+                        type(
+                            "Section",
+                            (),
+                            {
+                                "shelves": [
+                                    type(
+                                        "Shelf",
+                                        (),
+                                        {
+                                            "width": 102.0,
+                                            "depth": 302.0,
+                                            "x": 12.0,
+                                            "y": 22.0,
+                                            "z": 32.0,
+                                        },
+                                    )()
+                                ],
+                                "divider": None,
+                            },
+                        )(),
+                    ]
+                },
+            )()
+
+            builder._attach_section_engineering_components()
+
+        self.assertIsNot(cabinet.engineering_model, engineering_model)
+        self.assertEqual(len(cabinet.engineering_model.shelves), 3)
+        self.assertEqual(len(cabinet.engineering_model.dividers), 2)
+        self.assertEqual(len(getattr(engineering_model, "shelves", ())), 1)
+        self.assertEqual(len(getattr(engineering_model, "dividers", ())), 0)
+
+    def test_engineering_scene_graph_emits_shelves_and_dividers(self):
+        from domain.base_cabinet_engineering_model import (
+            BackPanelInstallationMode,
+            BackPanelStrategy,
+            EngineeringBackPanel,
+            EngineeringDividerPlacement,
+            EngineeringPanelPlacement,
+            EngineeringShelfPlacement,
+            BaseCabinetEngineeringModel,
+        )
+
+        cabinet = Cabinet()
+        cabinet.params.width = 1800.0
+        cabinet.params.height = 2200.0
+        cabinet.params.depth = 600.0
+        cabinet.params.sec_count = 3
+        cabinet.engineering_model = BaseCabinetEngineeringModel(
+            construction_model=types.SimpleNamespace(),
+            left_side_panel=EngineeringPanelPlacement(
+                "SIDE_PANEL", "Left", 18.0, 600.0, 2200.0, (0.0, 0.0, 0.0), 18.0, "MDF_18"
+            ),
+            right_side_panel=EngineeringPanelPlacement(
+                "SIDE_PANEL", "Right", 18.0, 600.0, 2200.0, (1782.0, 0.0, 0.0), 18.0, "MDF_18"
+            ),
+            top_panel=EngineeringPanelPlacement(
+                "TOP_PANEL", "Top", 1764.0, 600.0, 18.0, (18.0, 0.0, 2182.0), 18.0, "MDF_18"
+            ),
+            bottom_panel=EngineeringPanelPlacement(
+                "BOTTOM_PANEL", "Bottom", 1764.0, 600.0, 18.0, (18.0, 0.0, 0.0), 18.0, "MDF_18"
+            ),
+            back_panel=EngineeringBackPanel(
+                "BACK_PANEL",
+                "Back",
+                1764.0,
+                8.0,
+                2164.0,
+                (18.0, 592.0, 18.0),
+                8.0,
+                "HDF_3",
+                BackPanelInstallationMode.GROOVED,
+                "Inside rear groove behind side/top/bottom panels",
+                BackPanelStrategy.FULL_CABINET,
+                3.0,
+                4.0,
+                "ConstructionResolver",
+            ),
+            shelves=(
+                EngineeringShelfPlacement("SEC-1_Shelf_1", 0, "SEC-1", "bridge", 432.0, 300.0, 18.0, (18.0, 18.0, 100.0)),
+                EngineeringShelfPlacement("SEC-2_Shelf_1", 1, "SEC-2", "bridge", 864.0, 300.0, 18.0, (468.0, 18.0, 100.0)),
+                EngineeringShelfPlacement("SEC-3_Shelf_1", 2, "SEC-3", "bridge", 432.0, 300.0, 18.0, (1350.0, 18.0, 100.0)),
+            ),
+            dividers=(
+                EngineeringDividerPlacement("SEC-1_Divider", 0, "SEC-1", "bridge", 18.0, 520.0, 2100.0, (450.0, 18.0, 98.0)),
+                EngineeringDividerPlacement("SEC-2_Divider", 1, "SEC-2", "bridge", 18.0, 520.0, 2100.0, (1350.0, 18.0, 98.0)),
+            ),
+        )
+
+        graph = SceneGraphBuilder(cabinet, MaterialManager()).build(
+            type("Geo", (), {"resolved_top": type("Top", (), {"width": 1.0, "depth": 1.0, "thickness": 1.0, "x": 0.0, "y": 0.0, "z": 0.0})()})()
+        )
+
+        roles = [node.role for node in graph.all_nodes()]
+        self.assertEqual(roles.count(NodeRole.SHELF), 3)
+        self.assertEqual(roles.count(NodeRole.DIVIDER), 2)
+
+
+    def test_open_sections_populate_engineering_shelves_from_geometry(self):
+        from core.material_manager import MaterialManager
+        from engine.geometry_engine import GeometryEngine
+        from domain.base_cabinet_specification_adapter import BaseCabinetSpecificationAdapter
+
+        cabinet = Cabinet()
+        cabinet.params.width = 1800.0
+        cabinet.params.height = 2200.0
+        cabinet.params.depth = 600.0
+        cabinet.params.base_height = 80.0
+        cabinet.params.sec_count = 3
+        cabinet.params.section_widths = [450.0, 900.0, 450.0]
+        cabinet.params.sec_data = {
+            0: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='None', door_count=2),
+            1: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='None', door_count=2),
+            2: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='None', door_count=2),
+        }
+
+        spec = BaseCabinetSpecificationAdapter.from_cabinet_params(cabinet.params)
+        attach_base_cabinet_engineering_models(cabinet, spec)
+
+        fake_freecad = types.ModuleType('FreeCAD')
+        fake_part = types.ModuleType('Part')
+        fake_part.makeBox = lambda *args, **kwargs: object()
+        fake_freecad_gui = types.ModuleType('FreeCADGui')
+
+        with patch.dict(
+            'sys.modules',
+            {
+                'FreeCAD': fake_freecad,
+                'Part': fake_part,
+                'FreeCADGui': fake_freecad_gui,
+            },
+        ):
+            cabinet_builder_module = import_module('engine.cabinet_builder')
+            builder = cabinet_builder_module.CabinetBuilder()
+            builder._cabinet = cabinet
+            builder.mat = MaterialManager()
+            builder.geo = GeometryEngine(cabinet, builder.mat)
+            builder.geo.resolve_all()
+            builder._attach_section_engineering_components()
+
+        self.assertEqual(len(cabinet.engineering_model.shelves), 3)
+        self.assertEqual(len(cabinet.engineering_model.dividers), 2)
 
     def test_delegates_to_existing_cabinet_builder(self):
         FakeCabinetBuilder.instances_created = 0

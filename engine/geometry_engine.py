@@ -209,30 +209,14 @@ class GeometryEngine:
         # --- Shelves ---
         shelves = []
 
-        print(
-            f"[SHELF DEBUG] "
-            f"section={idx+1} "
-            f"cfg={sec.config.shelves} "
-            f"zone={layout_res.shelf_zone is not None}"
-        )
+        shelf_zone = layout_res.shelf_zone or getattr(layout_res, "shelf_placement_zone", None)
 
-        if layout_res.shelf_zone and sec.config.shelves > 0:
+        if shelf_zone and sec.config.shelves > 0:
             s_shelves = sec.config.shelves
-            usable_zone_h = layout_res.shelf_zone.height; zone_start_z = layout_res.shelf_zone.z_start
+            usable_zone_h = shelf_zone.height; zone_start_z = shelf_zone.z_start
             shelf_gap = (usable_zone_h - (s_shelves * T)) / (s_shelves + 1)
             for sh in range(1, s_shelves + 1):
                 z_pos = zone_start_z + (shelf_gap * sh) + (T * (sh - 1))
-                
-                print(
-                    f"[SHELF] start={start_x} "
-                    f"width={inner_w} "
-                    f"end={start_x + inner_w}"
-                )
-
-                print(
-                    f"[DIVIDER] x={start_x + inner_w}"
-                )
-
                 shelves.append(ResolvedShelf(
 x=start_x, y=shelf_start_y, z=z_pos,
                                              width=inner_w, depth=shelf_depth))

@@ -22,9 +22,24 @@ class EngineeringPanelPlacement:
 @dataclass(frozen=True)
 class EngineeringShelfPlacement:
     name: str
+    section_index: int
+    section_id: str
+    source_rule: str
     width_mm: float
     depth_mm: float
     thickness_mm: float
+    position_mm: Tuple[float, float, float]
+
+
+@dataclass(frozen=True)
+class EngineeringDividerPlacement:
+    name: str
+    section_index: int
+    section_id: str
+    source_rule: str
+    width_mm: float
+    depth_mm: float
+    height_mm: float
     position_mm: Tuple[float, float, float]
 
 
@@ -69,6 +84,7 @@ class BaseCabinetEngineeringModel:
     bottom_panel: EngineeringPanelPlacement
     back_panel: EngineeringBackPanel
     shelves: Tuple[EngineeringShelfPlacement, ...] = field(default_factory=tuple)
+    dividers: Tuple[EngineeringDividerPlacement, ...] = field(default_factory=tuple)
 
 
 def map_back_panel_installation_mode(
@@ -173,6 +189,9 @@ class BaseCabinetEngineeringModelBuilder:
         shelves = tuple(
             EngineeringShelfPlacement(
                 name=shelf.name,
+                section_index=0,
+                section_id="SEC-1",
+                source_rule="ConstructionResolver",
                 width_mm=shelf.width_mm,
                 depth_mm=shelf.depth_mm,
                 thickness_mm=shelf.thickness_mm,
@@ -180,6 +199,7 @@ class BaseCabinetEngineeringModelBuilder:
             )
             for shelf in construction_model.shelves
         )
+        dividers: Tuple[EngineeringDividerPlacement, ...] = ()
 
         return BaseCabinetEngineeringModel(
             construction_model=construction_model,
@@ -189,4 +209,5 @@ class BaseCabinetEngineeringModelBuilder:
             bottom_panel=bottom_panel,
             back_panel=back_panel,
             shelves=shelves,
+            dividers=dividers,
         )
