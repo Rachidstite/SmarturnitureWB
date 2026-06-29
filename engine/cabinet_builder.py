@@ -16,6 +16,7 @@ from assembly.assembly_graph_builder import AssemblyGraphBuilder
 from domain.system32 import System32Engine
 from manufacturing.visible_geometry_plan import build_visible_geometry_plan
 from domain.base_cabinet_engineering_model import (
+    EngineeringDrawerBox,
     EngineeringDoorPlacement,
     EngineeringDividerPlacement,
     EngineeringShelfPlacement,
@@ -97,6 +98,7 @@ class CabinetBuilder:
         shelves = []
         dividers = []
         doors = []
+        drawer_boxes = []
 
         for index, section in enumerate(getattr(self.geo, "resolved_sections", []) or []):
             section_id = f"SEC-{index + 1}"
@@ -137,6 +139,30 @@ class CabinetBuilder:
                         ),
                     )
                 )
+            for drawer_index, drawer in enumerate(getattr(section, "drawers", []) or []):
+                drawer_boxes.append(
+                    EngineeringDrawerBox(
+                        name=f"{section_id}_Drawer_{drawer_index + 1}",
+                        section_index=index,
+                        section_id=section_id,
+                        drawer_index=drawer_index,
+                        source_rule="resolved_drawer_projection",
+                        box_x_mm=drawer.box_x,
+                        box_y_mm=drawer.box_y,
+                        box_z_mm=drawer.box_z,
+                        box_w_mm=drawer.box_w,
+                        box_h_mm=drawer.box_h,
+                        box_d_mm=drawer.box_d,
+                        bottom_thickness_mm=drawer.bottom_thickness,
+                        side_thickness_mm=thickness,
+                        layer=0,
+                        material=getattr(
+                            getattr(engineering_model, "left_side_panel", None),
+                            "material",
+                            "",
+                        ),
+                    )
+                )
             divider = getattr(section, "divider", None)
             if divider is not None:
                 dividers.append(
@@ -155,6 +181,7 @@ class CabinetBuilder:
         self._cabinet.engineering_model = replace(
             engineering_model,
             doors=tuple(doors),
+            drawer_boxes=tuple(drawer_boxes),
             shelves=tuple(shelves),
             dividers=tuple(dividers),
         )

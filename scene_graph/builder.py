@@ -396,6 +396,97 @@ class SceneGraphBuilder:
                     material=door.material,
                 )
             )
+        for drawer_box in getattr(model, "drawer_boxes", []) or []:
+            side_thickness = drawer_box.side_thickness_mm
+            bottom_inset = getattr(self.mat, "drawer_bottom_inset", 0.0)
+            material = drawer_box.material or model.left_side_panel.material
+            left_index = drawer_box.drawer_index * 2 + 1
+            right_index = drawer_box.drawer_index * 2 + 2
+            box_identity_section = f"SEC-{drawer_box.section_index + 1}"
+            # Side left
+            self._add(
+                SceneNode(
+                    PanelIdentity(
+                        self.cabinet_id,
+                        box_identity_section,
+                        SemanticRole.DRAWER_BOX_SIDE,
+                        left_index,
+                    ),
+                    side_thickness,
+                    drawer_box.box_d_mm,
+                    drawer_box.box_h_mm,
+                    drawer_box.box_x_mm,
+                    drawer_box.box_y_mm,
+                    drawer_box.box_z_mm,
+                    group="Drawers",
+                    role=NodeRole.DRAWER_BOX_SIDE,
+                    thickness=side_thickness,
+                    material=material,
+                )
+            )
+            # Side right
+            self._add(
+                SceneNode(
+                    PanelIdentity(
+                        self.cabinet_id,
+                        box_identity_section,
+                        SemanticRole.DRAWER_BOX_SIDE,
+                        right_index,
+                    ),
+                    side_thickness,
+                    drawer_box.box_d_mm,
+                    drawer_box.box_h_mm,
+                    drawer_box.box_x_mm + drawer_box.box_w_mm - side_thickness,
+                    drawer_box.box_y_mm,
+                    drawer_box.box_z_mm,
+                    group="Drawers",
+                    role=NodeRole.DRAWER_BOX_SIDE,
+                    thickness=side_thickness,
+                    material=material,
+                )
+            )
+            # Back
+            self._add(
+                SceneNode(
+                    PanelIdentity(
+                        self.cabinet_id,
+                        box_identity_section,
+                        SemanticRole.DRAWER_BOX_BACK,
+                        drawer_box.drawer_index + 1,
+                    ),
+                    drawer_box.box_w_mm - (2 * side_thickness),
+                    side_thickness,
+                    drawer_box.box_h_mm,
+                    drawer_box.box_x_mm + side_thickness,
+                    drawer_box.box_y_mm + drawer_box.box_d_mm - side_thickness,
+                    drawer_box.box_z_mm,
+                    group="Drawers",
+                    role=NodeRole.DRAWER_BOX_BACK,
+                    thickness=side_thickness,
+                    material=material,
+                )
+            )
+            # Bottom
+            self._add(
+                SceneNode(
+                    PanelIdentity(
+                        self.cabinet_id,
+                        box_identity_section,
+                        SemanticRole.DRAWER_BOX_BOTTOM,
+                        drawer_box.drawer_index + 1,
+                    ),
+                    drawer_box.box_w_mm - (2 * side_thickness),
+                    drawer_box.box_d_mm - (2 * side_thickness),
+                    drawer_box.bottom_thickness_mm,
+                    drawer_box.box_x_mm + side_thickness,
+                    drawer_box.box_y_mm + side_thickness,
+                    drawer_box.box_z_mm + bottom_inset,
+                    group="Drawers",
+                    role=NodeRole.DRAWER_BOX_BOTTOM,
+                    thickness=drawer_box.bottom_thickness_mm,
+                    material=material,
+                )
+            )
         for divider in getattr(model, "dividers", []) or []:
             self._add(
                 SceneNode(
