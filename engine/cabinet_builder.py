@@ -16,6 +16,7 @@ from assembly.assembly_graph_builder import AssemblyGraphBuilder
 from domain.system32 import System32Engine
 from manufacturing.visible_geometry_plan import build_visible_geometry_plan
 from domain.base_cabinet_engineering_model import (
+    EngineeringDoorPlacement,
     EngineeringDividerPlacement,
     EngineeringShelfPlacement,
 )
@@ -95,6 +96,7 @@ class CabinetBuilder:
         shelf_thickness = thickness
         shelves = []
         dividers = []
+        doors = []
 
         for index, section in enumerate(getattr(self.geo, "resolved_sections", []) or []):
             section_id = f"SEC-{index + 1}"
@@ -109,6 +111,30 @@ class CabinetBuilder:
                         depth_mm=shelf.depth,
                         thickness_mm=shelf_thickness,
                         position_mm=(shelf.x, shelf.y, shelf.z),
+                    )
+                )
+            for door_index, door in enumerate(getattr(section, "doors", []) or []):
+                doors.append(
+                    EngineeringDoorPlacement(
+                        name=f"{section_id}_Door_{door_index + 1}",
+                        section_index=index,
+                        section_id=section_id,
+                        door_index=door_index,
+                        source_rule="resolved_door_projection",
+                        x_mm=door.x,
+                        y_mm=door.y,
+                        z_mm=door.z,
+                        width_mm=door.width,
+                        height_mm=door.height,
+                        thickness_mm=thickness,
+                        door_type=door.door_type,
+                        hinge_side=door.hinge_side,
+                        layer=door.layer,
+                        material=getattr(
+                            getattr(engineering_model, "left_side_panel", None),
+                            "material",
+                            "",
+                        ),
                     )
                 )
             divider = getattr(section, "divider", None)
@@ -128,6 +154,7 @@ class CabinetBuilder:
 
         self._cabinet.engineering_model = replace(
             engineering_model,
+            doors=tuple(doors),
             shelves=tuple(shelves),
             dividers=tuple(dividers),
         )

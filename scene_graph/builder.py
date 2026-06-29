@@ -374,6 +374,28 @@ class SceneGraphBuilder:
                 material=model.back_panel.material,
             )
         )
+        for door in getattr(model, "doors", []) or []:
+            self._add(
+                SceneNode(
+                    PanelIdentity.make_door(self.cabinet_id, door.section_index, door.door_index),
+                    door.width_mm,
+                    door.thickness_mm,
+                    door.height_mm,
+                    door.x_mm,
+                    door.y_mm,
+                    door.z_mm,
+                    group="Doors",
+                    role=NodeRole.DOOR_PANEL,
+                    metadata=DoorMetadata(
+                        door_type=door.door_type.name if hasattr(door.door_type, "name") else str(door.door_type),
+                        hinge_side=door.hinge_side,
+                        layer=door.layer,
+                        cnc_enabled=self.cabinet.params.cnc_mode,
+                    ),
+                    thickness=door.thickness_mm,
+                    material=door.material,
+                )
+            )
         for divider in getattr(model, "dividers", []) or []:
             self._add(
                 SceneNode(

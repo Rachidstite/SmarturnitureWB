@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Tuple
 
 from domain.furniture_construction_model import CabinetConstructionModel
+from shared.enums import DoorType
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,25 @@ class EngineeringDividerPlacement:
     depth_mm: float
     height_mm: float
     position_mm: Tuple[float, float, float]
+
+
+@dataclass(frozen=True)
+class EngineeringDoorPlacement:
+    name: str
+    section_index: int
+    section_id: str
+    door_index: int
+    source_rule: str
+    x_mm: float
+    y_mm: float
+    z_mm: float
+    width_mm: float
+    height_mm: float
+    thickness_mm: float
+    door_type: DoorType
+    hinge_side: str
+    layer: int
+    material: str
 
 
 class BackPanelInstallationMode(str, Enum):
@@ -83,6 +103,7 @@ class BaseCabinetEngineeringModel:
     top_panel: EngineeringPanelPlacement
     bottom_panel: EngineeringPanelPlacement
     back_panel: EngineeringBackPanel
+    doors: Tuple[EngineeringDoorPlacement, ...] = field(default_factory=tuple)
     shelves: Tuple[EngineeringShelfPlacement, ...] = field(default_factory=tuple)
     dividers: Tuple[EngineeringDividerPlacement, ...] = field(default_factory=tuple)
 
@@ -199,6 +220,7 @@ class BaseCabinetEngineeringModelBuilder:
             )
             for shelf in construction_model.shelves
         )
+        doors: Tuple[EngineeringDoorPlacement, ...] = ()
         dividers: Tuple[EngineeringDividerPlacement, ...] = ()
 
         return BaseCabinetEngineeringModel(
@@ -208,6 +230,7 @@ class BaseCabinetEngineeringModelBuilder:
             top_panel=top_panel,
             bottom_panel=bottom_panel,
             back_panel=back_panel,
+            doors=doors,
             shelves=shelves,
             dividers=dividers,
         )
