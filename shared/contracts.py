@@ -12,7 +12,10 @@ class CabinetParams:
     width: float = 1800.0; height: float = 2200.0; depth: float = 600.0
     base_height: float = 80.0; sec_count: int = 3
     sec_data: Dict[int, SectionConfig] = field(default_factory=dict)
+    section_widths: List[float] = field(default_factory=list)
     cnc_mode: bool = False; hw_mode: bool = False
+    material_thickness: float = 18.0
+    back_panel_type: str = "REAR"
     back_thickness: float = 8.0; drawer_depth: float = 450.0; drawer_bottom_thickness: float = 8.0
 
     hinge_sku: str = "HINGE_BLUM_110_V1"

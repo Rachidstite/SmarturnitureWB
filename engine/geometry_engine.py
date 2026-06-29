@@ -10,15 +10,32 @@ from manufacturing.resolver import ManufacturingResolver
 from constraints.constraint_engine import ConstraintEngine
 from shared.issues import GeometryIssue
 
-from core.logging_config import logger
 class GeometryEngine:
     def __init__(self, cabinet, mat: MaterialManager):
         self.cabinet = cabinet; self.mat = mat; self.resolved_sections = []; self.resolved_top = None; self.issues = []
         self.layout_engine = LayoutEngine(); self.validator = GeometryValidator(); self.constraint_engine = ConstraintEngine(); self.is_buildable = True
 
+    def _resolved_section_openings(self, params, sec_count, total_inner, divider_space):
+        manual_widths = list(getattr(params, "section_widths", []) or [])
+        if len(manual_widths) != sec_count:
+            return None
+        if any(width <= 0 for width in manual_widths):
+            return None
+        if abs(sum(manual_widths) - float(getattr(params, "width", 0.0) or 0.0)) > 0.01:
+            return None
+
+        available_opening = max(total_inner - divider_space, 0.0)
+        cabinet_width = float(getattr(params, "width", 0.0) or 0.0)
+        if cabinet_width <= 0:
+            return None
+
+        scale = available_opening / cabinet_width
+        return [width * scale for width in manual_widths]
+
     def resolve_all(self):
         self.resolved_sections.clear(); self.issues.clear(); self.is_buildable = True
         params = self.cabinet.params; T = self.mat.mdf_thickness; sec_count = params.sec_count
+        manual_widths = list(getattr(params, "section_widths", []) or [])
         self.cabinet.sections = []
         for i in range(sec_count):
             cfg = params.sec_data.get(i, SectionConfig())
@@ -26,12 +43,14 @@ class GeometryEngine:
             self.cabinet.sections.append(Section(i, cfg))
         total_inner = params.width - 2 * T
         divider_space = T * (sec_count - 1)
+        manual_openings = self._resolved_section_openings(params, sec_count, total_inner, divider_space)
         section_opening = max((total_inner - divider_space) / sec_count, 0) if sec_count > 1 else total_inner
         global_has_sliding = any(DoorType.from_string(s.config.doors).is_sliding() for s in self.cabinet.sections)
         sliding_track = self.mat.sliding_track_depth if global_has_sliding else 0
         current_x = T
         for i, sec in enumerate(self.cabinet.sections):
-            r = self._resolve_one_section(sec, i, section_opening, current_x, sliding_track, params, sec_count)
+            inner_width = manual_openings[i] if manual_openings is not None else section_opening
+            r = self._resolve_one_section(sec, i, inner_width, current_x, sliding_track, params, sec_count)
             self.resolved_sections.append(r)
             current_x += r.inner_width + (T if i < sec_count - 1 else 0)
         self.issues.extend(self.constraint_engine.validate(self.resolved_sections, self.mat))
@@ -41,12 +60,12 @@ class GeometryEngine:
         top_depth = params.depth + (T + self.mat.door_top_gap if has_overlay else 0)
         top_y = -(T + self.mat.door_top_gap) if has_overlay else 0
         self.resolved_top = ResolvedTopPanel(params.width, top_depth, T, 0, top_y, params.height - T)
-
     def _resolve_one_section(self, sec, idx, inner_w, start_x, sliding, params, sec_count):
         T = self.mat.mdf_thickness; D = params.depth; bp = 20; BT = self.mat.back_thickness; base_H = params.base_height
         door_type = DoorType.from_string(sec.config.doors)
         section_sliding = sliding if door_type.is_sliding() else 0
-        shelf_start_y = section_sliding + ((T + 2) if door_type.is_inset() else 2)
+        rear_clearance = max(T, self.mat.groove_depth + 2.0)
+        shelf_start_y = section_sliding + rear_clearance
         shelf_depth = max(D - bp - BT - self.mat.shelf_depth_margin - section_sliding, 50)
         max_drawer_depth = self.mat.drawer_depth if self.mat.drawer_depth > 0 else D - bp - BT - section_sliding - 20
         max_drawer_depth = min(max_drawer_depth, D - bp - BT - section_sliding - 20)
