@@ -96,6 +96,15 @@ class CabinetProject:
     topology: any
     placements: list = field(default_factory=list)
 
+
+def package_cabinet_project(graph, joinery, topology, placements=None) -> CabinetProject:
+    return CabinetProject(
+        graph=graph,
+        joinery=joinery,
+        topology=topology,
+        placements=list(placements or []),
+    )
+
 class WardrobeBuilder:
     def __init__(self, uid: str, width: float, height: float, depth: float, thickness: float = 18.0, material: str = "MDF_18_WHITE"):
         self.uid = uid
@@ -213,7 +222,7 @@ class WardrobeBuilder:
                 Identity(shelf_key), NodeRole.SHELF, 
                 sec_w - 1, self.d - 20, self.t, self.mat, 
                 {"FRONT": "ABS_1MM"}, "HORIZONTAL",
-                transform=Transform3D(x=self.t + start_x, y=0, z=self.t + current_z)
+                transform=Transform3D(x=self.t + start_x, y=self.t, z=self.t + current_z)
             )
             self.graph.add_node(shelf)
             current_z += self.t + vertical_gap
@@ -236,4 +245,9 @@ class WardrobeBuilder:
             self.graph.add_node(door)
 
     def build(self) -> CabinetProject:
-        return CabinetProject(graph=self.graph, joinery=self.joinery, topology=self.topology, placements=[])
+        return package_cabinet_project(
+            self.graph,
+            self.joinery,
+            self.topology,
+            [],
+        )

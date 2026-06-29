@@ -52,6 +52,20 @@ class TestWardrobeBuilder(unittest.TestCase):
         self.assertEqual(len(by_role[NodeRole.SHELF]), 3)
         self.assertEqual(len(by_role[NodeRole.DOOR_PANEL]), 2)
 
+    def test_wardrobe_builder_shelves_clear_the_back_panel_zone(self):
+        cabinet = WardrobeBuilder(uid="TEST3C", width=1200, height=2000, depth=600)
+        left_id, _right_id = cabinet.add_divider(600)
+        cabinet.add_shelves(count=1, section_id=left_id)
+
+        project = cabinet.build()
+        shelf = project.graph._by_role[NodeRole.SHELF][0]
+        back = project.graph._by_role[NodeRole.BACK_PANEL][0]
+
+        self.assertEqual(shelf.transform.y, cabinet.t)
+        self.assertGreater(shelf.transform.y, back.transform.y)
+        self.assertEqual(len(project.graph._by_role[NodeRole.SHELF]), 1)
+        self.assertEqual(len(project.graph._by_role[NodeRole.BACK_PANEL]), 1)
+
     def test_packaging_helper_preserves_project_shape(self):
         graph = SceneGraph()
         joinery = object()

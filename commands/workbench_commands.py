@@ -77,3 +77,68 @@ class CreateWardrobeCommand:
 
     def IsActive(self):
         return True
+
+
+class CreateEngineeringDemonstrationCommand:
+
+    def GetResources(self):
+        return {
+            "Pixmap": "",
+            "MenuText": "Manufacturing Geometry",
+            "ToolTip": "Build a visible manufacturing geometry cabinet",
+        }
+
+    def Activated(self):
+        from cost_intelligence.manufacturing_cost_pipeline_builder import (
+            ManufacturingCostPipelineBuilder,
+        )
+        from domain.builders import WardrobeBuilder
+        from domain.rules_engine import HardwarePlacementEngine, RuleContext
+        from manufacturing.engineering_demonstration_report import (
+            build_engineering_demonstration_report,
+        )
+        from manufacturing.manufacturing_runtime_pipeline_builder import (
+            ManufacturingRuntimePipelineBuilder,
+        )
+        from services.manufacturing_validation_service import (
+            ManufacturingValidationService,
+        )
+        from domain.manufacturing_compiler import ManufacturingCompiler
+        from gui.renderer import GeometryRenderer
+
+        cabinet = WardrobeBuilder(
+            uid="VISIBLE_ENGINEERING_DEMO",
+            width=1200,
+            height=2400,
+            depth=600,
+        )
+
+        left_section, right_section = cabinet.add_divider(600)
+        cabinet.add_shelves(2, left_section)
+        cabinet.add_shelves(2, right_section)
+        cabinet.add_doors(2)
+
+        project = cabinet.build()
+
+        context = RuleContext()
+        HardwarePlacementEngine(context).process(project)
+        ManufacturingCompiler().compile(project, context)
+
+        validation_state = ManufacturingValidationService.validate(project.graph)
+        runtime_result = ManufacturingRuntimePipelineBuilder().build(project.graph)
+        cost_summary = ManufacturingCostPipelineBuilder().build(
+            runtime_result.manufacturing_production_package
+        )
+        engineering_report = build_engineering_demonstration_report(
+            project,
+            validation_state=validation_state,
+            cost_summary=cost_summary,
+        )
+
+        GeometryRenderer.render(
+            project,
+            engineering_report=engineering_report,
+        )
+
+    def IsActive(self):
+        return True

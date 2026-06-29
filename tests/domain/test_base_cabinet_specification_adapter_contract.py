@@ -19,6 +19,37 @@ class TestBaseCabinetSpecificationAdapterContract(unittest.TestCase):
         self.assertTrue(is_dataclass(result))
         self.assertIsInstance(result.cabinet_params, CabinetParams)
 
+    def test_cabinet_params_are_converted_to_base_cabinet_specification(self):
+        params = CabinetParams(
+            width=820.0,
+            height=730.0,
+            depth=590.0,
+            base_height=90.0,
+            sec_count=1,
+            sec_data={
+                0: type(
+                    "SectionConfig",
+                    (),
+                    {"door_count": 3, "shelves": 2, "drawer_type": "Inset"},
+                )()
+            },
+            hinge_sku="HINGE_SPECIAL",
+        )
+
+        spec = BaseCabinetSpecificationAdapter.from_cabinet_params(params)
+
+        self.assertIsInstance(spec, BaseCabinetSpecification)
+        self.assertEqual(spec.width_mm, 820.0)
+        self.assertEqual(spec.height_mm, 730.0)
+        self.assertEqual(spec.depth_mm, 590.0)
+        self.assertEqual(spec.door_count, 3)
+        self.assertEqual(spec.shelf_count, 2)
+        self.assertTrue(spec.has_back_panel)
+        self.assertTrue(spec.edge_banding_required)
+        self.assertTrue(spec.toe_kick_required)
+        self.assertEqual(spec.hinge_family, "HINGE_SPECIAL")
+        self.assertEqual(spec.drawer_family, "Inset")
+
     def test_width_height_depth_are_preserved(self):
         specification = BaseCabinetSpecification(
             width_mm=750.0,
