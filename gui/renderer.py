@@ -4,6 +4,7 @@ from FreeCAD import Placement, Rotation, Vector
 
 from domain.core_types import NodeRole
 from manufacturing.visible_geometry_plan import build_visible_geometry_plan
+from manufacturing.panel_shape_processor import process_panel_shape
 
 try:
     import FreeCADGui as Gui
@@ -29,12 +30,18 @@ class GeometryRenderer:
         )
 
         cabinet_depth = getattr(getattr(project, "topology", None), "d", 600.0)
+        plan = build_visible_geometry_plan(project)
         physical_nodes = list(getattr(project.graph, "physical_nodes", []) or [])
 
         for node in physical_nodes:
-            GeometryRenderer._render_cabinet_panel(doc, group, node, cabinet_depth)
+            GeometryRenderer._render_cabinet_panel(
+                doc,
+                group,
+                node,
+                cabinet_depth,
+                plan.features,
+            )
 
-        plan = build_visible_geometry_plan(project)
         GeometryRenderer._render_manufacturing_geometry(
             doc,
             group,
@@ -55,22 +62,28 @@ class GeometryRenderer:
         return doc
 
     @staticmethod
-    def _render_cabinet_panel(doc, group, node, cabinet_depth):
+    def _render_cabinet_panel(doc, group, node, cabinet_depth, panel_features=None):
         dx, dy, dz = GeometryRenderer._get_dimensions(node)
         box_shape = Part.makeBox(dx, dy, dz)
 
         safe_name = node.identity.key.replace("-", "_").replace(".", "_")
         obj = doc.addObject("Part::Feature", safe_name)
-        obj.Shape = box_shape
 
         transform = getattr(node, "transform", None)
         actual_y = cabinet_depth - getattr(transform, "y", 0.0) - dy
+        panel_origin = (
+            getattr(transform, "x", 0.0),
+            actual_y,
+            getattr(transform, "z", 0.0),
+        )
+        obj.Shape = process_panel_shape(
+            box_shape,
+            node,
+            panel_features or (),
+            panel_origin=panel_origin,
+        )
         obj.Placement = Placement(
-            Vector(
-                getattr(transform, "x", 0.0),
-                actual_y,
-                getattr(transform, "z", 0.0),
-            ),
+            Vector(*panel_origin),
             Rotation(
                 getattr(transform, "rot_x", 0.0),
                 getattr(transform, "rot_y", 0.0),

@@ -6,12 +6,12 @@ except ImportError:  # pragma: no cover - test environment fallback
 from scene_graph.node import SceneNode
 from shared.roles import NodeRole
 from core.material_manager import MaterialManager
-
-from core.logging_config import logger
+from manufacturing.panel_shape_processor import process_panel_shape
 class SceneRenderer:
-    def __init__(self, doc, mat: MaterialManager, hw, groups: dict, cnc_engine=None, placements=None):
+    def __init__(self, doc, mat: MaterialManager, hw, groups: dict, cnc_engine=None, placements=None, panel_features=None):
         self.doc = doc; self.mat = mat; self.hw = hw; self.groups = groups; self.cnc_engine = cnc_engine
         self.placements = list(placements or [])
+        self.panel_features = list(panel_features or [])
 
     @staticmethod
     def build_manufacturing_overlays(markers):
@@ -57,7 +57,16 @@ class SceneRenderer:
         self._ensure_group(node.group)
         name = node.identity.key
         obj = self.doc.addObject("Part::Feature", name)
-        obj.Shape = Part.makeBox(node.width, node.depth, node.height)
+        base_shape = Part.makeBox(node.width, node.depth, node.height)
+        if node.role == NodeRole.BACK_PANEL:
+            obj.Shape = process_panel_shape(
+                base_shape,
+                node,
+                self.panel_features,
+                panel_origin=(node.x, node.y, node.z),
+            )
+        else:
+            obj.Shape = base_shape
         obj.Placement = App.Placement(App.Vector(node.x, node.y, node.z), App.Rotation())
         obj.ViewObject.ShapeColor = self._visual_color_for(node)
         try:

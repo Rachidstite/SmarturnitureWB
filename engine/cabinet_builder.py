@@ -1,4 +1,5 @@
 import FreeCAD as App, Part, FreeCADGui as Gui
+from types import SimpleNamespace
 from core.material_manager import MaterialManager
 from core.logging_config import logger
 from cnc.cnc_builder import CNCBuilder
@@ -12,6 +13,7 @@ from scene_graph.builder import SceneGraphBuilder
 from scene_graph.renderer import SceneRenderer
 from assembly.assembly_graph_builder import AssemblyGraphBuilder
 from domain.system32 import System32Engine
+from manufacturing.visible_geometry_plan import build_visible_geometry_plan
 
 class CabinetBuilder:
     def __init__(self):
@@ -80,12 +82,18 @@ class CabinetBuilder:
         self._cabinet = cabinet; self._doc = doc; self.drilling_z_positions = []
         for i, sec in enumerate(cabinet.sections):
             r = self.geo.resolved_sections[i]
+        visible_geometry_source = SimpleNamespace(
+            graph=self.scene_graph,
+            topology=SimpleNamespace(d=self._cabinet.params.depth),
+        )
+        visible_geometry_plan = build_visible_geometry_plan(visible_geometry_source)
         renderer = SceneRenderer(
             self._doc,
             self.mat,
             self.hw,
             self.groups,
-            self.cnc if self._cabinet.params.cnc_mode else None
+            self.cnc if self._cabinet.params.cnc_mode else None,
+            panel_features=visible_geometry_plan.features,
         )
 
         print("[SCENE GRAPH] rendering all nodes")
