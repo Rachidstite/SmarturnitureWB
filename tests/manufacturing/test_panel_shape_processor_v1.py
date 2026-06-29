@@ -39,7 +39,7 @@ class TestPanelShapeProcessorV1(unittest.TestCase):
         _install_freecad_stubs()
 
     def test_back_panel_groove_is_cut_from_base_shape(self):
-        from manufacturing.panel_shape_processor import process_panel_shape
+        import manufacturing.panel_shape_processor as panel_shape_processor
 
         base_shape = _FakeShape(("base",))
         panel = SimpleNamespace(identity=SimpleNamespace(key="BACK_PANEL_1"))
@@ -60,12 +60,17 @@ class TestPanelShapeProcessorV1(unittest.TestCase):
             ),
         ]
 
-        result = process_panel_shape(
-            base_shape,
-            panel,
-            features,
-            panel_origin=(0.0, 0.0, 0.0),
-        )
+        with patch.object(
+            panel_shape_processor,
+            "Part",
+            SimpleNamespace(makeBox=lambda *args: _FakeShape(args)),
+        ):
+            result = panel_shape_processor.process_panel_shape(
+                base_shape,
+                panel,
+                features,
+                panel_origin=(0.0, 0.0, 0.0),
+            )
 
         self.assertIsNot(result, base_shape)
         self.assertEqual(len(base_shape.cut_calls), 1)
