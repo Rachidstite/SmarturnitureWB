@@ -86,6 +86,11 @@ class TestEngineeringDoorProjectionContract(unittest.TestCase):
         )
         self.assertAlmostEqual(first_door.width_mm, builder.geo.resolved_sections[0].doors[0].width)
         self.assertAlmostEqual(first_door.height_mm, builder.geo.resolved_sections[0].doors[0].height)
+        self.assertAlmostEqual(first_door.x_mm, builder.geo.resolved_sections[0].doors[0].x)
+        self.assertAlmostEqual(first_door.y_mm, builder.geo.resolved_sections[0].doors[0].y)
+        self.assertAlmostEqual(first_door.z_mm, builder.geo.resolved_sections[0].doors[0].z)
+        self.assertEqual(first_door.hinge_side, builder.geo.resolved_sections[0].doors[0].hinge_side)
+        self.assertEqual(first_door.layer, builder.geo.resolved_sections[0].doors[0].layer)
 
     def test_engineering_branch_emits_door_nodes(self):
         cabinet = self._build_cabinet()
@@ -107,6 +112,62 @@ class TestEngineeringDoorProjectionContract(unittest.TestCase):
         self.assertEqual(len(door_nodes), 3)
         self.assertTrue(all(node.metadata.door_type for node in door_nodes))
         self.assertTrue(all(node.metadata.hinge_side in ("LEFT", "RIGHT") for node in door_nodes))
+
+    def test_engineering_door_nodes_flow_into_manufacturing_cutlist_and_production_package(self):
+        cabinet = Cabinet(
+            CabinetParams(
+                width=900.0,
+                height=720.0,
+                depth=580.0,
+                base_height=0.0,
+                sec_count=1,
+                sec_data={
+                    0: SectionConfig(shelves=1, doors="Inset", door_count=2),
+                },
+            )
+        )
+        spec = BaseCabinetSpecificationAdapter.from_cabinet_params(cabinet.params)
+        attach_base_cabinet_engineering_models(cabinet, spec)
+
+        builder_module = _import_cabinet_builder_module()
+        builder = builder_module.CabinetBuilder()
+        builder._cabinet = cabinet
+        builder.mat = MaterialManager()
+        builder.geo = GeometryEngine(cabinet, builder.mat)
+        builder.geo.resolve_all()
+        builder._attach_section_engineering_components()
+
+        self.assertEqual(len(cabinet.engineering_model.doors), 2)
+
+        graph = SceneGraphBuilder(cabinet, builder.mat, cabinet_id="V1-DOOR-CAB").build(builder.geo)
+
+        from manufacturing.manufacturing_runtime_pipeline_builder import (
+            ManufacturingRuntimePipelineBuilder,
+        )
+
+        runtime_result = ManufacturingRuntimePipelineBuilder().build(graph)
+
+        door_panel_specs = [
+            panel
+            for panel in runtime_result.manufacturing_package.panels
+            if panel.role == NodeRole.DOOR_PANEL
+        ]
+        self.assertEqual(len(door_panel_specs), 2)
+        self.assertTrue(
+            all("_DOOR-" in panel.identity for panel in door_panel_specs)
+        )
+
+        production_package = runtime_result.manufacturing_production_package
+        door_cutlist_items = [
+            item
+            for item in production_package.cutlist_report.items
+            if "_DOOR-" in item["identity"]
+        ]
+        self.assertEqual(len(door_cutlist_items), 2)
+        self.assertEqual(
+            [item["identity"] for item in door_cutlist_items],
+            [panel.identity for panel in door_panel_specs],
+        )
 
     def test_legacy_scene_graph_fallback_still_emits_doors_without_engineering_model(self):
         cabinet = Cabinet()

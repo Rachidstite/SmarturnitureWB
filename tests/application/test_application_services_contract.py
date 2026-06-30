@@ -30,6 +30,13 @@ from domain.base_cabinet_manufacturing_outputs_entry import (
     BaseCabinetManufacturingOutputsEntryResult,
 )
 from domain.base_cabinet_product_result import BaseCabinetProductResult
+from manufacturing.edge_spec import EdgeSpec
+from manufacturing.manufacturing_package import ManufacturingPackage
+from manufacturing.panel_spec import PanelSpec
+from manufacturing.unified_manufacturing_operation import (
+    UnifiedManufacturingOperation,
+)
+from shared.roles import NodeRole
 
 # ---- helpers ----
 
@@ -68,7 +75,25 @@ def _reset_fake_cabinet_builder() -> None:
 
 _FAKE_MANUFACTURING_RESULT = BaseCabinetManufacturingOutputsEntryResult(
     cut_list=object(),
-    manufacturing_package=object(),
+    manufacturing_package=ManufacturingPackage(
+        panels=[
+            PanelSpec(
+                identity="shelf-01",
+                role=NodeRole.SHELF,
+                width=600.0,
+                height=500.0,
+                thickness=18.0,
+                material="MDF_18MM",
+                edge_spec=EdgeSpec(top="ABS_1MM"),
+            )
+        ],
+        machining_operations=[
+            UnifiedManufacturingOperation(operation_type="DRILL")
+        ],
+        edge_operations=[
+            UnifiedManufacturingOperation(operation_type="EDGE_BANDING")
+        ],
+    ),
     metadata={"door_count": 2},
 )
 

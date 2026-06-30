@@ -108,7 +108,7 @@ class TestEngineeringDrawerBoxProjectionContract(unittest.TestCase):
         self.assertEqual(roles.count(NodeRole.DRAWER_BOX_SIDE), 2)
         self.assertEqual(roles.count(NodeRole.DRAWER_BOX_BACK), 1)
         self.assertEqual(roles.count(NodeRole.DRAWER_BOX_BOTTOM), 1)
-        self.assertEqual(roles.count(NodeRole.DRAWER_FACE), 0)
+        self.assertEqual(roles.count(NodeRole.DRAWER_FACE), 1)
 
     def test_legacy_scene_graph_fallback_still_emits_drawer_faces_without_engineering_model(self):
         cabinet = Cabinet(

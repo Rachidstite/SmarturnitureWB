@@ -7,6 +7,7 @@ from scene_graph.node import SceneNode
 from shared.roles import NodeRole
 from core.material_manager import MaterialManager
 from manufacturing.panel_shape_processor import process_panel_shape
+from scene_graph.metadata import EngineeringDrawerFaceMetadata
 class SceneRenderer:
     def __init__(self, doc, mat: MaterialManager, hw, groups: dict, cnc_engine=None, placements=None, panel_features=None):
         self.doc = doc; self.mat = mat; self.hw = hw; self.groups = groups; self.cnc_engine = cnc_engine
@@ -112,10 +113,18 @@ class SceneRenderer:
 from scene_graph.registry import RendererRegistry
 
 def _drawer_strategy(node, renderer):
-    from builders.drawer_builder import DrawerBuilder
-
     meta = node.metadata
     renderer._ensure_group(node.group)
+    if isinstance(meta, EngineeringDrawerFaceMetadata) or getattr(
+        meta,
+        "source_rule",
+        "",
+    ) == "resolved_drawer_face_projection":
+        renderer._render_simple_panel(node)
+        return
+
+    from builders.drawer_builder import DrawerBuilder
+
     DrawerBuilder.build(
         renderer.doc, renderer.groups[node.group], node.identity.key,
         node.width, node.height,  # face_w, face_h

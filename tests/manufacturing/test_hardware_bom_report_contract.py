@@ -12,8 +12,15 @@ def test_hardware_bom_row_field_inventory_is_stable():
     from manufacturing.hardware_bom_report import HardwareBomRow
 
     assert [field.name for field in fields(HardwareBomRow)] == [
-        "hardware_sku",
+        "bom_category",
+        "sku",
+        "description",
         "quantity",
+        "unit",
+        "component_reference",
+        "cabinet_reference",
+        "hardware_category",
+        "source_operation_references",
     ]
 
 
@@ -22,8 +29,16 @@ def test_hardware_bom_row_safe_defaults():
 
     row = HardwareBomRow()
 
+    assert row.bom_category == "HARDWARE"
+    assert row.sku == ""
     assert row.hardware_sku == ""
+    assert row.description == ""
     assert row.quantity == 0
+    assert row.unit == "pcs"
+    assert row.component_reference == ()
+    assert row.cabinet_reference == ()
+    assert row.hardware_category == ""
+    assert row.source_operation_references == ()
 
 
 def test_hardware_bom_report_contract_exists_and_is_dataclass():

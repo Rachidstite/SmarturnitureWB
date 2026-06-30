@@ -28,6 +28,12 @@ class TestManufacturingProductionPackageContract(unittest.TestCase):
                 "validation_summary_report",
                 "release_ready",
                 "warnings",
+                "product_bom_report",
+                "cnc_report",
+                "assembly_report",
+                "hardware_report",
+                "labels_report",
+                "manufacturing_decision",
             ],
         )
 
@@ -45,6 +51,12 @@ class TestManufacturingProductionPackageContract(unittest.TestCase):
         self.assertIsNone(package.validation_summary_report)
         self.assertFalse(package.release_ready)
         self.assertEqual(package.warnings, [])
+        self.assertIsNone(package.product_bom_report)
+        self.assertIsNone(package.cnc_report)
+        self.assertIsNone(package.assembly_report)
+        self.assertIsNone(package.hardware_report)
+        self.assertIsNone(package.labels_report)
+        self.assertIsNone(package.manufacturing_decision)
 
     def test_warning_defaults_are_independent(self):
         from manufacturing.manufacturing_production_package import (
@@ -67,6 +79,7 @@ class TestManufacturingProductionPackageContract(unittest.TestCase):
         package = ManufacturingProductionPackage()
 
         self.assertIsNone(package.validation_summary_report)
+        self.assertIsNone(package.validation_summary)
 
     def test_validation_summary_report_accepts_summary_report(self):
         from manufacturing.manufacturing_production_package import (
@@ -93,6 +106,43 @@ class TestManufacturingProductionPackageContract(unittest.TestCase):
         )
 
         self.assertIs(package.validation_summary_report, summary_report)
+        self.assertIs(package.validation_summary, summary_report)
+
+    def test_release_contract_aliases_existing_fields(self):
+        from manufacturing.manufacturing_production_package import (
+            ManufacturingProductionPackage,
+        )
+
+        package = ManufacturingProductionPackage(
+            summary_report="summary",
+            release_ready=True,
+            warnings=["warning"],
+        )
+
+        self.assertEqual(package.manufacturing_summary, "summary")
+        self.assertTrue(package.release_ready)
+        self.assertEqual(package.release_warnings, ["warning"])
+        self.assertIs(package.release_warnings, package.warnings)
+
+    def test_optional_future_v1_artifacts_can_be_carried(self):
+        from manufacturing.manufacturing_production_package import (
+            ManufacturingProductionPackage,
+        )
+
+        artifacts = {
+            "product_bom_report": object(),
+            "cnc_report": object(),
+            "assembly_report": object(),
+            "hardware_report": object(),
+            "labels_report": object(),
+            "manufacturing_decision": object(),
+        }
+
+        package = ManufacturingProductionPackage(**artifacts)
+
+        for field_name, artifact in artifacts.items():
+            with self.subTest(field_name=field_name):
+                self.assertIs(getattr(package, field_name), artifact)
 
     def test_backward_compatibility_is_preserved(self):
         from manufacturing.manufacturing_production_package import (
@@ -115,6 +165,32 @@ class TestManufacturingProductionPackageContract(unittest.TestCase):
         self.assertIsNone(package.validation_summary_report)
         self.assertTrue(package.release_ready)
         self.assertEqual(package.warnings, ["warning"])
+        self.assertEqual(package.manufacturing_summary, "summary")
+        self.assertIsNone(package.validation_summary)
+        self.assertEqual(package.release_warnings, ["warning"])
+
+    def test_existing_package_builder_still_builds_release_package(self):
+        from manufacturing.manufacturing_package import ManufacturingPackage
+        from manufacturing.manufacturing_production_package import (
+            ManufacturingProductionPackage,
+        )
+        from manufacturing.manufacturing_production_package_builder import (
+            ManufacturingProductionPackageBuilder,
+        )
+
+        package = ManufacturingPackage()
+
+        result = ManufacturingProductionPackageBuilder().build(package)
+
+        self.assertIsInstance(result, ManufacturingProductionPackage)
+        self.assertIsNotNone(result.cutlist_report)
+        self.assertIsNotNone(result.edge_report)
+        self.assertIsNotNone(result.machining_report)
+        self.assertIsNotNone(result.summary_report)
+        self.assertEqual(result.manufacturing_summary, result.summary_report)
+        self.assertFalse(result.release_ready)
+        self.assertEqual(result.release_warnings, result.warnings)
+        self.assertIn("No panels", result.release_warnings)
 
     def test_import_without_freecad(self):
         module = importlib.import_module(
@@ -134,10 +210,12 @@ class TestManufacturingProductionPackageContract(unittest.TestCase):
             "manufacturing_release_validator",
             "manufacturing_validator",
             "validation logic",
-            "CNC",
             "export",
             "cost",
             "geometry",
+            "Builder",
+            "Engine",
+            "Workflow",
         ):
             self.assertNotIn(token, source)
 

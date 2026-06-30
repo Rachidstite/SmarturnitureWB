@@ -82,6 +82,23 @@ class EngineeringDrawerBox:
     material: str
 
 
+@dataclass(frozen=True)
+class EngineeringDrawerFace:
+    name: str
+    section_index: int
+    section_id: str
+    drawer_index: int
+    source_rule: str
+    face_x_mm: float
+    face_y_mm: float
+    face_z_mm: float
+    face_w_mm: float
+    face_h_mm: float
+    thickness_mm: float
+    layer: int
+    material: str
+
+
 class BackPanelInstallationMode(str, Enum):
     GROOVED = "GROOVED"
     OVERLAY = "OVERLAY"
@@ -126,6 +143,7 @@ class BaseCabinetEngineeringModel:
     shelves: Tuple[EngineeringShelfPlacement, ...] = field(default_factory=tuple)
     dividers: Tuple[EngineeringDividerPlacement, ...] = field(default_factory=tuple)
     drawer_boxes: Tuple[EngineeringDrawerBox, ...] = field(default_factory=tuple)
+    drawer_faces: Tuple[EngineeringDrawerFace, ...] = field(default_factory=tuple)
 
 
 def map_back_panel_installation_mode(
@@ -241,6 +259,7 @@ class BaseCabinetEngineeringModelBuilder:
             for shelf in construction_model.shelves
         )
         drawer_boxes: Tuple[EngineeringDrawerBox, ...] = ()
+        drawer_faces: Tuple[EngineeringDrawerFace, ...] = ()
         doors: Tuple[EngineeringDoorPlacement, ...] = ()
         dividers: Tuple[EngineeringDividerPlacement, ...] = ()
 
@@ -255,4 +274,5 @@ class BaseCabinetEngineeringModelBuilder:
             shelves=shelves,
             dividers=dividers,
             drawer_boxes=drawer_boxes,
+            drawer_faces=drawer_faces,
         )

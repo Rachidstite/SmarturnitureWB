@@ -5,7 +5,12 @@ from scene_graph.scene_graph import SceneGraph
 from shared.identity import PanelIdentity, SemanticRole, normalize_identity_part
 from shared.roles import NodeRole
 from manufacturing.edge_spec import EdgeBandRegistry
-from scene_graph.metadata import BackPanelMetadata, DoorMetadata, DrawerMetadata
+from scene_graph.metadata import (
+    BackPanelMetadata,
+    DoorMetadata,
+    DrawerMetadata,
+    EngineeringDrawerFaceMetadata,
+)
 from domain.back_panel_engine import BackPanelRule
 from domain.furniture_construction_model import CabinetConstructionModel
 from domain.base_cabinet_engineering_model import (
@@ -485,6 +490,31 @@ class SceneGraphBuilder:
                     role=NodeRole.DRAWER_BOX_BOTTOM,
                     thickness=drawer_box.bottom_thickness_mm,
                     material=material,
+                )
+            )
+        for drawer_face in getattr(model, "drawer_faces", []) or []:
+            self._add(
+                SceneNode(
+                    PanelIdentity.make_drawer_face(
+                        self.cabinet_id,
+                        drawer_face.section_index,
+                        drawer_face.drawer_index,
+                    ),
+                    drawer_face.face_w_mm,
+                    drawer_face.thickness_mm,
+                    drawer_face.face_h_mm,
+                    drawer_face.face_x_mm,
+                    drawer_face.face_y_mm,
+                    drawer_face.face_z_mm,
+                    group="Drawers",
+                    role=NodeRole.DRAWER_FACE,
+                    metadata=EngineeringDrawerFaceMetadata(
+                        source_rule=drawer_face.source_rule,
+                        section_index=drawer_face.section_index,
+                        drawer_index=drawer_face.drawer_index,
+                    ),
+                    thickness=drawer_face.thickness_mm,
+                    material=drawer_face.material,
                 )
             )
         for divider in getattr(model, "dividers", []) or []:

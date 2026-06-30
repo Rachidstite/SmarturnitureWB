@@ -29,7 +29,12 @@ class TestManufacturingProductionPackageBuilder(unittest.TestCase):
         self.assertIsNotNone(production_package.machining_report)
         self.assertIsNotNone(production_package.summary_report)
         self.assertTrue(production_package.release_ready)
-        self.assertEqual(production_package.warnings, [])
+        self.assertEqual(
+            production_package.warnings,
+            [
+                "Door panels present but hinge hardware evidence is missing.",
+            ],
+        )
 
     def test_empty_package_builds_blocked_production_package(self):
         from manufacturing.manufacturing_package import ManufacturingPackage

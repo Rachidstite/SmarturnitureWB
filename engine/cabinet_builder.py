@@ -17,6 +17,7 @@ from domain.system32 import System32Engine
 from manufacturing.visible_geometry_plan import build_visible_geometry_plan
 from domain.base_cabinet_engineering_model import (
     EngineeringDrawerBox,
+    EngineeringDrawerFace,
     EngineeringDoorPlacement,
     EngineeringDividerPlacement,
     EngineeringShelfPlacement,
@@ -99,6 +100,7 @@ class CabinetBuilder:
         dividers = []
         doors = []
         drawer_boxes = []
+        drawer_faces = []
 
         for index, section in enumerate(getattr(self.geo, "resolved_sections", []) or []):
             section_id = f"SEC-{index + 1}"
@@ -140,6 +142,27 @@ class CabinetBuilder:
                     )
                 )
             for drawer_index, drawer in enumerate(getattr(section, "drawers", []) or []):
+                drawer_faces.append(
+                    EngineeringDrawerFace(
+                        name=f"{section_id}_DrawerFace_{drawer_index + 1}",
+                        section_index=index,
+                        section_id=section_id,
+                        drawer_index=drawer_index,
+                        source_rule="resolved_drawer_face_projection",
+                        face_x_mm=drawer.face_x,
+                        face_y_mm=drawer.face_y,
+                        face_z_mm=drawer.face_z,
+                        face_w_mm=drawer.face_w,
+                        face_h_mm=drawer.face_h,
+                        thickness_mm=thickness,
+                        layer=0,
+                        material=getattr(
+                            getattr(engineering_model, "left_side_panel", None),
+                            "material",
+                            "",
+                        ),
+                    )
+                )
                 drawer_boxes.append(
                     EngineeringDrawerBox(
                         name=f"{section_id}_Drawer_{drawer_index + 1}",
@@ -182,6 +205,7 @@ class CabinetBuilder:
             engineering_model,
             doors=tuple(doors),
             drawer_boxes=tuple(drawer_boxes),
+            drawer_faces=tuple(drawer_faces),
             shelves=tuple(shelves),
             dividers=tuple(dividers),
         )

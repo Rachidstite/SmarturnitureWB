@@ -15,6 +15,12 @@ class DrawerMetadata:
     bottom_thickness: float
 
 @dataclass
+class EngineeringDrawerFaceMetadata:
+    source_rule: str
+    section_index: int
+    drawer_index: int
+
+@dataclass
 class BackPanelMetadata:
     section_index: int
     section_label: str

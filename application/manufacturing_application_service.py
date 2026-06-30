@@ -9,6 +9,10 @@ from domain.base_cabinet_manufacturing_outputs_entry import (
     build_base_cabinet_manufacturing_outputs_entry,
 )
 from domain.base_cabinet_specification import BaseCabinetSpecification
+from manufacturing.manufacturing_decision_builder import ManufacturingDecisionBuilder
+from manufacturing.manufacturing_production_package_builder import (
+    ManufacturingProductionPackageBuilder,
+)
 
 
 class ManufacturingApplicationService(BaseApplicationService):
@@ -34,6 +38,12 @@ class ManufacturingApplicationService(BaseApplicationService):
         entry_result: BaseCabinetManufacturingOutputsEntryResult = (
             build_base_cabinet_manufacturing_outputs_entry(spec)
         )
+        manufacturing_production_package = ManufacturingProductionPackageBuilder().build(
+            entry_result.manufacturing_package
+        )
+        manufacturing_decision = ManufacturingDecisionBuilder().build(
+            production_evidence=manufacturing_production_package.production_evidence
+        )
 
         return ApplicationServiceResult(
             success=True,
@@ -41,6 +51,8 @@ class ManufacturingApplicationService(BaseApplicationService):
                 "manufacturing_outputs": entry_result,
                 "cut_list": entry_result.cut_list,
                 "manufacturing_package": entry_result.manufacturing_package,
+                "manufacturing_production_package": manufacturing_production_package,
+                "manufacturing_decision": manufacturing_decision,
                 "metadata": entry_result.metadata,
                 "specification": spec,
             },
