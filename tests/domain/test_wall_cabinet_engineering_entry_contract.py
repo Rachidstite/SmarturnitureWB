@@ -6,6 +6,7 @@ from domain.wall_cabinet_engineering_entry import (
     WallCabinetEngineeringEntryResult,
     build_wall_cabinet_engineering_cabinet,
 )
+from domain.furniture_construction_model import CabinetConstructionModel
 from domain.wall_cabinet_engineering_model import WallCabinetEngineeringModel
 from domain.wall_cabinet_specification import WallCabinetSpecification
 
@@ -45,6 +46,15 @@ class TestWallCabinetEngineeringEntryContract(unittest.TestCase):
         self.assertEqual(result.engineering_model.mounting_type, "wall")
         self.assertEqual(result.engineering_model.support_strategy, "wall_mounted")
         self.assertFalse(result.engineering_model.executable_geometry)
+
+    def test_result_exposes_wall_cabinet_construction_model(self):
+        result = build_wall_cabinet_engineering_cabinet(WallCabinetSpecification())
+
+        self.assertIsInstance(result.construction_model, CabinetConstructionModel)
+        self.assertEqual(result.construction_model.specification.wall_mount_count, 1)
+        self.assertFalse(
+            any(hasattr(result.construction_model, attr) for attr in ("scene_graph", "geometry"))
+        )
 
     def test_result_marks_executable_geometry_false(self):
         result = build_wall_cabinet_engineering_cabinet(WallCabinetSpecification())
