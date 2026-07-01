@@ -8,6 +8,10 @@ from domain.base_cabinet_engineering_entry import (
     build_base_cabinet_engineering_cabinet,
 )
 from domain.base_cabinet_specification import BaseCabinetSpecification
+from domain.product_configuration import ProductConfiguration
+from domain.product_configuration_base_cabinet_adapter import (
+    adapt_product_configuration_to_base_cabinet_specification,
+)
 
 
 class EngineeringApplicationService(BaseApplicationService):
@@ -21,6 +25,16 @@ class EngineeringApplicationService(BaseApplicationService):
 
     No mock values, no REAL_ENGINE_AVAILABLE guards.
     """
+
+    def execute_from_product_configuration(
+        self,
+        *,
+        configuration: ProductConfiguration,
+    ) -> ApplicationServiceResult:
+        specification = adapt_product_configuration_to_base_cabinet_specification(
+            configuration
+        )
+        return self.execute(specification=specification)
 
     def _execute(
         self,
