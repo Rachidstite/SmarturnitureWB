@@ -10,6 +10,10 @@ from domain.base_cabinet_product_workflow import (
     build_base_cabinet_product_workflow,
 )
 from domain.base_cabinet_specification import BaseCabinetSpecification
+from domain.product_configuration import ProductConfiguration
+from domain.product_configuration_base_cabinet_adapter import (
+    adapt_product_configuration_to_base_cabinet_specification,
+)
 
 
 class ProjectApplicationService(BaseApplicationService):
@@ -20,6 +24,22 @@ class ProjectApplicationService(BaseApplicationService):
       - ``domain.base_cabinet_product_workflow.build_base_cabinet_product_workflow``
         which itself chains: engineering → validation → manufacturing → cost → commercial
     """
+
+    def execute_from_product_configuration(
+        self,
+        *,
+        configuration: ProductConfiguration,
+        quotation_metadata: dict | None = None,
+        create_document: bool = True,
+    ) -> ApplicationServiceResult:
+        specification = adapt_product_configuration_to_base_cabinet_specification(
+            configuration
+        )
+        return self.execute(
+            specification=specification,
+            quotation_metadata=quotation_metadata,
+            create_document=create_document,
+        )
 
     def _execute(
         self,
