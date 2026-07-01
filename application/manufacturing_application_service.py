@@ -10,6 +10,9 @@ from domain.base_cabinet_manufacturing_outputs_entry import (
 )
 from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.product_configuration import ProductConfiguration
+from domain.product_configuration_family_classifier import (
+    classify_product_configuration_family,
+)
 from domain.product_configuration_base_cabinet_adapter import (
     adapt_product_configuration_to_base_cabinet_specification,
 )
@@ -38,6 +41,18 @@ class ManufacturingApplicationService(BaseApplicationService):
         *,
         configuration: ProductConfiguration,
     ) -> ApplicationServiceResult:
+        classification = classify_product_configuration_family(configuration)
+        if not classification.executable_family:
+            raise ValueError(
+                f"family_id={classification.family_id!r} is not executable: "
+                f"{classification.reason}"
+            )
+        if classification.engineering_path != "base_cabinet":
+            raise ValueError(
+                "Unsupported engineering path for "
+                f"family_id={classification.family_id!r}: "
+                f"{classification.engineering_path!r}"
+            )
         specification = adapt_product_configuration_to_base_cabinet_specification(
             configuration
         )
