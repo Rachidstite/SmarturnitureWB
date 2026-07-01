@@ -8,6 +8,7 @@ from application.project_application_service import ProjectApplicationService
 from domain.base_cabinet_product_result import BaseCabinetProductResult
 from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.product_configuration import ProductConfiguration
+from domain.wall_cabinet_engineering_entry import WallCabinetEngineeringEntryResult
 
 
 def _fake_project_result(specification=None, quotation_document=None):
@@ -106,7 +107,7 @@ class TestProjectApplicationServiceProductConfigurationContract(unittest.TestCas
         self.assertIsInstance(result, ApplicationServiceResult)
         self.assertIn("project_result", result.data)
 
-    def test_unsupported_family_id_raises_value_error_through_adapter_path(self):
+    def test_wall_cabinet_routes_to_wall_engineering_entry(self):
         service = ProjectApplicationService()
         configuration = ProductConfiguration(
             family_id="WALL_CABINET",
@@ -115,11 +116,24 @@ class TestProjectApplicationServiceProductConfigurationContract(unittest.TestCas
             depth=350.0,
         )
 
-        with self.assertRaises(ValueError):
-            service.execute_from_product_configuration(
+        with patch.object(
+            project_svc_module,
+            "build_base_cabinet_product_workflow",
+        ) as workflow_spy:
+            result = service.execute_from_product_configuration(
                 configuration=configuration,
                 create_document=False,
             )
+
+        self.assertTrue(result.success)
+        self.assertIsInstance(result.data, WallCabinetEngineeringEntryResult)
+        self.assertIsNone(result.data.cabinet)
+        self.assertFalse(result.data.executable_geometry)
+        self.assertIsNotNone(result.data.engineering_model)
+        self.assertEqual(result.data.engineering_model.mounting_type, "wall")
+        self.assertEqual(result.data.engineering_model.support_strategy, "wall_mounted")
+        self.assertIn("does not yet produce geometry", result.data.reason.lower())
+        workflow_spy.assert_not_called()
 
     def test_create_document_false_passes_through_without_forcing_document_creation(
         self,

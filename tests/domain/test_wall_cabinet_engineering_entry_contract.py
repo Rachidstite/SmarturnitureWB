@@ -6,6 +6,7 @@ from domain.wall_cabinet_engineering_entry import (
     WallCabinetEngineeringEntryResult,
     build_wall_cabinet_engineering_cabinet,
 )
+from domain.wall_cabinet_engineering_model import WallCabinetEngineeringModel
 from domain.wall_cabinet_specification import WallCabinetSpecification
 
 
@@ -36,6 +37,14 @@ class TestWallCabinetEngineeringEntryContract(unittest.TestCase):
         self.assertIsNotNone(result.intent)
         self.assertEqual(result.intent.mounting_type, "wall")
         self.assertEqual(result.intent.support_strategy, "wall_mounted")
+
+    def test_result_exposes_wall_cabinet_engineering_model(self):
+        result = build_wall_cabinet_engineering_cabinet(WallCabinetSpecification())
+
+        self.assertIsInstance(result.engineering_model, WallCabinetEngineeringModel)
+        self.assertEqual(result.engineering_model.mounting_type, "wall")
+        self.assertEqual(result.engineering_model.support_strategy, "wall_mounted")
+        self.assertFalse(result.engineering_model.executable_geometry)
 
     def test_result_marks_executable_geometry_false(self):
         result = build_wall_cabinet_engineering_cabinet(WallCabinetSpecification())

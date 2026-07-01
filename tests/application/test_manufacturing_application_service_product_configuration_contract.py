@@ -12,6 +12,7 @@ from domain.base_cabinet_manufacturing_outputs_entry import (
 )
 from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.product_configuration import ProductConfiguration
+from domain.wall_cabinet_engineering_entry import WallCabinetEngineeringEntryResult
 
 
 def _fake_entry_result():
@@ -140,7 +141,7 @@ class TestManufacturingApplicationServiceProductConfigurationContract(
         self.assertIsInstance(result, ApplicationServiceResult)
         self.assertIn("factory_release_package", result.data)
 
-    def test_unsupported_family_id_raises_value_error_through_adapter_path(self):
+    def test_wall_cabinet_routes_to_wall_engineering_entry(self):
         service = ManufacturingApplicationService()
         configuration = ProductConfiguration(
             family_id="WALL_CABINET",
@@ -149,8 +150,31 @@ class TestManufacturingApplicationServiceProductConfigurationContract(
             depth=350.0,
         )
 
-        with self.assertRaises(ValueError):
-            service.execute_from_product_configuration(configuration=configuration)
+        with patch.object(
+            mfg_svc_module,
+            "build_base_cabinet_manufacturing_outputs_entry",
+        ) as entry_spy, patch.object(
+            mfg_svc_module,
+            "ManufacturingProductionPackageBuilder",
+        ) as package_builder_class, patch.object(
+            mfg_svc_module,
+            "ManufacturingDecisionBuilder",
+        ) as decision_builder_class:
+            result = service.execute_from_product_configuration(
+                configuration=configuration
+            )
+
+        self.assertTrue(result.success)
+        self.assertIsInstance(result.data, WallCabinetEngineeringEntryResult)
+        self.assertIsNone(result.data.cabinet)
+        self.assertFalse(result.data.executable_geometry)
+        self.assertIsNotNone(result.data.engineering_model)
+        self.assertEqual(result.data.engineering_model.mounting_type, "wall")
+        self.assertEqual(result.data.engineering_model.support_strategy, "wall_mounted")
+        self.assertIn("does not yet produce geometry", result.data.reason.lower())
+        entry_spy.assert_not_called()
+        package_builder_class.assert_not_called()
+        decision_builder_class.assert_not_called()
 
     def test_no_project_engineering_cost_commercial_or_new_pipeline_path_is_used(
         self,

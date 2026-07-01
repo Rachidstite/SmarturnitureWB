@@ -9,6 +9,7 @@ from application.application_service_result import ApplicationServiceResult
 from application.engineering_application_service import EngineeringApplicationService
 from domain.base_cabinet_specification import BaseCabinetSpecification
 from domain.product_configuration import ProductConfiguration
+from domain.wall_cabinet_engineering_entry import WallCabinetEngineeringEntryResult
 from engine.cabinet import Cabinet
 
 
@@ -121,7 +122,7 @@ class TestEngineeringApplicationServiceProductConfigurationContract(unittest.Tes
         self.assertIsInstance(result, ApplicationServiceResult)
         self.assertIsInstance(result.data["cabinet"], Cabinet)
 
-    def test_unsupported_family_id_raises_value_error_through_adapter_path(self):
+    def test_wall_cabinet_routes_to_wall_engineering_entry(self):
         service = EngineeringApplicationService()
         configuration = ProductConfiguration(
             family_id="WALL_CABINET",
@@ -130,8 +131,27 @@ class TestEngineeringApplicationServiceProductConfigurationContract(unittest.Tes
             depth=350.0,
         )
 
-        with self.assertRaises(ValueError):
-            service.execute_from_product_configuration(configuration=configuration)
+        with patch.object(
+            eng_svc_module,
+            "adapt_product_configuration_to_base_cabinet_specification",
+        ) as adapter_spy, patch.object(
+            eng_svc_module,
+            "build_base_cabinet_engineering_cabinet",
+        ) as base_entry_spy:
+            result = service.execute_from_product_configuration(
+                configuration=configuration
+            )
+
+        self.assertTrue(result.success)
+        self.assertIsInstance(result.data, WallCabinetEngineeringEntryResult)
+        self.assertIsNone(result.data.cabinet)
+        self.assertFalse(result.data.executable_geometry)
+        self.assertIsNotNone(result.data.engineering_model)
+        self.assertEqual(result.data.engineering_model.mounting_type, "wall")
+        self.assertEqual(result.data.engineering_model.support_strategy, "wall_mounted")
+        self.assertIn("does not yet produce geometry", result.data.reason.lower())
+        adapter_spy.assert_not_called()
+        base_entry_spy.assert_not_called()
 
     def test_no_project_application_service_manufacturing_cost_or_commercial_path_is_used(
         self,

@@ -16,6 +16,7 @@ from domain.product_configuration import ProductConfiguration
 from domain.product_configuration_base_cabinet_adapter import (
     adapt_product_configuration_to_base_cabinet_specification,
 )
+from domain.wall_cabinet_engineering_entry import WallCabinetEngineeringEntryResult
 
 
 class TestApplicationServiceFamilyRoutingContract(unittest.TestCase):
@@ -29,7 +30,7 @@ class TestApplicationServiceFamilyRoutingContract(unittest.TestCase):
         for line in import_lines:
             self.assertNotIn("product_family_catalog", line)
 
-    def test_engineering_service_rejects_wall_cabinet_before_adapter(self):
+    def test_engineering_service_routes_wall_cabinet_to_wall_entry(self):
         service = EngineeringApplicationService()
         configuration = ProductConfiguration(
             family_id="WALL_CABINET",
@@ -41,15 +42,26 @@ class TestApplicationServiceFamilyRoutingContract(unittest.TestCase):
         with patch.object(
             eng_svc_module,
             "adapt_product_configuration_to_base_cabinet_specification",
-        ) as adapter_spy:
-            with self.assertRaisesRegex(
-                ValueError, r"WALL_CABINET.*catalog-only|not executable"
-            ):
-                service.execute_from_product_configuration(configuration=configuration)
+        ) as adapter_spy, patch.object(
+            eng_svc_module,
+            "build_base_cabinet_engineering_cabinet",
+        ) as base_entry_spy:
+            result = service.execute_from_product_configuration(
+                configuration=configuration
+            )
 
+        self.assertTrue(result.success)
+        self.assertIsInstance(result.data, WallCabinetEngineeringEntryResult)
+        self.assertIsNone(result.data.cabinet)
+        self.assertFalse(result.data.executable_geometry)
+        self.assertIsNotNone(result.data.engineering_model)
+        self.assertEqual(result.data.engineering_model.mounting_type, "wall")
+        self.assertEqual(result.data.engineering_model.support_strategy, "wall_mounted")
+        self.assertIn("does not yet produce geometry", result.data.reason.lower())
         adapter_spy.assert_not_called()
+        base_entry_spy.assert_not_called()
 
-    def test_manufacturing_service_rejects_wall_cabinet_before_adapter(self):
+    def test_manufacturing_service_routes_wall_cabinet_to_wall_entry(self):
         service = ManufacturingApplicationService()
         configuration = ProductConfiguration(
             family_id="WALL_CABINET",
@@ -61,15 +73,26 @@ class TestApplicationServiceFamilyRoutingContract(unittest.TestCase):
         with patch.object(
             mfg_svc_module,
             "adapt_product_configuration_to_base_cabinet_specification",
-        ) as adapter_spy:
-            with self.assertRaisesRegex(
-                ValueError, r"WALL_CABINET.*catalog-only|not executable"
-            ):
-                service.execute_from_product_configuration(configuration=configuration)
+        ) as adapter_spy, patch.object(
+            mfg_svc_module,
+            "build_base_cabinet_manufacturing_outputs_entry",
+        ) as entry_spy:
+            result = service.execute_from_product_configuration(
+                configuration=configuration
+            )
 
+        self.assertTrue(result.success)
+        self.assertIsInstance(result.data, WallCabinetEngineeringEntryResult)
+        self.assertIsNone(result.data.cabinet)
+        self.assertFalse(result.data.executable_geometry)
+        self.assertIsNotNone(result.data.engineering_model)
+        self.assertEqual(result.data.engineering_model.mounting_type, "wall")
+        self.assertEqual(result.data.engineering_model.support_strategy, "wall_mounted")
+        self.assertIn("does not yet produce geometry", result.data.reason.lower())
         adapter_spy.assert_not_called()
+        entry_spy.assert_not_called()
 
-    def test_project_service_rejects_wall_cabinet_before_adapter(self):
+    def test_project_service_routes_wall_cabinet_to_wall_entry(self):
         service = ProjectApplicationService()
         configuration = ProductConfiguration(
             family_id="WALL_CABINET",
@@ -81,16 +104,25 @@ class TestApplicationServiceFamilyRoutingContract(unittest.TestCase):
         with patch.object(
             project_svc_module,
             "adapt_product_configuration_to_base_cabinet_specification",
-        ) as adapter_spy:
-            with self.assertRaisesRegex(
-                ValueError, r"WALL_CABINET.*catalog-only|not executable"
-            ):
-                service.execute_from_product_configuration(
-                    configuration=configuration,
-                    create_document=False,
-                )
+        ) as adapter_spy, patch.object(
+            project_svc_module,
+            "build_base_cabinet_product_workflow",
+        ) as workflow_spy:
+            result = service.execute_from_product_configuration(
+                configuration=configuration,
+                create_document=False,
+            )
 
+        self.assertTrue(result.success)
+        self.assertIsInstance(result.data, WallCabinetEngineeringEntryResult)
+        self.assertIsNone(result.data.cabinet)
+        self.assertFalse(result.data.executable_geometry)
+        self.assertIsNotNone(result.data.engineering_model)
+        self.assertEqual(result.data.engineering_model.mounting_type, "wall")
+        self.assertEqual(result.data.engineering_model.support_strategy, "wall_mounted")
+        self.assertIn("does not yet produce geometry", result.data.reason.lower())
         adapter_spy.assert_not_called()
+        workflow_spy.assert_not_called()
 
     def test_unknown_family_is_rejected_with_clear_message(self):
         service = EngineeringApplicationService()

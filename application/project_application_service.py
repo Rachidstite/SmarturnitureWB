@@ -17,6 +17,12 @@ from domain.product_configuration_family_classifier import (
 from domain.product_configuration_base_cabinet_adapter import (
     adapt_product_configuration_to_base_cabinet_specification,
 )
+from domain.product_configuration_wall_cabinet_mapper import (
+    build_wall_cabinet_specification_from_product_configuration,
+)
+from domain.wall_cabinet_engineering_entry import (
+    build_wall_cabinet_engineering_cabinet,
+)
 
 
 class ProjectApplicationService(BaseApplicationService):
@@ -40,6 +46,21 @@ class ProjectApplicationService(BaseApplicationService):
             raise ValueError(
                 f"family_id={classification.family_id!r} is not executable: "
                 f"{classification.reason}"
+            )
+        if classification.engineering_path == "wall_cabinet":
+            wall_specification = (
+                build_wall_cabinet_specification_from_product_configuration(
+                    configuration
+                )
+            )
+            wall_result = build_wall_cabinet_engineering_cabinet(
+                wall_specification
+            )
+            return ApplicationServiceResult(
+                success=True,
+                data=wall_result,
+                errors=(),
+                diagnostics=(),
             )
         if classification.engineering_path != "base_cabinet":
             raise ValueError(

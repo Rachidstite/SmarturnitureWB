@@ -29,9 +29,9 @@ def classify_product_configuration_family(
     if family_key in {"wall_cabinet", "wall cabinet"}:
         return ProductConfigurationFamilyClassification(
             family_id=configuration.family_id,
-            executable_family=False,
-            engineering_path=None,
-            reason="catalog-only family; not executable through the current path",
+            executable_family=True,
+            engineering_path="wall_cabinet",
+            reason="executable family for the current wall cabinet path",
         )
 
     if family_key in {"tall_cabinet", "tall cabinet"}:

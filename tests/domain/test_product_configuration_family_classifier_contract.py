@@ -47,7 +47,9 @@ class TestProductConfigurationFamilyClassifierContract(unittest.TestCase):
         self.assertTrue(classification.executable_family)
         self.assertEqual(classification.engineering_path, "base_cabinet")
 
-    def test_wall_cabinet_is_recognized_but_catalog_only(self):
+    def test_wall_cabinet_is_recognized_as_executable_through_wall_cabinet_path(
+        self,
+    ):
         configuration = ProductConfiguration(
             family_id="WALL_CABINET",
             width=600.0,
@@ -57,9 +59,9 @@ class TestProductConfigurationFamilyClassifierContract(unittest.TestCase):
 
         classification = classify_product_configuration_family(configuration)
 
-        self.assertFalse(classification.executable_family)
-        self.assertIsNone(classification.engineering_path)
-        self.assertIn("catalog-only", classification.reason.lower())
+        self.assertTrue(classification.executable_family)
+        self.assertEqual(classification.engineering_path, "wall_cabinet")
+        self.assertIn("executable", classification.reason.lower())
 
     def test_lowercase_wall_cabinet_behaves_the_same(self):
         configuration = ProductConfiguration(
@@ -71,9 +73,9 @@ class TestProductConfigurationFamilyClassifierContract(unittest.TestCase):
 
         classification = classify_product_configuration_family(configuration)
 
-        self.assertFalse(classification.executable_family)
-        self.assertIsNone(classification.engineering_path)
-        self.assertIn("catalog-only", classification.reason.lower())
+        self.assertTrue(classification.executable_family)
+        self.assertEqual(classification.engineering_path, "wall_cabinet")
+        self.assertIn("executable", classification.reason.lower())
 
     def test_tall_cabinet_is_recognized_but_catalog_only(self):
         configuration = ProductConfiguration(
