@@ -5,6 +5,7 @@ from dataclasses import FrozenInstanceError
 import domain.hardware_decision_builder as builder_module
 from domain.hardware_decision import HardwareDecision
 from domain.hardware_decision_context import HardwareDecisionContext
+from domain.hardware_decision_evidence import HardwareDecisionEvidence
 from domain.operational_decision import OperationalDecisionType
 
 
@@ -30,24 +31,31 @@ class TestHardwareDecisionBuilderContract(unittest.TestCase):
             notes=("Context-only input",),
         )
 
+    def _empty_evidence(self) -> HardwareDecisionEvidence:
+        return HardwareDecisionEvidence()
+
     def test_builder_exposes_pure_function_entrypoint(self):
         build_fn = getattr(builder_module, "build_hardware_decision", None)
         self.assertTrue(callable(build_fn))
         self.assertEqual(
             list(inspect.signature(build_fn).parameters),
-            ["context"],
+            ["context", "evidence"],
         )
 
     def test_builder_is_deterministic_for_same_context(self):
         context = self._sample_context()
 
-        first = builder_module.build_hardware_decision(context)
-        second = builder_module.build_hardware_decision(context)
+        evidence = self._empty_evidence()
+        first = builder_module.build_hardware_decision(context, evidence)
+        second = builder_module.build_hardware_decision(context, evidence)
 
         self.assertEqual(first, second)
 
     def test_builder_returns_immutable_hardware_decision(self):
-        decision = builder_module.build_hardware_decision(self._sample_context())
+        decision = builder_module.build_hardware_decision(
+            self._sample_context(),
+            self._empty_evidence(),
+        )
 
         self.assertIsInstance(decision, HardwareDecision)
         with self.assertRaises(FrozenInstanceError):
@@ -55,7 +63,10 @@ class TestHardwareDecisionBuilderContract(unittest.TestCase):
 
     def test_builder_copies_only_explicit_context_values(self):
         context = self._sample_context()
-        decision = builder_module.build_hardware_decision(context)
+        decision = builder_module.build_hardware_decision(
+            context,
+            self._empty_evidence(),
+        )
 
         self.assertEqual(decision.decision.decision_id, context.context_id)
         self.assertEqual(
@@ -76,7 +87,10 @@ class TestHardwareDecisionBuilderContract(unittest.TestCase):
         )
 
     def test_missing_information_remains_unset_or_default(self):
-        decision = builder_module.build_hardware_decision(self._sample_context())
+        decision = builder_module.build_hardware_decision(
+            self._sample_context(),
+            self._empty_evidence(),
+        )
 
         self.assertIsNone(decision.decision.selected_option)
         self.assertEqual(decision.selected_hardware_sku, "")
@@ -93,9 +107,17 @@ class TestHardwareDecisionBuilderContract(unittest.TestCase):
         context = self._sample_context()
         before = context
 
-        builder_module.build_hardware_decision(context)
+        builder_module.build_hardware_decision(context, self._empty_evidence())
 
         self.assertEqual(context, before)
+
+    def test_builder_does_not_mutate_evidence(self):
+        evidence = self._empty_evidence()
+        before = evidence
+
+        builder_module.build_hardware_decision(self._sample_context(), evidence)
+
+        self.assertEqual(evidence, before)
 
     def test_builder_has_no_rules_recommendation_ai_or_runtime_dependencies(self):
         source = inspect.getsource(builder_module).lower()
