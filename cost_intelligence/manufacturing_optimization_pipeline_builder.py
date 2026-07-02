@@ -4,6 +4,7 @@ from cost_intelligence.manufacturing_optimization_result import (
 from cost_intelligence.nesting_intelligence_builder import (
     NestingIntelligenceBuilder,
 )
+from cost_intelligence.offcut_classifier import OffcutClassifier
 from cost_intelligence.offcut_extraction_service import OffcutExtractionService
 from cost_intelligence.offcut_intelligence_builder import (
     OffcutIntelligenceBuilder,
@@ -18,6 +19,11 @@ class ManufacturingOptimizationPipelineBuilder:
     def build(self, sheet_results, consumption_report, cost_estimate):
         sheet_utilization_report = SheetUtilizationBuilder().build(sheet_results)
         offcuts = OffcutExtractionService.extract(sheet_results)
+        if hasattr(offcuts, "__iter__"):
+            classifier = OffcutClassifier()
+            for offcut in offcuts:
+                classification = classifier.classify(offcut)
+                offcut.reusable = bool(classification.reusable)
         offcut_report = OffcutReportBuilder().build(offcuts)
         offcut_intelligence_report = OffcutIntelligenceBuilder().build(
             offcut_report
