@@ -9,6 +9,7 @@ from cost_intelligence.offcut_extraction_service import OffcutExtractionService
 from cost_intelligence.offcut_intelligence_builder import (
     OffcutIntelligenceBuilder,
 )
+from cost_intelligence.offcut_reuse_policy import OffcutReusePolicy
 from cost_intelligence.offcut_report_builder import OffcutReportBuilder
 from cost_intelligence.sheet_utilization_builder import SheetUtilizationBuilder
 from cost_intelligence.waste_intelligence_builder import WasteIntelligenceBuilder
@@ -20,7 +21,14 @@ class ManufacturingOptimizationPipelineBuilder:
         sheet_utilization_report = SheetUtilizationBuilder().build(sheet_results)
         offcuts = OffcutExtractionService.extract(sheet_results)
         if hasattr(offcuts, "__iter__"):
-            classifier = OffcutClassifier()
+            policy = OffcutReusePolicy(
+                material="",
+                thickness=0,
+                min_width=80,
+                min_height=80,
+                min_area=10000,
+            )
+            classifier = OffcutClassifier(policy=policy)
             for offcut in offcuts:
                 classification = classifier.classify(offcut)
                 offcut.reusable = bool(classification.reusable)
