@@ -39,6 +39,43 @@ class ProjectManufacturingReadinessBuilder:
                 ),
             )
 
+        # Product readiness can optionally absorb component-level back-panel
+        # and drawer decisions when upstream structural aggregation preserves
+        # that evidence on the structural report.
+        back_panel_decision = getattr(
+            cabinet_structural_report,
+            "back_panel_decision",
+            None,
+        )
+        if back_panel_decision is None:
+            back_panel_intelligence_report = getattr(
+                cabinet_structural_report,
+                "back_panel_intelligence_report",
+                None,
+            )
+            back_panel_decision = getattr(
+                back_panel_intelligence_report,
+                "decision",
+                None,
+            )
+
+        drawer_decision = getattr(
+            cabinet_structural_report,
+            "drawer_decision",
+            None,
+        )
+        if drawer_decision is None:
+            drawer_intelligence_report = getattr(
+                cabinet_structural_report,
+                "drawer_intelligence_report",
+                None,
+            )
+            drawer_decision = getattr(
+                drawer_intelligence_report,
+                "decision",
+                None,
+            )
+
         severities = [
             getattr(cabinet_structural_report, "structural_risk", "LOW"),
             getattr(cabinet_structural_report, "stability_risk", "LOW"),
@@ -47,6 +84,16 @@ class ProjectManufacturingReadinessBuilder:
             getattr(hardware_placement_report, "hardware_risk", "LOW"),
             getattr(kitchen_manufacturing_report, "manufacturing_complexity", "LOW"),
         ]
+
+        if getattr(back_panel_decision, "is_blocked", False):
+            severities.append("HIGH")
+        elif getattr(back_panel_decision, "requires_review", False):
+            severities.append("MEDIUM")
+
+        if getattr(drawer_decision, "is_blocked", False):
+            severities.append("HIGH")
+        elif getattr(drawer_decision, "requires_review", False):
+            severities.append("MEDIUM")
 
         if "HIGH" in severities:
             readiness_status = "BLOCKED"
