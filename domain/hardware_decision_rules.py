@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import replace
 
 from domain.hardware_decision import HardwareCompatibilityStatus, HardwareDecision
+from domain.hardware_decision_semantic_normalization import (
+    normalize_hardware_decision_semantics,
+)
 
 
 def apply_minifix_validation_decision_rule(
@@ -16,34 +19,31 @@ def apply_minifix_validation_decision_rule(
         return replace(decision)
 
     messages = tuple(decision.decision.validation_messages)
-    message_text = " | ".join(messages)
-    lower_messages = tuple(message.lower() for message in messages)
-
-    blocking_markers = ("block", "blocked", "constraint", "invalid", "fail")
-    review_markers = ("warn", "warning", "review", "risk")
-    has_blocking_signal = any(
-        marker in message for message in lower_messages for marker in blocking_markers
-    )
-    has_review_signal = any(
-        marker in message for message in lower_messages for marker in review_markers
+    normalized = normalize_hardware_decision_semantics(
+        {
+            "source_type": "MinifixValidationReport",
+            "source_ref": minifix_refs[0],
+            "semantic_fields": {},
+            "messages": messages,
+        }
     )
 
     compatibility_status = decision.compatibility_status
-    if has_blocking_signal:
+    if normalized.is_blocked or normalized.status == "BLOCKED":
         compatibility_status = HardwareCompatibilityStatus.BLOCKED
-    elif has_review_signal and messages:
+    elif normalized.status in {"WARNING", "NEEDS_REVIEW", "RISK"} and messages:
         compatibility_status = HardwareCompatibilityStatus.NEEDS_REVIEW
 
     quality_impact_note = decision.quality_impact_note
     if messages:
-        quality_impact_note = message_text
+        quality_impact_note = " | ".join(messages)
 
     source_parts = [
         part
         for part in (
             decision.decision.traceability.source_component,
             decision.decision.traceability.source_rule,
-            minifix_refs[0],
+            normalized.source_ref,
         )
         if part
     ]
