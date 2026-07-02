@@ -36,7 +36,9 @@ class ManufacturingOptimizationPipelineBuilder:
         offcut_intelligence_report = OffcutIntelligenceBuilder().build(
             offcut_report
         )
-        waste_intelligence_report = WasteIntelligenceBuilder().build(
+        waste_builder = WasteIntelligenceBuilder()
+        waste_builder.sheet_utilization_report = sheet_utilization_report
+        waste_intelligence_report = waste_builder.build(
             consumption_report,
             cost_estimate,
             offcut_intelligence_report,
