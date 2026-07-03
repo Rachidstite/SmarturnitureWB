@@ -217,6 +217,11 @@ class CabinetBuilder:
         visible_geometry_source = SimpleNamespace(
             graph=self.scene_graph,
             topology=SimpleNamespace(d=self._cabinet.params.depth),
+            manufacturing_production_package=getattr(
+                self._cabinet,
+                "manufacturing_production_package",
+                None,
+            ),
         )
         visible_geometry_plan = build_visible_geometry_plan(visible_geometry_source)
         renderer = SceneRenderer(

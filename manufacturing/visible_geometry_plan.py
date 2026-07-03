@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Iterable
 
 from domain.core_types import NodeCategory, NodeRole
-from domain.system32 import System32Engine
 
 
 @dataclass(frozen=True)
@@ -70,10 +70,19 @@ def _panel_geometry_features(node, project, cabinet_depth):
         features.extend(_back_panel_groove_features(node, cabinet_depth))
         features.extend(_wall_mount_prototype_features(node, cabinet_depth, project))
 
+    features.extend(_edge_banding_features(node, project, cabinet_depth))
+
+    if role in {"SIDE_PANEL", "DIVIDER", "TOP_PANEL", "BOTTOM_PANEL"}:
+        features.extend(_confirmat_features(node, project, cabinet_depth))
+
     if role in {"SIDE_PANEL", "DIVIDER"}:
+        features.extend(_minifix_features(node, project, cabinet_depth))
         features.extend(_side_panel_drilling_features(node, project, cabinet_depth))
         features.extend(_hinge_plate_features(node, project, cabinet_depth))
         features.extend(_drawer_slide_features(node, project, cabinet_depth))
+
+    if role in {"TOP_PANEL", "BOTTOM_PANEL"}:
+        features.extend(_minifix_features(node, project, cabinet_depth))
 
     if role == "DOOR_PANEL":
         features.extend(_hinge_cup_features(node, project, cabinet_depth))
@@ -87,9 +96,130 @@ def _manufacturing_details_for_node(node, project, cabinet_depth):
         return []
 
     features = []
-    features.extend(_confirmat_minifix_features(node, project, cabinet_depth))
     features.extend(_screw_features(node, project, cabinet_depth))
     return features
+
+
+def _edge_banding_features(node, project, cabinet_depth):
+    report = _manufacturing_edge_report(project)
+    if report is None:
+        return []
+
+    report_items = list(getattr(report, "items", None) or [])
+    if not report_items:
+        return []
+
+    node_id = str(getattr(getattr(node, "identity", None), "key", "") or "")
+    relevant_items = [
+        item
+        for item in report_items
+        if str(_report_value(item, "panel_identity", "")) == node_id
+    ]
+    if not relevant_items:
+        return []
+
+    base_x, actual_y, base_z = _panel_world_origin(node, cabinet_depth)
+    width, depth, height = _panel_render_dimensions(node)
+    role = _role_value(node)
+    features = []
+
+    for index, item in enumerate(relevant_items, start=1):
+        edge = str(_report_value(item, "edge", "") or "").upper()
+        banding = str(_report_value(item, "banding", "") or "")
+        strip = _edge_banding_strip_geometry(
+            role,
+            edge,
+            banding,
+            base_x,
+            actual_y,
+            base_z,
+            width,
+            depth,
+            height,
+        )
+        if strip is None:
+            continue
+
+        placement, size = strip
+        features.append(
+            VisibleGeometryFeatureSpec(
+                name=f"{node_id}_Edge_Banding_{index}",
+                kind="edge_banding_strip",
+                node_id=node_id,
+                placement=placement,
+                size=size,
+                color=(0.86, 0.76, 0.46),
+                label=f"{edge} edge banding: {banding}",
+                prototype=False,
+                notes=(edge, banding),
+            )
+        )
+
+    return features
+
+
+def _edge_banding_strip_geometry(
+    role,
+    edge,
+    banding,
+    base_x,
+    actual_y,
+    base_z,
+    width,
+    depth,
+    height,
+):
+    strip_thickness = _edge_banding_thickness(banding)
+    strip_depth = max(strip_thickness, 1.0)
+
+    if role in {"SIDE_PANEL", "DIVIDER"}:
+        if edge != "RIGHT":
+            return None
+        return (
+            (base_x, actual_y + max(depth - strip_depth, 0.0), base_z),
+            (width, strip_depth, height),
+        )
+
+    if role in {"TOP_PANEL", "BOTTOM_PANEL", "SHELF"}:
+        if edge != "RIGHT":
+            return None
+        return (
+            (base_x, actual_y + max(depth - strip_depth, 0.0), base_z),
+            (width, strip_depth, height),
+        )
+
+    if role in {"DOOR_PANEL", "DRAWER_FACE"}:
+        if edge == "TOP":
+            return (
+                (base_x, actual_y, base_z + max(height - strip_depth, 0.0)),
+                (width, depth, strip_depth),
+            )
+        if edge == "BOTTOM":
+            return (
+                (base_x, actual_y, base_z),
+                (width, depth, strip_depth),
+            )
+        if edge == "LEFT":
+            return (
+                (base_x, actual_y, base_z),
+                (strip_depth, depth, height),
+            )
+        if edge == "RIGHT":
+            return (
+                (base_x + max(width - strip_depth, 0.0), actual_y, base_z),
+                (strip_depth, depth, height),
+            )
+        return None
+
+    return None
+
+
+def _edge_banding_thickness(banding):
+    text = str(banding or "").upper()
+    match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*MM", text)
+    if match:
+        return max(float(match.group(1)), 1.0)
+    return 1.0
 
 
 def _back_panel_groove_features(node, cabinet_depth):
@@ -137,40 +267,37 @@ def _back_panel_groove_features(node, cabinet_depth):
 
 
 def _hinge_cup_features(node, project, cabinet_depth):
-    placements = _placements_for_intent(project, "INTENT_HINGE", node.identity.key)
-    if not placements:
-        placements = [
-            {
-                "offset_x": 22.5,
-                "offset_y": offset_y,
-                "prototype": True,
-            }
-            for offset_y in System32Engine.hinge_positions(float(getattr(node, "height", 0.0) or 0.0))
-        ]
+    if _role_value(node) != "DOOR_PANEL":
+        return []
+
+    hinge_ops = _compiled_hinge_ops(node)
+    if not hinge_ops:
+        return []
 
     base_x, actual_y, base_z = _panel_world_origin(node, cabinet_depth)
     width, depth, height = _panel_render_dimensions(node)
     features = []
 
-    for index, placement in enumerate(placements, start=1):
-        offset_x = float(placement["offset_x"])
-        offset_y = float(placement["offset_y"])
-        prototype = bool(placement["prototype"])
+    for index, operation in enumerate(hinge_ops, start=1):
+        local_x = float(getattr(operation, "local_x", 0.0) or 0.0)
+        local_y = float(getattr(operation, "local_y", 0.0) or 0.0)
+        face = str(getattr(operation, "face", "") or "").upper()
         features.append(
             VisibleGeometryFeatureSpec(
                 name=f"{node.identity.key}_Hinge_Cup_Hole_{index}",
                 kind="hinge_cup_hole",
                 node_id=node.identity.key,
                 placement=(
-                    base_x + max(min(offset_x, width - 18.0), 18.0),
+                    base_x + max(min(local_x, width - 18.0), 18.0),
                     actual_y + max(depth - 2.5, 0.0),
-                    base_z + offset_y,
+                    base_z + local_y,
                 ),
                 size=(35.0, 3.0, 35.0),
                 rotation=(90.0, 0.0, 0.0),
                 color=(0.85, 0.75, 0.25),
                 label="Hinge cup drilling",
-                prototype=prototype,
+                prototype=False,
+                notes=(str(getattr(operation, "metadata", {}).get("hardware_intent", "")), face),
             )
         )
 
@@ -178,41 +305,36 @@ def _hinge_cup_features(node, project, cabinet_depth):
 
 
 def _hinge_plate_features(node, project, cabinet_depth):
-    placements = _placements_for_intent(project, "INTENT_HINGE", None)
-    matching = [
-        placement for placement in placements
-        if placement["host_node_id"] == node.identity.key
-    ]
-    if not matching:
-        matching = [
-            {
-                "offset_x": 22.5,
-                "offset_y": offset_y,
-                "prototype": True,
-            }
-            for offset_y in System32Engine.hinge_positions(float(getattr(node, "height", 0.0) or 0.0))
-        ]
+    if _role_value(node) not in {"SIDE_PANEL", "DIVIDER"}:
+        return []
+
+    hinge_ops = _compiled_hinge_ops(node)
+    if not hinge_ops:
+        return []
 
     base_x, actual_y, base_z = _panel_world_origin(node, cabinet_depth)
     width, depth, _height = _panel_render_dimensions(node)
     features = []
 
-    for index, placement in enumerate(matching, start=1):
-        offset_y = float(placement["offset_y"])
+    for index, operation in enumerate(hinge_ops, start=1):
+        local_x = float(getattr(operation, "local_x", 0.0) or 0.0)
+        local_y = float(getattr(operation, "local_y", 0.0) or 0.0)
+        face = str(getattr(operation, "face", "") or "").upper()
         features.append(
             VisibleGeometryFeatureSpec(
                 name=f"{node.identity.key}_Hinge_Plate_Position_{index}",
                 kind="hinge_plate_position",
                 node_id=node.identity.key,
                 placement=(
-                    base_x + max(width - 22.0, 0.0),
-                    actual_y + 2.0,
-                    base_z + offset_y - 8.0,
+                    base_x + local_x,
+                    actual_y + max(depth - 3.0, 0.0),
+                    base_z + local_y,
                 ),
                 size=(18.0, 3.0, 32.0),
                 color=(0.55, 0.55, 0.62),
                 label="Hinge plate location",
-                prototype=bool(placement["prototype"]),
+                prototype=False,
+                notes=(str(getattr(operation, "metadata", {}).get("hardware_intent", "")), face),
             )
         )
 
@@ -263,7 +385,7 @@ def _side_panel_drilling_features(node, project, cabinet_depth):
     return features
 
 
-def _confirmat_minifix_features(node, project, cabinet_depth):
+def _confirmat_features(node, project, cabinet_depth):
     features = []
     for op in getattr(node, "machining_ops", []) or []:
         op_type = str(getattr(op, "op_type", "") or "").upper()
@@ -271,17 +393,66 @@ def _confirmat_minifix_features(node, project, cabinet_depth):
             continue
         metadata = getattr(op, "metadata", None) or {}
         intent = str(metadata.get("hardware_intent", "") or "").upper()
-        if intent not in {"INTENT_MINIFIX_15", "INTENT_CONFIRMAT_50"}:
+        if intent != "INTENT_CONFIRMAT_50":
             continue
+        diameter = float(getattr(op, "diameter", 0.0) or 0.0)
+        depth = float(getattr(op, "depth", 0.0) or 0.0)
+        feature_size = (
+            max(diameter, 5.0),
+            max(depth, 5.0),
+            max(diameter, 5.0),
+        )
         features.extend(
             _feature_from_drill_operation(
                 node,
                 cabinet_depth,
                 op,
-                name_prefix="Fastener_Drill",
+                name_prefix="Confirmat_Drill",
                 color=(0.9, 0.45, 0.15),
-                label="Fastener drilling indication",
+                label="Confirmat drilling indication",
                 prototype=False,
+                kind="confirmat_hole",
+                size=feature_size,
+            )
+        )
+
+    return features
+
+
+def _minifix_features(node, project, cabinet_depth):
+    minifix_ops = []
+    for op in getattr(node, "machining_ops", []) or []:
+        op_type = str(getattr(op, "op_type", "") or "").upper()
+        if op_type != "DRILL":
+            continue
+        metadata = getattr(op, "metadata", None) or {}
+        if str(metadata.get("hardware_intent", "") or "").upper() != "INTENT_MINIFIX_15":
+            continue
+        minifix_ops.append(op)
+
+    if not minifix_ops:
+        return []
+
+    features = []
+    for index, operation in enumerate(minifix_ops, start=1):
+        diameter = float(getattr(operation, "diameter", 0.0) or 0.0)
+        depth = float(getattr(operation, "depth", 0.0) or 0.0)
+        feature_size = (
+            max(diameter, 5.0),
+            max(depth, 5.0),
+            max(diameter, 5.0),
+        )
+        features.extend(
+            _feature_from_drill_operation(
+                node,
+                cabinet_depth,
+                operation,
+                name_prefix=f"Minifix_Drill_{index}",
+                color=(0.72, 0.42, 0.18),
+                label="Minifix drilling indication",
+                prototype=False,
+                kind="minifix_hole",
+                size=feature_size,
             )
         )
 
@@ -400,7 +571,17 @@ def _wall_mount_prototype_features(node, cabinet_depth, project):
     return features
 
 
-def _feature_from_drill_operation(node, cabinet_depth, operation, name_prefix, color, label, prototype):
+def _feature_from_drill_operation(
+    node,
+    cabinet_depth,
+    operation,
+    name_prefix,
+    color,
+    label,
+    prototype,
+    kind="drilling_indicator",
+    size=(5.0, 5.0, 5.0),
+):
     base_x, actual_y, base_z = _panel_world_origin(node, cabinet_depth)
     width, depth, _height = _panel_render_dimensions(node)
     local_x = float(getattr(operation, "local_x", 0.0) or 0.0)
@@ -411,14 +592,14 @@ def _feature_from_drill_operation(node, cabinet_depth, operation, name_prefix, c
     return [
         VisibleGeometryFeatureSpec(
             name=f"{node.identity.key}_{name_prefix}_{int(round(local_y))}",
-            kind="drilling_indicator",
+            kind=kind,
             node_id=node.identity.key,
             placement=(
                 base_x + local_x,
                 actual_y + max(depth - 3.0, 0.0),
                 base_z + local_y,
             ),
-            size=(5.0, 5.0, 5.0),
+            size=size,
             color=color,
             label=label,
             prototype=prototype,
@@ -455,6 +636,41 @@ def _placements(project):
             }
         )
     return placements
+
+
+def _compiled_hinge_ops(node):
+    hinge_ops = []
+    for op in getattr(node, "machining_ops", []) or []:
+        op_type = str(getattr(op, "op_type", "") or "").upper()
+        if op_type != "DRILL":
+            continue
+        metadata = getattr(op, "metadata", None) or {}
+        if str(metadata.get("hardware_intent", "") or "").upper() != "INTENT_HINGE":
+            continue
+        hinge_ops.append(op)
+    return hinge_ops
+
+
+def _manufacturing_edge_report(project):
+    for attribute in (
+        "manufacturing_production_package",
+        "manufacturing_edge_report",
+        "edge_report",
+    ):
+        report = getattr(project, attribute, None)
+        if report is None:
+            continue
+        if attribute == "manufacturing_production_package":
+            report = getattr(report, "edge_report", None)
+        if report is not None:
+            return report
+    return None
+
+
+def _report_value(item, key, default):
+    if isinstance(item, dict):
+        return item.get(key, default)
+    return getattr(item, key, default)
 
 
 def _panel_world_origin(node, cabinet_depth):

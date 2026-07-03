@@ -19,8 +19,10 @@ from core.logging_config import logger
 def process_panel_shape(base_shape, panel_node, features: Iterable, panel_origin=None):
     """Apply supported visible machining features to a panel solid.
 
-    V1 supports production-backed `back_panel_groove` and `shelf_pin_hole`
-    features and leaves all other feature kinds untouched.
+    V1 supports production-backed `back_panel_groove`, `shelf_pin_hole`,
+    `drawer_slide_line`, `hinge_cup_hole`, and `minifix_hole` features and
+    passes through `edge_banding_strip` markers without altering the solid.
+    All other feature kinds are left untouched.
     """
     if base_shape is None:
         return None
@@ -53,6 +55,8 @@ def process_panel_shape(base_shape, panel_node, features: Iterable, panel_origin
 
     processed = base_shape
     for feature in relevant_features:
+        if _feature_kind(feature) == "edge_banding_strip":
+            continue
         tool = _make_feature_tool(feature, origin)
         if tool is None:
             logger.warning(
@@ -107,8 +111,14 @@ def _panel_role(panel_node) -> str:
         return "BACK_PANEL"
     if "SIDE" in panel_key:
         return "SIDE_PANEL"
+    if "TOP" in panel_key:
+        return "TOP_PANEL"
+    if "BOTTOM" in panel_key:
+        return "BOTTOM_PANEL"
     if "DIVIDER" in panel_key:
         return "DIVIDER"
+    if "DOOR" in panel_key:
+        return "DOOR_PANEL"
     return ""
 
 
@@ -122,6 +132,25 @@ def _feature_supported_for_panel(panel_node, feature) -> bool:
         return panel_role in {"SIDE_PANEL", "DIVIDER"}
     if feature_kind == "drawer_slide_line":
         return panel_role == "SIDE_PANEL"
+    if feature_kind == "hinge_plate_position":
+        return panel_role == "SIDE_PANEL"
+    if feature_kind == "hinge_cup_hole":
+        return panel_role == "DOOR_PANEL"
+    if feature_kind == "minifix_hole":
+        return panel_role in {"SIDE_PANEL", "TOP_PANEL", "BOTTOM_PANEL", "DIVIDER"}
+    if feature_kind == "confirmat_hole":
+        return panel_role in {"SIDE_PANEL", "TOP_PANEL", "BOTTOM_PANEL", "DIVIDER"}
+    if feature_kind == "edge_banding_strip":
+        return panel_role in {
+            "SIDE_PANEL",
+            "TOP_PANEL",
+            "BOTTOM_PANEL",
+            "SHELF",
+            "DIVIDER",
+            "DOOR_PANEL",
+            "DRAWER_FACE",
+            "PLINTH",
+        }
     return False
 
 

@@ -269,6 +269,130 @@ class TestSceneRendererPanelShapeProcessorContract(unittest.TestCase):
         panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
         self.assertEqual(panel_obj.Shape.args, ("processed", (18.0, 600.0, 1982.0)))
 
+    def test_top_panel_with_minifix_feature_uses_existing_processor_path(self):
+        renderer, doc = self._make_renderer(
+            [
+                SimpleNamespace(
+                    kind="minifix_hole",
+                    node_id="TOP_PANEL_TEST",
+                    placement=(34.0, 580.0, 0.0),
+                    size=(15.0, 14.0, 15.0),
+                    name="TOP_PANEL_TEST_Minifix_Drill",
+                )
+            ]
+        )
+        node = SimpleNamespace(
+            identity=SimpleNamespace(key="TOP_PANEL_TEST"),
+            role=NodeRole.TOP_PANEL,
+            width=18.0,
+            depth=600.0,
+            height=1982.0,
+            thickness=18.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            group="Carcass",
+        )
+
+        with patch.object(
+            self.renderer,
+            "process_panel_shape",
+            side_effect=lambda base_shape, panel_node, panel_features, panel_origin=None: _FakeShape(
+                ("processed", base_shape.args)
+            ),
+        ) as processor_spy:
+            renderer._render_simple_panel(node)
+
+        processor_spy.assert_called_once()
+        panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
+        self.assertEqual(panel_obj.Shape.args, ("processed", (18.0, 600.0, 1982.0)))
+
+    def test_bottom_panel_with_confirmat_feature_uses_existing_processor_path(self):
+        renderer, doc = self._make_renderer(
+            [
+                SimpleNamespace(
+                    kind="confirmat_hole",
+                    node_id="BOTTOM_PANEL_TEST",
+                    placement=(0.0, 50.0, 0.0),
+                    size=(7.0, 18.0, 7.0),
+                    name="BOTTOM_PANEL_TEST_Confirmat_Drill",
+                )
+            ]
+        )
+        node = SimpleNamespace(
+            identity=SimpleNamespace(key="BOTTOM_PANEL_TEST"),
+            role=NodeRole.BOTTOM_PANEL,
+            width=18.0,
+            depth=600.0,
+            height=1982.0,
+            thickness=18.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            group="Carcass",
+        )
+
+        with patch.object(
+            self.renderer,
+            "process_panel_shape",
+            side_effect=lambda base_shape, panel_node, panel_features, panel_origin=None: _FakeShape(
+                ("processed", base_shape.args)
+            ),
+        ) as processor_spy:
+            renderer._render_simple_panel(node)
+
+        processor_spy.assert_called_once()
+        panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
+        self.assertEqual(panel_obj.Shape.args, ("processed", (18.0, 600.0, 1982.0)))
+
+    def test_door_panel_with_hinge_feature_uses_existing_processor_path(self):
+        renderer, doc = self._make_renderer(
+            [
+                SimpleNamespace(
+                    kind="hinge_cup_hole",
+                    node_id="DOOR_PANEL_TEST",
+                    placement=(22.5, 1.5, 633.3333333333334),
+                    size=(35.0, 3.0, 35.0),
+                    name="DOOR_PANEL_TEST_Hinge_Cup",
+                )
+            ]
+        )
+        renderer.mat.mdf_thickness = 18.0
+        node = SimpleNamespace(
+            identity=SimpleNamespace(key="DOOR_PANEL_TEST"),
+            role=NodeRole.DOOR_PANEL,
+            width=500.0,
+            depth=18.0,
+            height=1800.0,
+            thickness=18.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            group="Doors",
+            metadata=SimpleNamespace(
+                door_type="OVERLAY",
+                cnc_enabled=False,
+                hinge_side="LEFT",
+                layer=0,
+            ),
+        )
+
+        with patch.object(
+            self.renderer,
+            "process_panel_shape",
+            side_effect=lambda base_shape, panel_node, panel_features, panel_origin=None: _FakeShape(
+                ("processed", base_shape.args)
+            ),
+        ) as processor_spy:
+            self.renderer._door_strategy(node, renderer)
+
+        processor_spy.assert_called_once()
+        panel_obj = next(
+            obj for obj in doc.Objects
+            if isinstance(obj, _FakeObject) and obj.Name == "DOOR_PANEL_TEST"
+        )
+        self.assertEqual(panel_obj.Shape.args, ("processed", (500.0, 18.0, 1800.0)))
+
     def test_non_back_panel_unsupported_features_preserve_shape(self):
         renderer, doc = self._make_renderer(
             [

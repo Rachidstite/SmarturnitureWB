@@ -63,23 +63,51 @@ class TestVisualEngineeringMetadata(unittest.TestCase):
         self.assertEqual(metadata.material_label, "MDF_18MM")
 
     def test_edge_banding_metadata_can_be_carried(self):
-        from manufacturing.edge_spec import EdgeSpec
+        from manufacturing.manufacturing_edge_report import (
+            ManufacturingEdgeReport,
+        )
         from scene_graph.renderer import SceneRenderer
 
         node = SimpleNamespace(
             identity=SimpleNamespace(key="SHELF-1"),
             material="MDF_18MM",
-            edge_spec=EdgeSpec(top="ABS_1MM", right="PVC_2MM"),
+            edge_spec=SimpleNamespace(all_banded=lambda: {"TOP": "ABS_1MM"}),
             edge_bandings="",
+            metadata={},
+        )
+
+        metadata = SceneRenderer.resolve_visual_metadata(
+            node,
+            manufacturing_edge_report=ManufacturingEdgeReport(
+                items=[
+                    {
+                        "panel_identity": "SHELF-1",
+                        "edge": "TOP",
+                        "banding": "ABS_1MM",
+                    }
+                ]
+            ),
+        )
+
+        self.assertEqual(
+            [(item.side, item.banding) for item in metadata.edge_banding],
+            [("TOP", "ABS_1MM")],
+        )
+
+    def test_edge_banding_requires_manufacturing_evidence(self):
+        from scene_graph.renderer import SceneRenderer
+
+        node = SimpleNamespace(
+            identity=SimpleNamespace(key="SHELF-1"),
+            material="MDF_18MM",
+            edge_spec=SimpleNamespace(all_banded=lambda: {"TOP": "ABS_1MM"}),
+            edge_bandings="ABS_1MM",
             metadata={},
         )
 
         metadata = SceneRenderer.resolve_visual_metadata(node)
 
-        self.assertEqual(
-            [(item.side, item.banding) for item in metadata.edge_banding],
-            [("TOP", "ABS_1MM"), ("RIGHT", "PVC_2MM")],
-        )
+        self.assertEqual(metadata.edge_banding, ())
 
     def test_drill_hole_markers_can_be_carried_from_cnc_evidence(self):
         from manufacturing.cnc_report import CNCReport, CNCReportRow

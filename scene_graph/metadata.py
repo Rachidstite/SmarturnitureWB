@@ -88,11 +88,15 @@ def build_visual_metadata(
     node,
     *,
     cnc_report=None,
+    manufacturing_edge_report=None,
     hardware_bom=None,
     assembly_report=None,
 ) -> VisualMetadata:
     panel_identity = _panel_identity(node)
-    edge_banding = _edge_banding_from_node(node)
+    edge_banding = _edge_banding_from_report(
+        panel_identity,
+        manufacturing_edge_report,
+    )
     drill_holes = _drill_holes_from_cnc(panel_identity, cnc_report)
     grooves = _grooves_from_node(panel_identity, node)
     hardware_markers = _hardware_markers_from_reports(
@@ -117,29 +121,24 @@ def _panel_identity(node) -> str:
     return str(getattr(getattr(node, "identity", None), "key", "") or "")
 
 
-def _edge_banding_from_node(node) -> tuple[EdgeBandVisual, ...]:
-    edge_spec = getattr(node, "edge_spec", None)
-    if edge_spec is not None and hasattr(edge_spec, "all_banded"):
-        return tuple(
+def _edge_banding_from_report(panel_identity: str, manufacturing_edge_report) -> tuple[EdgeBandVisual, ...]:
+    rows = getattr(manufacturing_edge_report, "items", None) or []
+    visuals = []
+    for row in rows:
+        if panel_identity and str(_metadata_value(row, "panel_identity", "") or "") != panel_identity:
+            continue
+        edge = str(_metadata_value(row, "edge", "") or "").upper()
+        banding = str(_metadata_value(row, "banding", "") or "")
+        if not edge and not banding:
+            continue
+        visuals.append(
             EdgeBandVisual(
-                side=str(side or ""),
-                banding=str(banding or ""),
-                label=f"{side} edge: {banding}",
+                side=edge,
+                banding=banding,
+                label=f"{edge} edge: {banding}" if edge else banding,
             )
-            for side, banding in (edge_spec.all_banded() or {}).items()
         )
-
-    edge_bandings = str(getattr(node, "edge_bandings", "") or "").strip()
-    if not edge_bandings:
-        return ()
-
-    return (
-        EdgeBandVisual(
-            side="",
-            banding=edge_bandings,
-            label=edge_bandings,
-        ),
-    )
+    return tuple(visuals)
 
 
 def _drill_holes_from_cnc(panel_identity: str, cnc_report) -> tuple[DrillHoleVisual, ...]:

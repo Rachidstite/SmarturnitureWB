@@ -70,12 +70,14 @@ class SceneRenderer:
         node,
         *,
         cnc_report=None,
+        manufacturing_edge_report=None,
         hardware_bom=None,
         assembly_report=None,
     ):
         return build_visual_metadata(
             node,
             cnc_report=cnc_report,
+            manufacturing_edge_report=manufacturing_edge_report,
             hardware_bom=hardware_bom,
             assembly_report=assembly_report,
         )
@@ -280,7 +282,13 @@ class SceneRenderer:
         name = node.identity.key
         obj = self.doc.addObject("Part::Feature", name)
         base_shape = Part.makeBox(node.width, node.depth, node.height)
-        if node.role in (NodeRole.BACK_PANEL, NodeRole.SIDE_PANEL, NodeRole.DIVIDER):
+        if node.role in (
+            NodeRole.BACK_PANEL,
+            NodeRole.SIDE_PANEL,
+            NodeRole.TOP_PANEL,
+            NodeRole.BOTTOM_PANEL,
+            NodeRole.DIVIDER,
+        ):
             obj.Shape = process_panel_shape(
                 base_shape,
                 node,
@@ -363,7 +371,7 @@ def _door_strategy(node, renderer):
     door_type_str = meta.door_type.replace("_", " ").title()
     cnc = renderer.cnc_engine if meta.cnc_enabled else None
     hw_b = renderer.hw
-    DoorBuilder.build(
+    door_obj = DoorBuilder.build(
         renderer.doc, renderer.groups[node.group], node.identity.key,
         node.width, node.height,
         node.x, node.y, node.z,
@@ -373,6 +381,16 @@ def _door_strategy(node, renderer):
         meta.layer,
         hinge_offsets=renderer.hinge_offsets_for(node.identity.key) or None
     )
+
+    if door_obj is not None and hasattr(door_obj, "Shape") and renderer.panel_features:
+        processed_shape = process_panel_shape(
+            door_obj.Shape,
+            node,
+            renderer.panel_features,
+            panel_origin=(node.x, node.y, node.z),
+        )
+        if processed_shape is not None:
+            door_obj.Shape = processed_shape
 
 def _shelf_strategy(node, renderer):
     renderer._render_simple_panel(node)

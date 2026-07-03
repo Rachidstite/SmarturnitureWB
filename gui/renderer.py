@@ -142,7 +142,12 @@ class GeometryRenderer:
         size = getattr(feature, "size", (0.0, 0.0, 0.0))
         sx, sy, sz = (float(size[0]), float(size[1]), float(size[2]))
 
-        if kind in {"back_panel_groove", "drawer_slide_line", "wall_mount_prototype"}:
+        if kind in {
+            "back_panel_groove",
+            "drawer_slide_line",
+            "edge_banding_strip",
+            "wall_mount_prototype",
+        }:
             return Part.makeBox(max(sx, 0.1), max(sy, 0.1), max(sz, 0.1))
 
         if kind in {"hinge_plate_position"}:
