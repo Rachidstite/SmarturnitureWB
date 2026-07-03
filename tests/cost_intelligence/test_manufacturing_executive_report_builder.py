@@ -313,6 +313,49 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
         self.assertEqual(report.production_readiness_status, "READY_WITH_WARNINGS")
         self.assertEqual(report.overall_management_status, "MONITOR")
 
+    def test_governance_recommendations_are_derived_from_kpi_management_statuses(self):
+        kpi_report, readiness_report, optimization_result = self._inputs()
+        kpi_report.project_profitability_status = "LOW"
+        kpi_report.material_efficiency_status = "STABLE"
+        kpi_report.waste_risk_status = "HIGH"
+        kpi_report.bottleneck_status = "HIGH"
+        kpi_report.production_readiness_status = "READY_WITH_WARNINGS"
+        kpi_report.overall_management_status = "ACTION_REQUIRED"
+
+        report = self.builder.build(
+            kpi_report,
+            readiness_report,
+            optimization_result,
+        )
+
+        self.assertEqual(
+            report.governance_primary_recommendation,
+            "Delay production release until readiness issues are cleared",
+        )
+        self.assertEqual(
+            report.governance_secondary_recommendations,
+            [
+                "Review quotation pricing",
+                "Reschedule production around bottlenecks",
+                "Review nesting and material usage",
+                "Review material efficiency before release",
+            ],
+        )
+
+    def test_existing_executive_recommendations_remain_unchanged(self):
+        kpi_report, readiness_report, optimization_result = self._inputs()
+        kpi_report.project_profitability_status = "LOW"
+        kpi_report.waste_risk_status = "HIGH"
+        kpi_report.production_readiness_status = "READY_WITH_WARNINGS"
+
+        report = self.builder.build(
+            kpi_report,
+            readiness_report,
+            optimization_result,
+        )
+
+        self.assertEqual(report.recommendations, ["Review nesting"])
+
     def test_builder_does_not_recompute_management_status_fields(self):
         from cost_intelligence.manufacturing_executive_report_builder import (
             ManufacturingExecutiveReportBuilder,
@@ -336,6 +379,7 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
             "manufacturing_kpi_report.bottleneck_status",
             "manufacturing_kpi_report.production_readiness_status",
             "manufacturing_kpi_report.overall_management_status",
+            "management_status_source=manufacturing_kpi_report",
         ):
             self.assertIn(mapping, source)
 

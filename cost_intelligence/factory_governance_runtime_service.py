@@ -32,11 +32,17 @@ class FactoryGovernanceRuntimeService:
         "REJECTED": "Stop release and do not manufacture",
     }
 
-    def build(self, context: FactoryGovernancePolicyContext, factory_bottleneck=""):
+    def build(
+        self,
+        context: FactoryGovernancePolicyContext,
+        factory_bottleneck="",
+        management_status_source=None,
+    ):
         policy_report = FactoryGovernancePolicyBuilder().build(context)
         recommendation_report = FactoryGovernanceRecommendationBuilder().build(
             policy_report,
             FactoryGovernanceAuthorityReport(),
+            management_status_source=management_status_source,
         )
         manufacturing_recommendation_report = self._build_manufacturing_recommendation(
             policy_report.reason_code,

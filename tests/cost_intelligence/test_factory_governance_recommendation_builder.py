@@ -1,10 +1,16 @@
 import inspect
+from types import SimpleNamespace
 import unittest
 
 
 class TestFactoryGovernanceRecommendationBuilder(unittest.TestCase):
 
-    def _build(self, policy_kwargs=None, authority_kwargs=None):
+    def _build(
+        self,
+        policy_kwargs=None,
+        authority_kwargs=None,
+        management_status_source=None,
+    ):
         from cost_intelligence.factory_governance_authority_report import (
             FactoryGovernanceAuthorityReport,
         )
@@ -22,6 +28,7 @@ class TestFactoryGovernanceRecommendationBuilder(unittest.TestCase):
         return FactoryGovernanceRecommendationBuilder().build(
             policy_report,
             authority_report,
+            management_status_source=management_status_source,
         )
 
     def test_builder_exists(self):
@@ -134,6 +141,128 @@ class TestFactoryGovernanceRecommendationBuilder(unittest.TestCase):
         for token in forbidden:
             with self.subTest(token=token):
                 self.assertNotIn(token, source)
+
+    def test_management_status_recommendations_are_deterministic(self):
+        report = self._build(
+            {"reason_code": "POLICY_CLEAR"},
+            {"winning_signal": "POLICY_CLEAR"},
+            management_status_source=SimpleNamespace(
+                project_profitability_status="LOW",
+                material_efficiency_status="STABLE",
+                waste_risk_status="HIGH",
+                bottleneck_status="HIGH",
+                production_readiness_status="READY_WITH_WARNINGS",
+                overall_management_status="MONITOR",
+            ),
+        )
+
+        self.assertEqual(
+            report.primary_recommendation,
+            "Delay production release until readiness issues are cleared",
+        )
+        self.assertEqual(report.urgency, "HIGH")
+        self.assertEqual(
+            report.secondary_recommendations,
+            [
+                "Review quotation pricing",
+                "Reschedule production around bottlenecks",
+                "Review nesting and material usage",
+                "Review material efficiency before release",
+            ],
+        )
+
+    def test_management_status_recommendations_extend_existing_signal_without_replacing_it(self):
+        report = self._build(
+            {"reason_code": "LOW_MARGIN"},
+            {"winning_signal": "LOW_MARGIN"},
+            management_status_source=SimpleNamespace(
+                project_profitability_status="LOW",
+                material_efficiency_status="STABLE",
+                waste_risk_status="HIGH",
+                bottleneck_status="UNKNOWN",
+                production_readiness_status="READY",
+                overall_management_status="MONITOR",
+            ),
+        )
+
+        self.assertEqual(report.primary_recommendation, "Increase quotation price")
+        self.assertEqual(
+            report.secondary_recommendations,
+            [
+                "Reduce material waste",
+                "Review hardware selection",
+                "Review quotation pricing",
+                "Review nesting and material usage",
+                "Review material efficiency before release",
+            ],
+        )
+
+    def test_highest_priority_management_status_becomes_primary(self):
+        report = self._build(
+            {"reason_code": "POLICY_CLEAR"},
+            {"winning_signal": "POLICY_CLEAR"},
+            management_status_source=SimpleNamespace(
+                project_profitability_status="LOW",
+                material_efficiency_status="STABLE",
+                waste_risk_status="HIGH",
+                bottleneck_status="HIGH",
+                production_readiness_status="BLOCKED",
+                overall_management_status="ACTION_REQUIRED",
+            ),
+        )
+
+        self.assertEqual(
+            report.primary_recommendation,
+            "Delay production release until readiness issues are cleared",
+        )
+
+    def test_duplicate_recommendations_are_removed(self):
+        from cost_intelligence.factory_governance_recommendation_builder import (
+            FactoryGovernanceRecommendationBuilder,
+        )
+
+        deduped = FactoryGovernanceRecommendationBuilder._dedupe_recommendations(
+            [
+                "Review quotation pricing",
+                "Review quotation pricing",
+                "Review nesting and material usage",
+                "Review nesting and material usage",
+            ]
+        )
+
+        self.assertEqual(
+            deduped,
+            [
+                "Review quotation pricing",
+                "Review nesting and material usage",
+            ],
+        )
+
+    def test_builder_reuses_status_fields_without_recomputing_kpis(self):
+        from cost_intelligence.factory_governance_recommendation_builder import (
+            FactoryGovernanceRecommendationBuilder,
+        )
+
+        source = inspect.getsource(FactoryGovernanceRecommendationBuilder)
+        for helper_name in (
+            "_profitability_status",
+            "_material_efficiency_status",
+            "_waste_risk_status",
+            "_overall_management_status",
+        ):
+            self.assertFalse(
+                hasattr(FactoryGovernanceRecommendationBuilder, helper_name)
+            )
+
+        self.assertIn("_build_management_recommendations(", source)
+        for field_name in (
+            '"project_profitability_status"',
+            '"material_efficiency_status"',
+            '"waste_risk_status"',
+            '"bottleneck_status"',
+            '"production_readiness_status"',
+        ):
+            self.assertIn(field_name, source)
 
     def test_existing_runtime_behavior_unchanged(self):
         from cost_intelligence.factory_decision_builder import FactoryDecisionBuilder

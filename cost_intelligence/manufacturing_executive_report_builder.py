@@ -117,6 +117,7 @@ class ManufacturingExecutiveReportBuilder:
                 if factory_decision_report
                 else ""
             ),
+            management_status_source=manufacturing_kpi_report,
         )
 
         report = ManufacturingExecutiveReport(
