@@ -159,13 +159,13 @@ The following repository objects map to domain concepts:
 - `WallMountCapability`
   - an existing extension vocabulary for mounting semantics
 - `ManufacturingCommercialResult`
-  - the canonical runtime commercial contract
+  - a legacy internal runtime commercial aggregate
 - `FactoryReleasePackage`
   - the factory-release evidence contract
 - `CostPackageReport`
   - the passive cost foundation report
 - `CommercialPackageReport`
-  - the passive commercial foundation report
+  - the official downstream Commercial boundary
 - `CustomerPackageReport`
   - the passive customer-facing foundation report
 
@@ -174,7 +174,8 @@ Clarifications supported by repository evidence:
 - `BaseCabinetSpecification` is a specialized engineering contract.
 - `CabinetParams` is an execution-oriented contract.
 - `WallMountCapability` is existing extension vocabulary.
-- `ManufacturingCommercialResult` is the canonical runtime commercial contract.
+- `ManufacturingCommercialResult` remains an internal legacy aggregate.
+- `CommercialPackageReport` is the official downstream Commercial boundary.
 
 ## 9. Boundary Rules
 

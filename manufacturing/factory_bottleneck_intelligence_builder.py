@@ -5,7 +5,7 @@ from manufacturing.factory_bottleneck_intelligence_report import (
 
 class FactoryBottleneckIntelligenceBuilder:
 
-    def build(self, factory_load_report):
+    def build(self, factory_load_report, production_schedule_report=None):
         bottleneck = factory_load_report.bottleneck
 
         load_percent_map = {
@@ -22,6 +22,17 @@ class FactoryBottleneckIntelligenceBuilder:
         else:
             severity = "LOW"
 
+        schedule_risk_level = getattr(
+            production_schedule_report,
+            "schedule_risk_level",
+            "LOW",
+        )
+        if schedule_risk_level == "HIGH":
+            if severity == "LOW":
+                severity = "MEDIUM"
+            elif severity == "MEDIUM":
+                severity = "HIGH"
+
         if severity == "HIGH":
             impact = "DELIVERY_RISK"
         elif severity == "MEDIUM":
@@ -37,6 +48,14 @@ class FactoryBottleneckIntelligenceBuilder:
         recommendation = recommendation_map.get(
             bottleneck, "No bottleneck detected"
         )
+        if (
+            schedule_risk_level == "HIGH"
+            and bottleneck
+            and recommendation != "No bottleneck detected"
+        ):
+            recommendation = (
+                f"{recommendation}; review production schedule for {bottleneck}"
+            )
 
         return FactoryBottleneckIntelligenceReport(
             bottleneck=bottleneck,

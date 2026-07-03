@@ -1,5 +1,5 @@
 # ADR-0012
-Canonical Output Contract
+Canonical Commercial Output Contract
 
 ## Status
 
@@ -122,38 +122,45 @@ cost-relevant evidence available from `FactoryReleasePackage`.
 
 ## Decision
 
-Canonical Runtime Contract:
+Official downstream Commercial boundary:
+
+- `CommercialPackageReport`
+
+Internal commercial read models:
 
 - `ManufacturingCommercialResult`
-
-Derived runtime report:
-
+- `ManufacturingQuotationInput`
 - `QuotationReport`
+- `ProfitabilityReport`
+- `QuotationIntelligenceReport`
+- `QuotationBreakdownReport`
 
 Export artifact:
 
 - `QuotationDocumentV1`
 
-Foundation components:
+Upstream cost boundary inputs:
 
+- `ManufacturingCostSummary`
 - `CostPackageReport`
-- `CommercialPackageReport`
 
 Customer artifact:
 
 - `CustomerPackageReport`
 
-Internal DTOs:
-
-- `ManufacturingQuotationInput`
-- `ManufacturingCostSummary`
-
 ## Rationale
 
-`ManufacturingCommercialResult` is the canonical runtime contract because it is
-the richest semantic representation produced by the full product workflow after
-commercial processing. Repository evidence shows that it carries the runtime
-commercial state required for downstream work:
+`CommercialPackageReport` is the official downstream Commercial boundary
+because it is the narrowest passive contract intentionally shaped for
+cross-layer consumption after Commercial processing. Repository evidence shows
+that it is built from `CostPackageReport`, contains only commercial summary
+state, and is already consumed by the customer-output path without importing
+manufacturing, optimization, or factory-runtime concerns.
+
+`ManufacturingCommercialResult` remains a supported internal runtime aggregate.
+It is still useful inside legacy bridges and Business Intelligence assembly, but
+it is too rich to be the long-term public downstream surface because it carries
+multiple internal read models:
 
 - cost summary
 - quotation input
@@ -161,9 +168,10 @@ commercial state required for downstream work:
 - profitability
 - quotation intelligence
 
-`QuotationReport` is narrower than `ManufacturingCommercialResult` and is
-produced inside the commercial runtime pipeline. It is therefore a derived
-runtime report, not the primary workflow handoff.
+`QuotationReport`, `ProfitabilityReport`, `QuotationIntelligenceReport`, and
+`QuotationBreakdownReport` remain internal commercial read models. They are
+valid supported objects, but they should not be treated as the single public
+downstream Commercial boundary.
 
 `QuotationDocumentV1` must remain a derived export artifact because repository
 evidence shows it is created by transforming `QuotationReport` together with
@@ -176,23 +184,27 @@ the full product workflow produces `ManufacturingCommercialResult` and
 `QuotationDocumentV1`. The customer package foundation therefore exists on a
 separate downstream path.
 
-`CostPackageReport` and `CommercialPackageReport` remain foundation components
-because they are produced by passive builders over narrower upstream contracts:
+`CostPackageReport` and `CommercialPackageReport` remain the supported passive
+foundation path because they are produced by passive builders over narrower
+upstream contracts:
 
 - `FactoryReleasePackage -> CostPackageReport`
 - `CostPackageReport -> CommercialPackageReport`
 
-They are valid supported artifacts, but they are not the canonical runtime
-handoff of the full product workflow.
+This path is now the official downstream Commercial surface.
 
 ## Consequences
 
-Future integrations should consume `ManufacturingCommercialResult`.
+Future downstream integrations should consume `CommercialPackageReport`.
 
-Quotation, PDF, Excel, REST, SaaS, and customer-facing exports should derive
-from the canonical runtime contract instead of becoming peer runtime contracts.
+Quotation, PDF, Excel, REST, SaaS, and customer-facing exports should either:
 
-The foundation path remains supported but is not the runtime workflow handoff.
+- derive from internal commercial read models inside the Commercial layer, or
+- consume `CommercialPackageReport` as the official downstream boundary.
+
+`ManufacturingCommercialResult` remains supported for backward compatibility,
+but it is an internal runtime aggregate rather than the official public
+downstream Commercial contract.
 
 ## Deferred Technical Debt
 

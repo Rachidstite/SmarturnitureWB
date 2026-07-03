@@ -78,7 +78,8 @@ The repository currently verifies the following:
 - Base Cabinet is the executable product family
 - Wall Cabinet and Tall Cabinet exist as catalog data only
 - `docs/architecture/Architecture_Baseline_v1.md` exists
-- `ManufacturingCommercialResult` is the canonical runtime commercial contract
+- `CommercialPackageReport` is the official downstream Commercial boundary
+- `ManufacturingCommercialResult` remains a legacy internal runtime commercial aggregate
 
 ## 6. Product Governance
 

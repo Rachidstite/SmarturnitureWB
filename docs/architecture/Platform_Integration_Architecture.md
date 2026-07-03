@@ -174,11 +174,11 @@ These layers are supported by existing repository contracts and application entr
   - `cost_intelligence/manufacturing_commercial_pipeline_builder.py`
   - `cost_intelligence/manufacturing_commercial_result.py`
 - **Inputs**: cost package / manufacturing cost evidence.
-- **Outputs**: commercial package reports and `ManufacturingCommercialResult`.
+- **Outputs**: `CommercialPackageReport` as the official downstream boundary, plus internal runtime commercial reports.
 - **Downstream consumer**: quotation and customer output derivation.
 - **Upstream dependency**: cost.
 - **Business responsibility**: produce commercial intelligence and pricing-related output.
-- **Current maturity**: stable as a downstream contract; `ManufacturingCommercialResult` is the canonical runtime commercial contract.
+- **Current maturity**: stable as a downstream contract; `CommercialPackageReport` is the official downstream Commercial boundary, while `ManufacturingCommercialResult` remains an internal legacy aggregate.
 - **Extension points**: derived reporting and export use cases.
 
 ### Quotation
@@ -194,7 +194,7 @@ These layers are supported by existing repository contracts and application entr
 - **Downstream consumer**: customer-facing document export.
 - **Upstream dependency**: commercial output.
 - **Business responsibility**: present commercial output in quotation form.
-- **Current maturity**: stable and derived from the canonical runtime commercial contract.
+- **Current maturity**: stable and derived from internal commercial read models and quotation metadata; it remains an export artifact, not the public downstream Commercial boundary.
 - **Extension points**: export formats and document rendering.
 
 ### Customer Outputs
