@@ -5,9 +5,13 @@ from core.logging_config import logger
 class PanelOperationEngine:
 
     @staticmethod
-    def generate(scene_graph):
+    def generate(scene_graph, hardware_profile=None):
 
         panel_ops = {}
+        if hardware_profile is None:
+            from domain.rules_engine import RuleContext
+
+            hardware_profile = dict(RuleContext().hardware_profile or {})
 
         assembly = AssemblyGraphBuilder.build(
             scene_graph
@@ -31,7 +35,8 @@ class PanelOperationEngine:
 
             ops = JointOperationGenerator.minifix_joint(
                 parent_node,
-                child_node
+                child_node,
+                hardware_profile=hardware_profile,
             )
 
             panel_ops.setdefault(

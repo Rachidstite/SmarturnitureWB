@@ -10,6 +10,7 @@ class HardwareOperationAdapter:
 
         for hole in list(hole_specs or []):
             face = hole.face.value if hasattr(hole.face, "value") else hole.face
+            metadata = dict(getattr(hole, "metadata", None) or {})
 
             if hole.axis == "X" or face in ("LEFT", "RIGHT"):
                 operations.append(
@@ -19,6 +20,7 @@ class HardwareOperationAdapter:
                         diameter=hole.diameter,
                         depth=hole.depth,
                         edge=face,
+                        metadata=metadata,
                     )
                 )
             else:
@@ -29,6 +31,7 @@ class HardwareOperationAdapter:
                         diameter=hole.diameter,
                         depth=hole.depth,
                         face=face,
+                        metadata=metadata,
                     )
                 )
 

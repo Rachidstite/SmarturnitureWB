@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from dataclasses import field
 
 class ManufacturingOperation:
     """الفئة الأساسية لكل العمليات التصنيعية"""
@@ -11,6 +12,7 @@ class FaceDrill(ManufacturingOperation):
     diameter: float
     depth: float
     face: str  # "TOP", "BOTTOM", "FRONT", "BACK", "LEFT", "RIGHT"
+    metadata: dict = field(default_factory=dict)
 
 @dataclass(frozen=True)
 class EdgeDrill(ManufacturingOperation):
@@ -19,6 +21,7 @@ class EdgeDrill(ManufacturingOperation):
     diameter: float
     depth: float
     edge: str  # "LEFT", "RIGHT", "TOP", "BOTTOM"
+    metadata: dict = field(default_factory=dict)
 
 @dataclass(frozen=True)
 class Groove(ManufacturingOperation):
@@ -28,3 +31,4 @@ class Groove(ManufacturingOperation):
     depth: float
     length: float
     face: str
+    metadata: dict = field(default_factory=dict)
