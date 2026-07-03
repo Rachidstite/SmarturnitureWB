@@ -44,10 +44,10 @@ class TestBaseCabinetMaterialResolutionDiagnostic(unittest.TestCase):
         )
 
         manufacturing_package = manufacturing_result.data["manufacturing_package"]
+        self.assertGreater(len(manufacturing_package.materials), 0)
         self.assertEqual(
-            manufacturing_package.materials,
-            [],
-            "Manufacturing runtime currently drops the engineering material list.",
+            [material.name for material in manufacturing_package.materials],
+            ["MDF_MR_18MM", "HDF_3MM"],
         )
         self.assertTrue(manufacturing_package.machining_operations)
         self.assertTrue(
@@ -58,7 +58,7 @@ class TestBaseCabinetMaterialResolutionDiagnostic(unittest.TestCase):
             ),
             "Base cabinet runtime machining ops should preserve hardware identity.",
         )
-        self.assertIn(
+        self.assertNotIn(
             "No materials",
             manufacturing_result.data["manufacturing_decision"].warning_reasons,
         )

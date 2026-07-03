@@ -67,11 +67,18 @@ class TestManufacturingRuntimePipelineBuilder(unittest.TestCase):
         panel_specs = [
             self._panel(
                 cnc_operations=[first_cnc_operation],
+                material="MDF_18",
                 edge_spec=EdgeSpec(top="ABS_1MM", right="PVC_2MM"),
             ),
             self._panel(
                 cnc_operations=[second_cnc_operation],
+                material="MDF_18",
                 edge_spec=EdgeSpec(bottom="ABS_1MM"),
+            ),
+            self._panel(
+                cnc_operations=[],
+                material="HDF_3",
+                edge_spec=EdgeSpec(),
             ),
         ]
         scene_graph = object()
@@ -92,7 +99,10 @@ class TestManufacturingRuntimePipelineBuilder(unittest.TestCase):
         package_builder_class.return_value.build.assert_called_once()
         build_kwargs = package_builder_class.return_value.build.call_args.kwargs
         self.assertIs(build_kwargs["panels"], panel_specs)
-        self.assertEqual(build_kwargs["materials"], [])
+        self.assertEqual(
+            [material.name for material in build_kwargs["materials"]],
+            ["MDF_MR_18MM", "HDF_3MM"],
+        )
         self.assertTrue(
             all(
                 isinstance(operation, UnifiedManufacturingOperation)
@@ -179,12 +189,13 @@ class TestManufacturingRuntimePipelineBuilder(unittest.TestCase):
         self.assertEqual(scene_graph._identity_map, {})
 
     @staticmethod
-    def _panel(cnc_operations, edge_spec):
+    def _panel(cnc_operations, edge_spec, material="MDF_18"):
         from types import SimpleNamespace
 
         return SimpleNamespace(
             cnc_operations=cnc_operations,
             edge_spec=edge_spec,
+            material=material,
         )
 
     @staticmethod

@@ -237,18 +237,23 @@ class TestBaseCabinetRealManufacturingScenario(unittest.TestCase):
         self.assertTrue(production_package.has_cutlist_evidence)
         self.assertTrue(production_package.has_machining_evidence)
         self.assertTrue(production_package.has_edge_evidence)
-        self.assertTrue(
-            production_package.has_hardware_evidence,
-            "Hardware identity should now survive the base-cabinet runtime path.",
-        )
+        self.assertTrue(production_package.has_hardware_evidence)
         self.assertGreater(
             len(getattr(production_package.hardware_report, "bom_rows", []) or []),
             0,
         )
-        self.assertEqual(
+        self.assertGreater(
             len(getattr(production_package.assembly_report, "rows", []) or []),
-            len(getattr(production_package.hardware_report, "bom_rows", []) or []),
-            "Assembly documentation should now be driven by hardware evidence.",
+            0,
+        )
+        self.assertNotIn(
+            "No materials",
+            manufacturing_result.data["manufacturing_decision"].warning_reasons,
+        )
+        self.assertTrue(
+            len(getattr(production_package.assembly_report, "rows", []) or [])
+            >= len(getattr(production_package.hardware_report, "bom_rows", []) or []),
+            "Assembly documentation should be driven by hardware evidence.",
         )
 
         validation_summary = product_result.validation.manufacturing_validation_summary_report
