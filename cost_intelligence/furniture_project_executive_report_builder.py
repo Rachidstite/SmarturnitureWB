@@ -38,4 +38,18 @@ class FurnitureProjectExecutiveReportBuilder:
             recovery_score=manufacturing_executive_report.recovery_score,
             warnings=warnings,
             recommendations=recommendations,
+            project_profitability_status=(
+                manufacturing_executive_report.project_profitability_status
+            ),
+            material_efficiency_status=(
+                manufacturing_executive_report.material_efficiency_status
+            ),
+            waste_risk_status=manufacturing_executive_report.waste_risk_status,
+            bottleneck_status=manufacturing_executive_report.bottleneck_status,
+            production_readiness_status=(
+                manufacturing_executive_report.production_readiness_status
+            ),
+            overall_management_status=(
+                manufacturing_executive_report.overall_management_status
+            ),
         )

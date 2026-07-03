@@ -1,5 +1,6 @@
 import unittest
 from dataclasses import fields, is_dataclass
+import inspect
 
 
 class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
@@ -36,6 +37,12 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
                 "reason_code",
                 "warnings",
                 "recommendations",
+                "project_profitability_status",
+                "material_efficiency_status",
+                "waste_risk_status",
+                "bottleneck_status",
+                "production_readiness_status",
+                "overall_management_status",
             ],
         )
 
@@ -113,6 +120,12 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
         self.assertEqual(report.utilization_rate, 0.75)
         self.assertEqual(report.waste_rate, 0.25)
         self.assertEqual(report.recovery_score, 60)
+        self.assertEqual(report.project_profitability_status, "HEALTHY")
+        self.assertEqual(report.material_efficiency_status, "EFFICIENT")
+        self.assertEqual(report.waste_risk_status, "MEDIUM")
+        self.assertEqual(report.bottleneck_status, "UNKNOWN")
+        self.assertEqual(report.production_readiness_status, "READY")
+        self.assertEqual(report.overall_management_status, "HEALTHY")
 
     def test_existing_callers_still_work_without_optional_reports(self):
         kpi_report, readiness_report, optimization_result = self._inputs()
@@ -278,6 +291,54 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
             ["Review complexity"],
         )
 
+    def test_management_status_fields_are_reused_from_kpi_report(self):
+        kpi_report, readiness_report, optimization_result = self._inputs()
+        kpi_report.project_profitability_status = "LOW"
+        kpi_report.material_efficiency_status = "STABLE"
+        kpi_report.waste_risk_status = "HIGH"
+        kpi_report.bottleneck_status = "MEDIUM"
+        kpi_report.production_readiness_status = "READY_WITH_WARNINGS"
+        kpi_report.overall_management_status = "MONITOR"
+
+        report = self.builder.build(
+            kpi_report,
+            readiness_report,
+            optimization_result,
+        )
+
+        self.assertEqual(report.project_profitability_status, "LOW")
+        self.assertEqual(report.material_efficiency_status, "STABLE")
+        self.assertEqual(report.waste_risk_status, "HIGH")
+        self.assertEqual(report.bottleneck_status, "MEDIUM")
+        self.assertEqual(report.production_readiness_status, "READY_WITH_WARNINGS")
+        self.assertEqual(report.overall_management_status, "MONITOR")
+
+    def test_builder_does_not_recompute_management_status_fields(self):
+        from cost_intelligence.manufacturing_executive_report_builder import (
+            ManufacturingExecutiveReportBuilder,
+        )
+
+        source = inspect.getsource(ManufacturingExecutiveReportBuilder)
+        for helper_name in (
+            "_profitability_status",
+            "_material_efficiency_status",
+            "_waste_risk_status",
+            "_overall_management_status",
+        ):
+            self.assertFalse(
+                hasattr(ManufacturingExecutiveReportBuilder, helper_name)
+            )
+
+        for mapping in (
+            "manufacturing_kpi_report.project_profitability_status",
+            "manufacturing_kpi_report.material_efficiency_status",
+            "manufacturing_kpi_report.waste_risk_status",
+            "manufacturing_kpi_report.bottleneck_status",
+            "manufacturing_kpi_report.production_readiness_status",
+            "manufacturing_kpi_report.overall_management_status",
+        ):
+            self.assertIn(mapping, source)
+
     def test_builder_does_not_mutate_inputs(self):
         kpi_report, readiness_report, optimization_result = self._inputs()
         original_kpi_warnings = list(kpi_report.warnings)
@@ -319,6 +380,12 @@ class TestManufacturingExecutiveReportBuilder(unittest.TestCase):
             waste_rate=0.25,
             production_status="READY",
             warnings=["KPI warning"],
+            project_profitability_status="HEALTHY",
+            material_efficiency_status="EFFICIENT",
+            waste_risk_status="MEDIUM",
+            bottleneck_status="UNKNOWN",
+            production_readiness_status="READY",
+            overall_management_status="HEALTHY",
         )
         readiness_report = ProductionReadinessReport(
             status="READY",

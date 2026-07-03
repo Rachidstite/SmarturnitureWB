@@ -68,6 +68,12 @@ class TestFurnitureProjectExecutiveReportBuilder(unittest.TestCase):
         self.assertEqual(report.utilization_rate, 0.78)
         self.assertEqual(report.waste_rate, 0.22)
         self.assertEqual(report.recovery_score, 66)
+        self.assertEqual(report.project_profitability_status, "HEALTHY")
+        self.assertEqual(report.material_efficiency_status, "EFFICIENT")
+        self.assertEqual(report.waste_risk_status, "MEDIUM")
+        self.assertEqual(report.bottleneck_status, "LOW")
+        self.assertEqual(report.production_readiness_status, "READY")
+        self.assertEqual(report.overall_management_status, "HEALTHY")
         self.assertEqual(
             report.warnings,
             ["Executive warning", "Decision warning"],
@@ -106,6 +112,33 @@ class TestFurnitureProjectExecutiveReportBuilder(unittest.TestCase):
         self.assertEqual(executive_report.__dict__, original_executive)
         self.assertEqual(decision_report.__dict__, original_decision)
 
+    def test_builder_reuses_management_status_fields_from_executive_report(self):
+        from cost_intelligence.furniture_project_executive_report_builder import (
+            FurnitureProjectExecutiveReportBuilder,
+        )
+
+        executive_report = self._manufacturing_executive_report(
+            project_profitability_status="LOW",
+            material_efficiency_status="STABLE",
+            waste_risk_status="HIGH",
+            bottleneck_status="MEDIUM",
+            production_readiness_status="READY_WITH_WARNINGS",
+            overall_management_status="MONITOR",
+        )
+
+        report = FurnitureProjectExecutiveReportBuilder().build(
+            self._project_summary(),
+            executive_report,
+            self._factory_decision_report(),
+        )
+
+        self.assertEqual(report.project_profitability_status, "LOW")
+        self.assertEqual(report.material_efficiency_status, "STABLE")
+        self.assertEqual(report.waste_risk_status, "HIGH")
+        self.assertEqual(report.bottleneck_status, "MEDIUM")
+        self.assertEqual(report.production_readiness_status, "READY_WITH_WARNINGS")
+        self.assertEqual(report.overall_management_status, "MONITOR")
+
     @staticmethod
     def _project_summary(
         total_cabinets=0,
@@ -132,6 +165,12 @@ class TestFurnitureProjectExecutiveReportBuilder(unittest.TestCase):
         recovery_score=0,
         warnings=None,
         recommendations=None,
+        project_profitability_status="HEALTHY",
+        material_efficiency_status="EFFICIENT",
+        waste_risk_status="MEDIUM",
+        bottleneck_status="LOW",
+        production_readiness_status="READY",
+        overall_management_status="HEALTHY",
     ):
         from cost_intelligence.manufacturing_executive_report import (
             ManufacturingExecutiveReport,
@@ -148,6 +187,12 @@ class TestFurnitureProjectExecutiveReportBuilder(unittest.TestCase):
             recovery_score=recovery_score,
             warnings=[] if warnings is None else warnings,
             recommendations=[] if recommendations is None else recommendations,
+            project_profitability_status=project_profitability_status,
+            material_efficiency_status=material_efficiency_status,
+            waste_risk_status=waste_risk_status,
+            bottleneck_status=bottleneck_status,
+            production_readiness_status=production_readiness_status,
+            overall_management_status=overall_management_status,
         )
 
     @staticmethod

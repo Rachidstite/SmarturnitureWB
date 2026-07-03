@@ -17,3 +17,9 @@ class FurnitureProjectExecutiveReport:
     recovery_score: int = 0
     warnings: list = field(default_factory=list)
     recommendations: list = field(default_factory=list)
+    project_profitability_status: str = "UNKNOWN"
+    material_efficiency_status: str = "UNKNOWN"
+    waste_risk_status: str = "UNKNOWN"
+    bottleneck_status: str = "UNKNOWN"
+    production_readiness_status: str = "UNKNOWN"
+    overall_management_status: str = "UNKNOWN"

@@ -153,6 +153,20 @@ class ManufacturingExecutiveReportBuilder:
                     else []
                 )
             ),
+            project_profitability_status=(
+                manufacturing_kpi_report.project_profitability_status
+            ),
+            material_efficiency_status=(
+                manufacturing_kpi_report.material_efficiency_status
+            ),
+            waste_risk_status=manufacturing_kpi_report.waste_risk_status,
+            bottleneck_status=manufacturing_kpi_report.bottleneck_status,
+            production_readiness_status=(
+                manufacturing_kpi_report.production_readiness_status
+            ),
+            overall_management_status=(
+                manufacturing_kpi_report.overall_management_status
+            ),
         )
         report.governance_explanation = governance_report.explanation
         report.governance_primary_recommendation = (

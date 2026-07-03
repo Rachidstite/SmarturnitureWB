@@ -33,6 +33,12 @@ class TestFurnitureProjectExecutiveReportContract(unittest.TestCase):
                 "recovery_score",
                 "warnings",
                 "recommendations",
+                "project_profitability_status",
+                "material_efficiency_status",
+                "waste_risk_status",
+                "bottleneck_status",
+                "production_readiness_status",
+                "overall_management_status",
             ],
         )
 
@@ -57,6 +63,12 @@ class TestFurnitureProjectExecutiveReportContract(unittest.TestCase):
         self.assertEqual(report.recovery_score, 0)
         self.assertEqual(report.warnings, [])
         self.assertEqual(report.recommendations, [])
+        self.assertEqual(report.project_profitability_status, "UNKNOWN")
+        self.assertEqual(report.material_efficiency_status, "UNKNOWN")
+        self.assertEqual(report.waste_risk_status, "UNKNOWN")
+        self.assertEqual(report.bottleneck_status, "UNKNOWN")
+        self.assertEqual(report.production_readiness_status, "UNKNOWN")
+        self.assertEqual(report.overall_management_status, "UNKNOWN")
 
     def test_list_defaults_are_independent(self):
         from cost_intelligence.furniture_project_executive_report import (
