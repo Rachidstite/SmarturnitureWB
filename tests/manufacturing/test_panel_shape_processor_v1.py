@@ -77,6 +77,38 @@ class TestPanelShapeProcessorV1(unittest.TestCase):
         self.assertEqual(base_shape.cut_calls[0].args, (112.0, 2.0, 2.0))
         self.assertEqual(base_shape.cut_calls[0].translated_by, [(4.0, 1.0, 4.0)])
 
+    def test_supported_shelf_pin_feature_is_cut_from_base_shape(self):
+        import manufacturing.panel_shape_processor as panel_shape_processor
+
+        base_shape = _FakeShape(("base",))
+        panel = SimpleNamespace(identity=SimpleNamespace(key="SIDE_PANEL_1"))
+        features = [
+            SimpleNamespace(
+                kind="shelf_pin_hole",
+                node_id="SIDE_PANEL_1",
+                placement=(2.0, 300.0, 64.0),
+                size=(5.0, 5.0, 5.0),
+                name="SIDE_PANEL_1_Shelf_Pin",
+            ),
+        ]
+
+        with patch.object(
+            panel_shape_processor,
+            "Part",
+            SimpleNamespace(makeBox=lambda *args: _FakeShape(args)),
+        ):
+            result = panel_shape_processor.process_panel_shape(
+                base_shape,
+                panel,
+                features,
+                panel_origin=(0.0, 0.0, 0.0),
+            )
+
+        self.assertIsNot(result, base_shape)
+        self.assertEqual(len(base_shape.cut_calls), 1)
+        self.assertEqual(base_shape.cut_calls[0].args, (5.0, 5.0, 5.0))
+        self.assertEqual(base_shape.cut_calls[0].translated_by, [(2.0, 300.0, 64.0)])
+
     def test_unsupported_feature_kinds_are_ignored(self):
         from manufacturing.panel_shape_processor import process_panel_shape
 

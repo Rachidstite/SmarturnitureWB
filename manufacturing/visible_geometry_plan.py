@@ -237,10 +237,7 @@ def _side_panel_drilling_features(node, project, cabinet_depth):
         )
 
     if not drill_positions:
-        drill_positions = [
-            (float(z), "LEFT" if _panel_is_left(node) else "RIGHT", {"prototype": True})
-            for z in System32Engine.shelf_pin_positions(float(getattr(node, "height", 0.0) or 0.0))
-        ]
+        return []
 
     base_x, actual_y, base_z = _panel_world_origin(node, cabinet_depth)
     width, depth, _height = _panel_render_dimensions(node)

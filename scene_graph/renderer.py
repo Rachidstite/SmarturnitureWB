@@ -280,7 +280,7 @@ class SceneRenderer:
         name = node.identity.key
         obj = self.doc.addObject("Part::Feature", name)
         base_shape = Part.makeBox(node.width, node.depth, node.height)
-        if node.role == NodeRole.BACK_PANEL:
+        if node.role in (NodeRole.BACK_PANEL, NodeRole.SIDE_PANEL, NodeRole.DIVIDER):
             obj.Shape = process_panel_shape(
                 base_shape,
                 node,

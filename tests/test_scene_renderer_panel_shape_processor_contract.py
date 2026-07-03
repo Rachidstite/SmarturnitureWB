@@ -193,8 +193,46 @@ class TestSceneRendererPanelShapeProcessorContract(unittest.TestCase):
         self.assertEqual(panel_obj.Shape.args, (100.0, 3.0, 200.0))
         self.assertEqual(panel_obj.Shape.cut_calls, [])
 
-    def test_non_back_panel_skips_processor(self):
-        renderer, _doc = self._make_renderer(
+    def test_side_panel_with_shelf_pin_feature_uses_existing_processor_path(self):
+        renderer, doc = self._make_renderer(
+            [
+                SimpleNamespace(
+                    kind="shelf_pin_hole",
+                    node_id="SIDE_PANEL_TEST",
+                    placement=(2.0, 300.0, 64.0),
+                    size=(5.0, 5.0, 5.0),
+                    name="SIDE_PANEL_TEST_Shelf_Pin",
+                )
+            ]
+        )
+        node = SimpleNamespace(
+            identity=SimpleNamespace(key="SIDE_PANEL_TEST"),
+            role=NodeRole.SIDE_PANEL,
+            width=18.0,
+            depth=600.0,
+            height=1982.0,
+            thickness=18.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            group="Carcass",
+        )
+
+        with patch.object(
+            self.renderer,
+            "process_panel_shape",
+            side_effect=lambda base_shape, panel_node, panel_features, panel_origin=None: _FakeShape(
+                ("processed", base_shape.args)
+            ),
+        ) as processor_spy:
+            renderer._render_simple_panel(node)
+
+        processor_spy.assert_called_once()
+        panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
+        self.assertEqual(panel_obj.Shape.args, ("processed", (18.0, 600.0, 1982.0)))
+
+    def test_non_back_panel_unsupported_features_preserve_shape(self):
+        renderer, doc = self._make_renderer(
             [
                 SimpleNamespace(
                     kind="back_panel_groove",
@@ -218,10 +256,11 @@ class TestSceneRendererPanelShapeProcessorContract(unittest.TestCase):
             group="Carcass",
         )
 
-        with patch.object(self.renderer, "process_panel_shape") as processor_spy:
-            renderer._render_simple_panel(node)
+        renderer._render_simple_panel(node)
 
-        processor_spy.assert_not_called()
+        panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
+        self.assertEqual(panel_obj.Shape.args, (18.0, 600.0, 1982.0))
+        self.assertEqual(panel_obj.Shape.cut_calls, [])
 
 
 if __name__ == "__main__":

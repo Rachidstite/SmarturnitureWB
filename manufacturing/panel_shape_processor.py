@@ -19,8 +19,8 @@ from core.logging_config import logger
 def process_panel_shape(base_shape, panel_node, features: Iterable, panel_origin=None):
     """Apply supported visible machining features to a panel solid.
 
-    V1 supports only `back_panel_groove` features and leaves all other
-    feature kinds untouched.
+    V1 supports production-backed `back_panel_groove` and `shelf_pin_hole`
+    features and leaves all other feature kinds untouched.
     """
     if base_shape is None:
         return None
@@ -30,7 +30,7 @@ def process_panel_shape(base_shape, panel_node, features: Iterable, panel_origin
         feature
         for feature in list(features or [])
         if _feature_matches_panel(feature, panel_key)
-        and _feature_kind(feature) == "back_panel_groove"
+        and _feature_supported_for_panel(panel_node, feature)
     ]
 
     if not relevant_features:
@@ -94,6 +94,33 @@ def _feature_matches_panel(feature, panel_key: str) -> bool:
 
 def _feature_kind(feature) -> str:
     return str(getattr(feature, "kind", "") or "").lower()
+
+
+def _panel_role(panel_node) -> str:
+    role = getattr(panel_node, "role", "")
+    role_value = str(getattr(role, "value", role) or "").upper()
+    if role_value:
+        return role_value
+
+    panel_key = _panel_key(panel_node).upper()
+    if "BACK" in panel_key:
+        return "BACK_PANEL"
+    if "SIDE" in panel_key:
+        return "SIDE_PANEL"
+    if "DIVIDER" in panel_key:
+        return "DIVIDER"
+    return ""
+
+
+def _feature_supported_for_panel(panel_node, feature) -> bool:
+    feature_kind = _feature_kind(feature)
+    panel_role = _panel_role(panel_node)
+
+    if feature_kind == "back_panel_groove":
+        return panel_role == "BACK_PANEL"
+    if feature_kind == "shelf_pin_hole":
+        return panel_role in {"SIDE_PANEL", "DIVIDER"}
+    return False
 
 
 def _panel_origin(panel_node, panel_origin):

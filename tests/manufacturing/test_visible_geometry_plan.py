@@ -114,6 +114,36 @@ class TestVisibleGeometryPlan(unittest.TestCase):
 
         self.assertTrue(plan.prototype_lines)
 
+    def test_shelf_pin_holes_require_production_backed_machining_evidence(self):
+        from manufacturing.visible_geometry_plan import build_visible_geometry_plan
+
+        side_left = SimpleNamespace(
+            identity=SimpleNamespace(key="CAB_SIDE_L"),
+            role=SimpleNamespace(value="SIDE_PANEL"),
+            category=SimpleNamespace(value="PHYSICAL"),
+            width=600.0,
+            height=2400.0,
+            depth=18.0,
+            thickness=18.0,
+            transform=SimpleNamespace(x=0.0, y=0.0, z=0.0),
+            machining_ops=[],
+        )
+
+        project = SimpleNamespace(
+            uid="CAB",
+            topology=SimpleNamespace(d=600.0),
+            graph=SimpleNamespace(all_nodes=lambda: [side_left]),
+            placements=[],
+        )
+
+        plan = build_visible_geometry_plan(project)
+
+        shelf_pins = [
+            feature for feature in plan.features if feature.kind == "shelf_pin_hole"
+        ]
+
+        self.assertEqual(shelf_pins, [])
+
 
 if __name__ == "__main__":
     unittest.main()
