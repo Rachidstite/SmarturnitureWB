@@ -60,3 +60,5 @@ class DoorBuilder:
                     (hx, hy, pz + pos),
                     hw_group
                 )
+
+        return subgroup if is_glass else door
