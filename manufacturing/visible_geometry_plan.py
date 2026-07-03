@@ -314,28 +314,45 @@ def _screw_features(node, project, cabinet_depth):
 
 
 def _drawer_slide_features(node, project, cabinet_depth):
-    placements = _placements_for_intent(project, "INTENT_DRAWER_SLIDE", node.identity.key)
-    if not placements:
+    if _role_value(node) != "SIDE_PANEL":
+        return []
+
+    slide_ops = []
+    for op in getattr(node, "machining_ops", []) or []:
+        op_type = str(getattr(op, "op_type", "") or "").upper()
+        if op_type != "DRILL":
+            continue
+        metadata = getattr(op, "metadata", None) or {}
+        if str(metadata.get("hardware_intent", "") or "").upper() != "INTENT_DRAWER_SLIDE":
+            continue
+        slide_ops.append(op)
+
+    if not slide_ops:
         return []
 
     base_x, actual_y, base_z = _panel_world_origin(node, cabinet_depth)
     width, depth, _height = _panel_render_dimensions(node)
     features = []
 
-    for index, placement in enumerate(placements, start=1):
-        side = str(placement["side"]).upper()
-        z_position = float(placement["offset_y"])
-        x_position = base_x + (2.0 if side == "LEFT" else max(width - 5.0, 0.0))
+    for index, operation in enumerate(slide_ops, start=1):
+        local_x = float(getattr(operation, "local_x", 0.0) or 0.0)
+        local_y = float(getattr(operation, "local_y", 0.0) or 0.0)
+        face = str(getattr(operation, "face", "") or "").upper()
         features.append(
             VisibleGeometryFeatureSpec(
                 name=f"{node.identity.key}_Drawer_Slide_Line_{index}",
                 kind="drawer_slide_line",
                 node_id=node.identity.key,
-                placement=(x_position, actual_y + 4.0, base_z + z_position),
-                size=(3.0, max(depth - 8.0, 4.0), 3.0),
+                placement=(
+                    base_x + local_x,
+                    actual_y + max(depth - 3.0, 0.0),
+                    base_z + local_y,
+                ),
+                size=(5.0, 5.0, 5.0),
                 color=(0.8, 0.2, 0.9),
                 label="Drawer slide hole line",
-                prototype=bool(placement["prototype"]),
+                prototype=False,
+                notes=(str(getattr(operation, "metadata", {}).get("hardware_intent", "")), face),
             )
         )
 
