@@ -1,5 +1,6 @@
 import unittest
 from dataclasses import fields, is_dataclass
+import inspect
 
 
 class TestManufacturingKPIBuilder(unittest.TestCase):
@@ -27,6 +28,12 @@ class TestManufacturingKPIBuilder(unittest.TestCase):
                 "reuse_rate",
                 "production_status",
                 "warnings",
+                "project_profitability_status",
+                "material_efficiency_status",
+                "waste_risk_status",
+                "bottleneck_status",
+                "production_readiness_status",
+                "overall_management_status",
             ],
         )
 
@@ -48,6 +55,15 @@ class TestManufacturingKPIBuilder(unittest.TestCase):
         self.assertEqual(report.waste_rate, 0.25)
         self.assertEqual(report.reuse_rate, 0.60)
         self.assertEqual(report.production_status, "READY_WITH_WARNINGS")
+        self.assertEqual(report.project_profitability_status, "HEALTHY")
+        self.assertEqual(report.material_efficiency_status, "EFFICIENT")
+        self.assertEqual(report.waste_risk_status, "MEDIUM")
+        self.assertEqual(report.bottleneck_status, "UNKNOWN")
+        self.assertEqual(
+            report.production_readiness_status,
+            "READY_WITH_WARNINGS",
+        )
+        self.assertEqual(report.overall_management_status, "MONITOR")
 
     def test_warnings_are_combined_in_order_into_new_list(self):
         cost_summary, optimization_result, commercial_result, readiness_report = (
@@ -99,6 +115,56 @@ class TestManufacturingKPIBuilder(unittest.TestCase):
 
         self.assertEqual(cost_summary.warnings, original_cost_warnings)
         self.assertEqual(readiness_report.warnings, original_readiness_warnings)
+
+    def test_management_status_fields_are_deterministic(self):
+        cost_summary, optimization_result, commercial_result, readiness_report = (
+            self._inputs()
+        )
+        readiness_report.status = "BLOCKED"
+        commercial_result.profitability_report.gross_margin_rate = 0.0
+        optimization_result.sheet_utilization_report.waste_rate = 0.35
+
+        report = self.builder.build(
+            cost_summary,
+            optimization_result,
+            commercial_result,
+            readiness_report,
+        )
+
+        self.assertEqual(report.project_profitability_status, "CRITICAL")
+        self.assertEqual(report.material_efficiency_status, "EFFICIENT")
+        self.assertEqual(report.waste_risk_status, "HIGH")
+        self.assertEqual(report.production_readiness_status, "BLOCKED")
+        self.assertEqual(report.overall_management_status, "ACTION_REQUIRED")
+
+    def test_optional_bottleneck_report_is_mapped_without_new_import_dependency(self):
+        cost_summary, optimization_result, commercial_result, readiness_report = (
+            self._inputs()
+        )
+        from manufacturing.factory_bottleneck_intelligence_report import (
+            FactoryBottleneckIntelligenceReport,
+        )
+
+        report = self.builder.build(
+            cost_summary,
+            optimization_result,
+            commercial_result,
+            readiness_report,
+            factory_bottleneck_intelligence_report=(
+                FactoryBottleneckIntelligenceReport(severity="HIGH")
+            ),
+        )
+
+        self.assertEqual(report.bottleneck_status, "HIGH")
+        self.assertEqual(report.overall_management_status, "ACTION_REQUIRED")
+
+        from cost_intelligence.manufacturing_kpi_builder import (
+            ManufacturingKPIBuilder,
+        )
+
+        source = inspect.getsource(ManufacturingKPIBuilder)
+        self.assertNotIn("from manufacturing", source)
+        self.assertNotIn("import manufacturing", source)
 
     @staticmethod
     def _inputs():
