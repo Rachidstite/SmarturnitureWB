@@ -5,6 +5,7 @@ from typing import Any
 
 from core.qt_compat import QtWidgets
 from .read_models import (
+    InspectorFieldReadModel,
     InspectorReadModel,
     MessageCenterReadModel,
     PreviewReadModel,
@@ -1051,6 +1052,42 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
     def set_message_center_read_model(self, read_model: MessageCenterReadModel):
         self.message_center_read_model = read_model
 
+    def set_presentation_aware_inspector(
+        self,
+        selection: ConfiguratorSelection | None,
+        interactive_component: InteractiveVisualComponent | None = None,
+    ):
+        """Update inspector with optional presentation-aware fields.
+
+        Builds the base inspector read model from *selection*, then
+        appends presentation state and visual contract fields when
+        *interactive_component* is provided and carries presentation data.
+
+        The base inspector behavior is unchanged when interactive_component
+        is None or has no presentation data.
+        """
+        selection = selection or ConfiguratorSelection()
+        base_model = build_inspector_read_model(selection)
+
+        if interactive_component is not None and interactive_component.interaction.presentation is not None:
+            extra_fields = _build_presentation_inspector_fields(interactive_component)
+            merged_fields = base_model.fields + extra_fields
+            merged_model = InspectorReadModel(
+                selection_id=base_model.selection_id,
+                selection_type=base_model.selection_type,
+                display_name=base_model.display_name,
+                fields=merged_fields,
+                warnings=base_model.warnings,
+                source_reference=base_model.source_reference,
+                unsupported=base_model.unsupported,
+                unsupported_reason=base_model.unsupported_reason,
+                suggested_action=base_model.suggested_action,
+                stale=base_model.stale,
+            )
+            self.set_inspector_read_model(merged_model)
+        else:
+            self.set_inspector_read_model(base_model)
+
     def set_review_panel_read_models(
         self,
         read_models: tuple[ReviewPanelReadModel, ...],
@@ -1139,3 +1176,111 @@ def _attach_synchronized_states(
             )
         )
     return tuple(result)
+
+
+# ── Presentation inspector helper ────────────────────────────────────
+
+
+def _build_presentation_inspector_fields(
+    interactive: InteractiveVisualComponent,
+) -> tuple[InspectorFieldReadModel, ...]:
+    """Build inspector field entries from an interactive component's presentation state.
+
+    Returns InspectorFieldReadModel entries for ``Presentation`` group
+    when the component carries presentation or visual contract data.
+
+    Returns empty tuple when the component has no presentation data.
+    """
+    if interactive is None:
+        return ()
+
+    interaction = interactive.interaction
+    presentation = interaction.presentation
+    contract = interaction.visual_contract
+
+    if presentation is None and contract is None:
+        return ()
+
+    fields: list[InspectorFieldReadModel] = []
+
+    # ── Identity
+    fields.append(
+        InspectorFieldReadModel(
+            name="presentation_component_id",
+            label="Presentation Component ID",
+            value=interactive.component_id,
+            group="Presentation",
+        )
+    )
+    fields.append(
+        InspectorFieldReadModel(
+            name="presentation_state",
+            label="Presentation State",
+            value=interaction.state_label,
+            group="Presentation",
+        )
+    )
+
+    # ── Presentation state flags
+    if presentation is not None and not presentation.is_neutral:
+        fields.append(
+            InspectorFieldReadModel(
+                name="presentation_flags",
+                label="Active Flags",
+                value=", ".join(presentation.active_flags) if presentation.active_flags else "none",
+                group="Presentation",
+            )
+        )
+        fields.append(
+            InspectorFieldReadModel(
+                name="presentation_dominant",
+                label="Dominant Flag",
+                value=presentation.dominant_flag,
+                group="Presentation",
+            )
+        )
+        fields.append(
+            InspectorFieldReadModel(
+                name="presentation_severity",
+                label="Visual Severity",
+                value=str(presentation.visual_severity),
+                group="Presentation",
+            )
+        )
+
+    # ── Visual contract tokens
+    if contract is not None and not contract.is_neutral:
+        fields.append(
+            InspectorFieldReadModel(
+                name="vc_emphasis",
+                label="Emphasis Level",
+                value=contract.emphasis_level,
+                group="Presentation",
+            )
+        )
+        fields.append(
+            InspectorFieldReadModel(
+                name="vc_outline",
+                label="Outline Intent",
+                value=contract.outline_intent,
+                group="Presentation",
+            )
+        )
+        fields.append(
+            InspectorFieldReadModel(
+                name="vc_opacity",
+                label="Opacity Intent",
+                value=contract.opacity_intent,
+                group="Presentation",
+            )
+        )
+        fields.append(
+            InspectorFieldReadModel(
+                name="vc_priority",
+                label="Interaction Priority",
+                value=str(contract.interaction_priority),
+                group="Presentation",
+            )
+        )
+
+    return tuple(fields)
