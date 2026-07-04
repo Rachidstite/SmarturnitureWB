@@ -1057,10 +1057,208 @@ def build_review_panel_read_models(
     return tuple(results)
 
 
+def _mfg_op_label(op: Any, data: dict[str, Any]) -> str:
+    """Extract a safe display label from a manufacturing operation object."""
+    label = _as_str(
+        _get_value(
+            op, "operation_label",
+            _get_value(
+                op, "label",
+                _get_value(
+                    op, "operation",
+                    data.get("operation_label",
+                             data.get("label",
+                                      data.get("operation", ""))),
+                ),
+            ),
+        )
+    )
+    name = _as_str(
+        _get_value(
+            op, "operation_name",
+            _get_value(
+                op, "name",
+                data.get("operation_name",
+                         data.get("name", "")),
+            ),
+        )
+    )
+    return label or name
+
+
+def _mfg_op_status(op: Any, data: dict[str, Any]) -> str:
+    """Extract a safe status string from a manufacturing operation."""
+    status = _as_str(
+        _get_value(op, "operation_status",
+        _get_value(op, "status",
+        data.get("operation_status",
+        data.get("status", "")))))
+    return status.upper() if status else "UNKNOWN"
+
+
+def _mfg_op_detail(op: Any, data: dict[str, Any]) -> str:
+    """Extract a safe detail/message string from a manufacturing operation."""
+    return _as_str(
+        _get_value(op, "operation_message",
+        _get_value(op, "message",
+        _get_value(op, "detail",
+        data.get("operation_message",
+        data.get("message",
+        data.get("detail", "")))))))
+
+
+def build_manufacturing_review_projection(
+    source: Any = None,
+) -> ReviewPanelReadModel:
+    """Project duck-typed manufacturing source into a ReviewPanelReadModel.
+
+    Accepts:
+    - An object with ``operations`` attribute (iterable of operation objects)
+    - A dict with ``"operations"`` key
+    - A list/tuple of operation objects directly
+
+    Each operation object may expose (via attribute or dict key):
+    - ``operation_label`` / ``label`` / ``operation`` / ``name`` — display label
+    - ``operation_status`` / ``status`` — e.g. PASS, FAIL, WARNING, SKIPPED
+    - ``operation_message`` / ``message`` / ``detail`` — detail text
+    - ``component_id`` — optional linked component ID
+
+    Operations are grouped into sections by status category.
+
+    Returns a ReviewPanelReadModel with panel_name="Manufacturing".
+    No raw manufacturing objects leak into the output.
+    """
+    _reject_backend_like_object(source, "manufacturing source")
+
+    if source is None:
+        return ReviewPanelReadModel(
+            panel_name="Manufacturing",
+            available=False,
+        )
+
+    # ── Extract raw operations ─────────────────────────────────────
+    data = _as_dict(source)
+    raw_ops = _get_value(source, "operations", data.get("operations", None))
+
+    if raw_ops is None:
+        # Source might be a list/tuple of operations directly
+        if isinstance(source, (list, tuple)):
+            raw_ops = source
+        elif hasattr(source, "__iter__") and not isinstance(source, (str, bytes, Mapping)):
+            raw_ops = list(source)
+        else:
+            raw_ops = ()
+
+    if not raw_ops:
+        return ReviewPanelReadModel(
+            panel_name="Manufacturing",
+            sections=(
+                ReviewSectionReadModel(
+                    section_name="Manufacturing Operations",
+                    rows=(("Status", "No operations data"),),
+                    warnings=("Manufacturing data not available",),
+                ),
+            ),
+            available=False,
+        )
+
+    # ── Convert each operation to a row ────────────────────────────
+    passed_rows: list[tuple[str, str]] = []
+    failed_rows: list[tuple[str, str]] = []
+    warning_rows: list[tuple[str, str]] = []
+    skipped_rows: list[tuple[str, str]] = []
+    other_rows: list[tuple[str, str]] = []
+    all_warnings: list[str] = []
+
+    for op in raw_ops:
+        _reject_backend_like_object(op, "manufacturing operation")
+        op_data = _as_dict(op)
+
+        label = _mfg_op_label(op, op_data)
+        status = _mfg_op_status(op, op_data)
+        detail = _mfg_op_detail(op, op_data)
+        cid = _as_str(
+            _get_value(op, "component_id",
+            _get_value(op, "cid",
+            op_data.get("component_id",
+            op_data.get("cid", "")))))
+
+        # Build the value part of the row
+        value_parts = [status]
+        if detail:
+            value_parts.append(detail)
+        if cid:
+            value_parts.append(f"[{cid}]")
+        value = " | ".join(value_parts)
+
+        row = (label, value)
+
+        if status == "PASS":
+            passed_rows.append(row)
+        elif status == "FAIL":
+            failed_rows.append(row)
+            all_warnings.append(f"{label}: {detail or 'Failed'}")
+        elif status == "WARNING":
+            warning_rows.append(row)
+            all_warnings.append(f"{label}: {detail or 'Warning'}")
+        elif status == "SKIPPED":
+            skipped_rows.append(row)
+        else:
+            other_rows.append(row)
+
+    # ── Build sections ─────────────────────────────────────────────
+    sections: list[ReviewSectionReadModel] = []
+
+    if failed_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Failed",
+                rows=tuple(failed_rows),
+                warnings=tuple(w for w in all_warnings if "Failed" in w),
+            )
+        )
+    if warning_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Warnings",
+                rows=tuple(warning_rows),
+                warnings=tuple(w for w in all_warnings if "Warning" in w),
+            )
+        )
+    if passed_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Passed",
+                rows=tuple(passed_rows),
+            )
+        )
+    if skipped_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Skipped",
+                rows=tuple(skipped_rows),
+            )
+        )
+    if other_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Other",
+                rows=tuple(other_rows),
+            )
+        )
+
+    return ReviewPanelReadModel(
+        panel_name="Manufacturing",
+        sections=tuple(sections),
+        available=True,
+    )
+
+
 __all__ = [
     "build_project_tree_read_model",
     "build_inspector_read_model",
     "build_preview_read_model",
     "build_message_center_read_model",
     "build_review_panel_read_models",
+    "build_manufacturing_review_projection",
 ]

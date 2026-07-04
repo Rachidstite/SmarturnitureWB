@@ -38,6 +38,7 @@ from .read_models import (
 )
 from .projection_adapters import (
     build_inspector_read_model,
+    build_manufacturing_review_projection,
     build_message_center_read_model,
     build_preview_read_model,
     build_project_tree_read_model,
@@ -167,6 +168,7 @@ __all__ = [
     "build_inspector_read_model",
     "build_preview_read_model",
     "build_message_center_read_model",
+    "build_manufacturing_review_projection",
     "build_review_panel_read_models",
     "SceneBoundsProjection",
     "SceneNodeProjection",
