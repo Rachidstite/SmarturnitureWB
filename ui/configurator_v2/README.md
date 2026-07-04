@@ -48,6 +48,13 @@ Service Integration:
 - unsupported capabilities become messages, not fake data
 - future sprints will wire real actions gradually
 
+Inspector:
+
+- InspectorRegion consumes InspectorReadModel only
+- selection changes flow through the projection adapter layer
+- Inspector rendering is read-model driven and read-only
+- unsupported selections are shown as messages and display metadata, not exceptions
+
 Integration is still pending:
 
 - Application Services are not called yet

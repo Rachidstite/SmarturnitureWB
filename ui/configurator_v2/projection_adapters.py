@@ -49,6 +49,31 @@ _REQUIRED_PANEL_NAMES = (
     "Release",
 )
 
+_INSPECTOR_GROUPS = (
+    "Identity",
+    "Geometry",
+    "Materials",
+    "Hardware",
+    "Manufacturing",
+    "Validation",
+    "Metadata",
+)
+
+_INSPECTOR_METADATA_EXCLUSIONS = {
+    "warnings",
+    "warning",
+    "source_reference",
+    "source_region",
+    "unsupported",
+    "unsupported_reason",
+    "suggested_action",
+    "stale",
+    "fields",
+    "selection_id",
+    "selection_type",
+    "display_name",
+}
+
 
 def _as_dict(source: Any) -> dict[str, Any]:
     if source is None:
@@ -103,6 +128,26 @@ def _string_pairs(source: Any) -> tuple[tuple[str, str], ...]:
             value = getattr(item, "value", getattr(item, "text", ""))
         pairs.append((_as_str(key), _as_str(value)))
     return tuple(pairs)
+
+
+def _normalize_inspector_group(name: str, label: str, explicit_group: str = "") -> str:
+    explicit_group = _as_str(explicit_group).strip()
+    if explicit_group:
+        return explicit_group
+    probe = f"{name} {label}".lower()
+    if any(token in probe for token in ("selection_id", "display_name", "selection_type", "source_reference", "id", "name")):
+        return "Identity"
+    if any(token in probe for token in ("width", "height", "depth", "thickness", "diameter", "angle", "radius", "x", "y", "z", "geometry", "position", "size", "offset")):
+        return "Geometry"
+    if any(token in probe for token in ("material", "finish", "color", "surface", "veneer", "laminate")):
+        return "Materials"
+    if any(token in probe for token in ("hardware", "hinge", "slider", "handle", "fastener", "screw", "bolt")):
+        return "Hardware"
+    if any(token in probe for token in ("manufact", "machin", "edge", "cut", "cnc", "assembly", "drill", "hole")):
+        return "Manufacturing"
+    if any(token in probe for token in ("warn", "stale", "support", "valid", "block", "error", "tolerance")):
+        return "Validation"
+    return "Metadata"
 
 
 def _reject_backend_like_object(value: Any, field_name: str):
@@ -240,13 +285,19 @@ def build_project_tree_read_model(
 
 def _build_inspector_field(field: Any) -> InspectorFieldReadModel:
     _reject_backend_like_object(field, "inspector field")
+    data = _as_dict(field)
     return InspectorFieldReadModel(
-        name=_as_str(_get_value(field, "name", "")),
-        label=_as_str(_get_value(field, "label", _get_value(field, "name", ""))),
-        value=_as_str(_get_value(field, "value", _get_value(field, "text", ""))),
-        unit=_as_str(_get_value(field, "unit", "")),
-        editable=_as_bool(_get_value(field, "editable", False), False),
-        source_reference=_as_str(_get_value(field, "source_reference", _get_value(field, "source", ""))),
+        name=_as_str(_get_value(field, "name", data.get("name", ""))),
+        label=_as_str(_get_value(field, "label", _get_value(field, "name", data.get("name", "")))),
+        value=_as_str(_get_value(field, "value", _get_value(field, "text", data.get("value", data.get("text", ""))))),
+        unit=_as_str(_get_value(field, "unit", data.get("unit", ""))),
+        editable=_as_bool(_get_value(field, "editable", data.get("editable", False)), False),
+        source_reference=_as_str(_get_value(field, "source_reference", _get_value(field, "source", data.get("source", "")))),
+        group=_normalize_inspector_group(
+            _as_str(_get_value(field, "name", data.get("name", ""))),
+            _as_str(_get_value(field, "label", data.get("label", data.get("name", "")))),
+            _as_str(_get_value(field, "group", _get_value(field, "category", data.get("group", data.get("category", ""))))),
+        ),
     )
 
 
@@ -262,14 +313,79 @@ def build_inspector_read_model(
         return empty_inspector_read_model()
 
     data = _as_dict(source)
+    metadata_source = _get_value(source, "metadata", data.get("metadata", {}))
+    if isinstance(metadata_source, Mapping):
+        metadata_source = dict(metadata_source)
+    else:
+        metadata_source = _as_dict(metadata_source)
+
     field_source = _get_value(source, "fields", data.get("fields", ()))
-    warnings_source = _get_value(source, "warnings", data.get("warnings", ()))
+    if not field_source and metadata_source:
+        field_source = (
+            {
+                "name": key,
+                "label": key.replace("_", " ").title(),
+                "value": value,
+                "group": "Metadata",
+                "source_reference": _get_value(source, "source_region", data.get("source_region", "")),
+            }
+            for key, value in metadata_source.items()
+            if key not in _INSPECTOR_METADATA_EXCLUSIONS
+        )
+    warnings_source = _get_value(source, "warnings", data.get("warnings", metadata_source.get("warnings", ())))
+    if isinstance(warnings_source, str):
+        warnings_source = (warnings_source,)
+    unsupported = _as_bool(_get_value(source, "unsupported", data.get("unsupported", False)), False)
+    unsupported_reason = _as_str(
+        _get_value(
+            source,
+            "unsupported_reason",
+            data.get("unsupported_reason", metadata_source.get("unsupported_reason", "")),
+        )
+    )
+    if unsupported_reason and not unsupported:
+        unsupported = True
+    suggested_action = _as_str(
+        _get_value(
+            source,
+            "suggested_action",
+            data.get("suggested_action", metadata_source.get("suggested_action", "")),
+        )
+    )
+    source_reference = _as_str(
+        _get_value(
+            source,
+            "source_reference",
+            _get_value(source, "source_region", data.get("source_reference", data.get("source_region", ""))),
+        )
+    )
+    if not source_reference and metadata_source.get("source_reference"):
+        source_reference = _as_str(metadata_source.get("source_reference", ""))
+    resolved_selection_id = _as_str(
+        selection_id
+        if selection_id is not None
+        else data.get("selection_id", data.get("id", data.get("node_id", "")))
+    )
+    resolved_display_name = _as_str(
+        display_name
+        if display_name is not None
+        else data.get("display_name", data.get("label", data.get("name", "")))
+    )
+    if not resolved_display_name:
+        resolved_display_name = resolved_selection_id
+
     return InspectorReadModel(
-        selection_id=_as_str(selection_id if selection_id is not None else data.get("selection_id", "")),
-        selection_type=_as_str(selection_type if selection_type is not None else data.get("selection_type", "NONE")),
-        display_name=_as_str(display_name if display_name is not None else data.get("display_name", "")),
+        selection_id=resolved_selection_id,
+        selection_type=_as_str(
+            selection_type if selection_type is not None else data.get("selection_type", data.get("node_type", "NONE"))
+        ),
+        display_name=resolved_display_name,
         fields=tuple(_build_inspector_field(field) for field in (field_source or ())),
         warnings=tuple(_as_str(warning) for warning in (warnings_source or ())),
+        source_reference=source_reference,
+        unsupported=unsupported,
+        unsupported_reason=unsupported_reason,
+        suggested_action=suggested_action,
         stale=_as_bool(stale if stale is not None else data.get("stale", False), False),
     )
 

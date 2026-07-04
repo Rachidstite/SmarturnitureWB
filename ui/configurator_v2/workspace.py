@@ -16,6 +16,7 @@ from .read_models import (
     empty_project_tree_read_model,
     empty_review_panel_read_models,
 )
+from .projection_adapters import build_inspector_read_model
 
 NAVIGATION_ENTRIES = (
     "Dashboard",
@@ -93,6 +94,16 @@ MESSAGE_CATEGORIES = (
     "System errors",
 )
 
+INSPECTOR_FIELD_GROUPS = (
+    "Identity",
+    "Geometry",
+    "Materials",
+    "Hardware",
+    "Manufacturing",
+    "Validation",
+    "Metadata",
+)
+
 SELECTION_TYPES = (
     "NONE",
     "PROJECT",
@@ -145,6 +156,75 @@ def _frame_layout(widget):
     if hasattr(layout, "setContentsMargins"):
         layout.setContentsMargins(8, 8, 8, 8)
     return layout
+
+
+def _clear_layout(layout):
+    if hasattr(layout, "items"):
+        layout.items = []
+    if hasattr(layout, "count") and hasattr(layout, "takeAt"):
+        while layout.count():
+            item = layout.takeAt(0)
+            if item is None:
+                continue
+            widget = getattr(item, "widget", None)
+            if callable(widget):
+                child_widget = widget()
+                if child_widget is not None and hasattr(child_widget, "setParent"):
+                    child_widget.setParent(None)
+                continue
+            child_layout = getattr(item, "layout", None)
+            if callable(child_layout):
+                nested = child_layout()
+                if nested is not None:
+                    _clear_layout(nested)
+
+
+def _inspector_field_group(name: str, label: str, explicit_group: str = "") -> str:
+    explicit_group = (explicit_group or "").strip()
+    if explicit_group:
+        return explicit_group
+    probe = f"{name} {label}".lower()
+    if any(
+        token in probe
+        for token in (
+            "selection_id",
+            "display_name",
+            "selection_type",
+            "source_reference",
+            "id",
+            "name",
+        )
+    ):
+        return "Identity"
+    if any(
+        token in probe
+        for token in (
+            "width",
+            "height",
+            "depth",
+            "thickness",
+            "diameter",
+            "angle",
+            "radius",
+            "x",
+            "y",
+            "z",
+            "geometry",
+            "position",
+            "size",
+            "offset",
+        )
+    ):
+        return "Geometry"
+    if any(token in probe for token in ("material", "finish", "color", "surface", "veneer", "laminate")):
+        return "Materials"
+    if any(token in probe for token in ("hardware", "hinge", "slider", "handle", "fastener", "screw", "bolt")):
+        return "Hardware"
+    if any(token in probe for token in ("manufact", "machin", "edge", "cut", "cnc", "assembly", "drill", "hole")):
+        return "Manufacturing"
+    if any(token in probe for token in ("warn", "stale", "support", "valid", "block", "error", "tolerance")):
+        return "Validation"
+    return "Metadata"
 
 
 class _ShellFrame(QtWidgets.QFrame):
@@ -414,54 +494,106 @@ class ProductStateIndicator(_ShellFrame):
 
 
 class InspectorRegion(_ShellFrame):
+    SUMMARY_ALIASES = {
+        "Selection Type": "selection_type_value",
+        "Display Name": "display_name_value",
+        "Selection ID": "selection_id_value",
+        "Source Reference": "source_region_value",
+        "Warnings": "metadata_value",
+    }
+
     def __init__(self, parent=None):
         super().__init__(
             "Inspector",
-            "Selected object properties and draft-editable values.",
+            "Selected object read model and grouped metadata.",
             parent=parent,
         )
-        self.selection_type_value = QtWidgets.QLabel("NONE")
-        self.display_name_value = QtWidgets.QLabel("Not selected")
-        self.selection_id_value = QtWidgets.QLabel("")
-        self.source_region_value = QtWidgets.QLabel("")
-        self.metadata_value = QtWidgets.QLabel("{}")
-        self.body_layout.addWidget(QtWidgets.QLabel("Selection Type"))
-        self.body_layout.addWidget(self.selection_type_value)
-        self.body_layout.addWidget(QtWidgets.QLabel("Display Name"))
-        self.body_layout.addWidget(self.display_name_value)
-        self.body_layout.addWidget(QtWidgets.QLabel("Selection ID"))
-        self.body_layout.addWidget(self.selection_id_value)
-        self.body_layout.addWidget(QtWidgets.QLabel("Source Region"))
-        self.body_layout.addWidget(self.source_region_value)
-        self.body_layout.addWidget(QtWidgets.QLabel("Metadata"))
-        self.body_layout.addWidget(self.metadata_value)
-        self.property_rows: dict[str, object] = {}
-        form = QtWidgets.QFormLayout()
-        for label_text in (
-            "Dimensions",
-            "Materials",
-            "Doors",
-            "Drawers",
-            "Shelves",
-            "Dividers",
-            "Hardware",
-        ):
-            value_widget = QtWidgets.QLabel("No selection")
-            form.addRow(label_text, value_widget)
-            self.property_rows[label_text] = value_widget
-        self.body_layout.addLayout(form)
+        self.read_model = empty_inspector_read_model()
+        self.render_rows: list[str] = []
+        self.selection_summary_values: dict[str, object] = {}
+        self.field_group_rows: dict[str, list[object]] = {group: [] for group in INSPECTOR_FIELD_GROUPS}
+        self.group_headers: dict[str, object] = {}
+        self.group_containers: dict[str, object] = {}
+        self.group_field_labels: dict[str, list[object]] = {group: [] for group in INSPECTOR_FIELD_GROUPS}
+
+        self._rebuild_render_state()
+
+    def _append_summary_row(self, label_text: str, value_text: str):
+        label_widget = QtWidgets.QLabel(label_text)
+        if hasattr(label_widget, "setText"):
+            label_widget.setText(label_text)
+        self.body_layout.addWidget(label_widget)
+        value_widget = QtWidgets.QLabel()
+        if hasattr(value_widget, "setText"):
+            value_widget.setText(value_text)
+        self.body_layout.addWidget(value_widget)
+        self.selection_summary_values[label_text] = value_widget
+        alias_name = self.SUMMARY_ALIASES.get(label_text)
+        if alias_name:
+            setattr(self, alias_name, value_widget)
+        self.render_rows.append(f"{label_text}: {value_text}")
+
+    def _append_field_group(self, group_name: str, fields):
+        header = QtWidgets.QLabel()
+        if hasattr(header, "setText"):
+            header.setText(group_name)
+        self.body_layout.addWidget(header)
+        self.group_headers[group_name] = header
+        self.render_rows.append(group_name)
+        group_rows = []
+        for field in fields:
+            value_text = field.value if not field.unit else f"{field.value} {field.unit}".strip()
+            row_text = f"{field.label}: {value_text}"
+            if field.source_reference:
+                row_text = f"{row_text} [{field.source_reference}]"
+            label = QtWidgets.QLabel()
+            if hasattr(label, "setText"):
+                label.setText(row_text)
+            self.body_layout.addWidget(label)
+            group_rows.append(label)
+            self.group_field_labels.setdefault(group_name, []).append(label)
+            self.render_rows.append(f"{group_name} | {row_text}")
+        self.field_group_rows[group_name] = group_rows
+
+    def _rebuild_render_state(self):
+        _clear_layout(self.body_layout)
+        self.render_rows = []
+        self.selection_summary_values = {}
+        self.field_group_rows = {group: [] for group in INSPECTOR_FIELD_GROUPS}
+        self.group_headers = {}
+        self.group_containers = {}
+        self.group_field_labels = {group: [] for group in INSPECTOR_FIELD_GROUPS}
+
+        read_model = self.read_model or empty_inspector_read_model()
+        warnings_text = ", ".join(read_model.warnings) if read_model.warnings else "None"
+        self._append_summary_row("Selection Type", read_model.selection_type or "NONE")
+        self._append_summary_row("Display Name", read_model.display_name or "Not selected")
+        self._append_summary_row("Selection ID", read_model.selection_id or "")
+        self._append_summary_row("Source Reference", read_model.source_reference or "")
+        self._append_summary_row("Stale Status", "STALE" if read_model.stale else "Fresh")
+        self._append_summary_row("Unsupported Status", "Unsupported" if read_model.unsupported else "Supported")
+        self._append_summary_row("Unsupported Reason", read_model.unsupported_reason or "None")
+        self._append_summary_row("Suggested Action", read_model.suggested_action or "None")
+        self._append_summary_row("Warnings", warnings_text)
+
+        grouped_fields: dict[str, list[object]] = {group: [] for group in INSPECTOR_FIELD_GROUPS}
+        for field in read_model.fields:
+            group_name = _inspector_field_group(field.name, field.label, field.group)
+            grouped_fields.setdefault(group_name, []).append(field)
+
+        for group_name in INSPECTOR_FIELD_GROUPS:
+            self._append_field_group(group_name, grouped_fields.get(group_name, ()))
+
+        for group_name, fields in grouped_fields.items():
+            if group_name not in INSPECTOR_FIELD_GROUPS and fields:
+                self._append_field_group(group_name, fields)
+
+    def set_read_model(self, read_model: InspectorReadModel):
+        self.read_model = read_model or empty_inspector_read_model()
+        self._rebuild_render_state()
 
     def set_selection(self, selection: ConfiguratorSelection):
-        self.selection_type_value.setText(selection.selection_type)
-        self.display_name_value.setText(selection.display_name or "Not selected")
-        self.selection_id_value.setText(selection.selection_id or "")
-        self.source_region_value.setText(selection.source_region or "")
-        metadata = dict(selection.metadata or {})
-        self.metadata_value.setText(
-            ", ".join(f"{key}={value}" for key, value in metadata.items())
-            if metadata
-            else "{}"
-        )
+        self.set_read_model(build_inspector_read_model(selection))
 
 
 class ReviewContainer(_ShellFrame):
@@ -630,7 +762,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
     def set_selection(self, selection: ConfiguratorSelection | None):
         selection = selection or ConfiguratorSelection()
         self.current_selection = selection
-        self.inspector_region.set_selection(selection)
+        self.set_inspector_read_model(build_inspector_read_model(selection))
         self.preview_region.set_selection_highlight(selection)
 
     def clear_selection(self):
@@ -645,6 +777,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def set_inspector_read_model(self, read_model: InspectorReadModel):
         self.inspector_read_model = read_model
+        self.inspector_region.set_read_model(read_model)
 
     def set_preview_read_model(self, read_model: PreviewReadModel):
         self.preview_read_model = read_model

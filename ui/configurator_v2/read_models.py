@@ -92,6 +92,7 @@ class InspectorFieldReadModel:
     unit: str = ""
     editable: bool = False
     source_reference: str = ""
+    group: str = ""
 
     def __post_init__(self):
         object.__setattr__(self, "name", _ensure_str(self.name, "name"))
@@ -100,6 +101,7 @@ class InspectorFieldReadModel:
         object.__setattr__(self, "unit", _ensure_str(self.unit, "unit"))
         object.__setattr__(self, "editable", _ensure_bool(self.editable, "editable"))
         object.__setattr__(self, "source_reference", _ensure_str(self.source_reference, "source_reference"))
+        object.__setattr__(self, "group", _ensure_str(self.group, "group"))
 
 
 @dataclass(frozen=True)
@@ -109,6 +111,10 @@ class InspectorReadModel:
     display_name: str = ""
     fields: tuple[InspectorFieldReadModel, ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    source_reference: str = ""
+    unsupported: bool = False
+    unsupported_reason: str = ""
+    suggested_action: str = ""
     stale: bool = False
 
     def __post_init__(self):
@@ -121,6 +127,10 @@ class InspectorReadModel:
             _ensure_instance_tuple(self.fields, "fields", InspectorFieldReadModel),
         )
         object.__setattr__(self, "warnings", tuple(_ensure_str(warning, "warnings") for warning in (self.warnings or ())))
+        object.__setattr__(self, "source_reference", _ensure_str(self.source_reference, "source_reference"))
+        object.__setattr__(self, "unsupported", _ensure_bool(self.unsupported, "unsupported"))
+        object.__setattr__(self, "unsupported_reason", _ensure_str(self.unsupported_reason, "unsupported_reason"))
+        object.__setattr__(self, "suggested_action", _ensure_str(self.suggested_action, "suggested_action"))
         object.__setattr__(self, "stale", _ensure_bool(self.stale, "stale"))
 
 

@@ -4,12 +4,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from .projection_adapters import (
+    build_inspector_read_model,
     build_message_center_read_model,
     build_preview_read_model,
     build_project_tree_read_model,
     build_review_panel_read_models,
 )
-from .read_models import MessageReadModel
+from .read_models import MessageReadModel, empty_inspector_read_model
 from .workspace import (
     ConfiguratorV2ServiceBindings,
     ConfiguratorV2Workspace,
@@ -67,6 +68,20 @@ class ConfiguratorV2ServiceIntegration:
             source["selected_node_id"] = selection.selection_id
         return source or None
 
+    def _workspace_inspector_source(self):
+        selection = getattr(self.workspace, "current_selection", None)
+        if not selection:
+            return None
+        if (
+            getattr(selection, "selection_type", "NONE") in ("", "NONE")
+            and not getattr(selection, "selection_id", "")
+            and not getattr(selection, "display_name", "")
+            and not getattr(selection, "source_region", "")
+            and not getattr(selection, "metadata", None)
+        ):
+            return None
+        return selection
+
     def refresh_project_tree(self, source: Any = None):
         source = source if source is not None else self._workspace_project_source()
         if not source:
@@ -82,6 +97,33 @@ class ConfiguratorV2ServiceIntegration:
 
         read_model = build_project_tree_read_model(source)
         self.workspace.set_project_tree_read_model(read_model)
+        return read_model
+
+    def refresh_inspector(self, source: Any = None):
+        source = source if source is not None else self._workspace_inspector_source()
+        if not source:
+            read_model = empty_inspector_read_model()
+            self.workspace.set_inspector_read_model(read_model)
+            self.push_message(
+                severity="INFO",
+                text="Inspector integration not available yet",
+                category="Inspector integration",
+                source_reference="ConfiguratorV2ServiceIntegration.refresh_inspector",
+            )
+            return read_model
+
+        read_model = build_inspector_read_model(source)
+        if read_model.unsupported:
+            severity = "UNSUPPORTED"
+            text = read_model.unsupported_reason or "Selected object is not supported yet"
+            self.push_message(
+                severity=severity,
+                text=text,
+                category="Inspector integration",
+                source_reference=read_model.source_reference
+                or "ConfiguratorV2ServiceIntegration.refresh_inspector",
+            )
+        self.workspace.set_inspector_read_model(read_model)
         return read_model
 
     def refresh_preview(self, source: Any = None):
