@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .interactive_components import (
+    InteractiveVisualComponent,
+    build_interactive_visual_components,
+)
 from .projection_adapters import (
     build_inspector_read_model,
     build_message_center_read_model,
@@ -187,7 +191,15 @@ class ConfiguratorV2ServiceIntegration:
         self.workspace.set_inspector_read_model(read_model)
         return read_model
 
-    def refresh_preview(self, source: Any = None):
+    def refresh_preview(
+        self,
+        source: Any = None,
+        *,
+        show_hardware: bool | None = None,
+        show_feature_markers: bool | None = None,
+        show_door_swing: bool | None = None,
+        show_drawer_open: bool | None = None,
+    ):
         source = source if source is not None else self._workspace_preview_source()
         if not source:
             read_model = build_preview_read_model(
@@ -213,11 +225,30 @@ class ConfiguratorV2ServiceIntegration:
         scene_projection = self._scene_projection_source(source)
         if scene_projection is not None:
             visual_components = build_visual_components(scene_projection)
-            source = {
-                **(source if isinstance(source, dict) else {}),
-                "scene_projection": scene_projection,
-                "visual_components": visual_components,
-            }
+            kwargs: dict[str, Any] = {}
+            if show_hardware is not None:
+                kwargs["show_hardware"] = show_hardware
+            if show_feature_markers is not None:
+                kwargs["show_feature_markers"] = show_feature_markers
+            if show_door_swing is not None:
+                kwargs["show_door_swing"] = show_door_swing
+            if show_drawer_open is not None:
+                kwargs["show_drawer_open"] = show_drawer_open
+            if kwargs:
+                interactive = build_interactive_visual_components(
+                    visual_components, **kwargs
+                )
+                source = {
+                    **(source if isinstance(source, dict) else {}),
+                    "scene_projection": scene_projection,
+                    "interactive_components": interactive,
+                }
+            else:
+                source = {
+                    **(source if isinstance(source, dict) else {}),
+                    "scene_projection": scene_projection,
+                    "visual_components": visual_components,
+                }
 
         read_model = build_preview_read_model(source)
         if read_model.unsupported_reason:
@@ -228,10 +259,17 @@ class ConfiguratorV2ServiceIntegration:
                 source_reference="ConfiguratorV2ServiceIntegration.refresh_preview",
             )
         if scene_projection is not None:
-            self.workspace.set_preview_visual_components(
-                source.get("visual_components", ()),
-                read_model,
-            )
+            interactive_in_source = source.get("interactive_components", None) if isinstance(source, dict) else None
+            if interactive_in_source is not None:
+                self.workspace.set_preview_interactive_components(
+                    interactive_in_source,
+                    read_model,
+                )
+            else:
+                self.workspace.set_preview_visual_components(
+                    source.get("visual_components", ()),
+                    read_model,
+                )
         else:
             self.workspace.set_preview_read_model(read_model)
         return read_model

@@ -141,3 +141,91 @@ When `build_preview_read_model` processes visual components, it calls `build_fur
 ### Rendering
 
 Rendering Furniture Visual Styles into actual 3D or 2D visuals remains **future work**. This layer only captures what a renderer *would* need to know to display furniture elements correctly.
+
+## Interactive Furniture Components
+
+Visual Components define *what* furniture element exists.
+Furniture Visual Styles describe *how* that element should appear.
+Interactive Components define *how the user interacts* with each element.
+
+The interactive layer sits between Visual Styles and the PreviewReadModel:
+
+    SceneProjection
+         ↓
+    Visual Components
+         ↓
+    Furniture Visual Styles
+         ↓
+    Interactive Components    ← (this layer)
+         ↓
+    PreviewReadModel
+         ↓
+    PreviewRegion
+
+### Design Rules
+
+- **Presentation-only**: interaction state carries booleans (selected, highlighted, expanded, visible) and strings (state label, motion hint) — never geometry, transforms, positions, or backend objects.
+- **Renderer independent**: toggles like `door_swing_visible` and `drawer_open_visible` are hints for a future renderer. No swing arcs or open indicators are actually drawn.
+- **No geometry**: no hit-testing, no spatial queries, no bounds computation.
+- **No FreeCAD dependency**: the layer imports only `VisualComponent` from the same package.
+- **No SceneGraph dependency**: the builder works from `VisualComponent` state, not from `SceneProjection` or `SceneGraph`.
+
+### Interaction State Types
+
+| Type | Data |
+|---|---|
+| `ComponentInteractionOverlay` | selected, highlighted, expanded (all bool) |
+| `ComponentVisibilityState` | visible, hardware_visible, feature_markers_visible, door_swing_visible, drawer_open_visible (all bool) |
+| `ComponentMotionIndicator` | motion_hint: str (e.g. "swing", "slide") |
+| `ComponentInteractionState` | aggregates overlay + visibility + motion + state_label + tooltip + warnings |
+| `InteractiveVisualComponent` | component_id, component_type, display_name + ComponentInteractionState |
+
+### Interaction States
+
+| State | Description |
+|---|---|
+| `NORMAL` | Default resting state |
+| `SELECTED` | User has clicked/selected the component |
+| `HIGHLIGHTED` | Component is under cursor or programmatically targeted |
+| `EXPANDED` | Sub-structure is revealed (e.g. opened cabinet) |
+| `COLLAPSED` | Sub-structure is hidden |
+| `HIDDEN` | Component is not visible |
+| `UNSUPPORTED` | Component cannot be interacted with |
+| `STALE` | Component data is out of date |
+
+### Builder API
+
+```python
+from .interactive_components import build_interactive_visual_components
+
+interactives = build_interactive_visual_components(
+    components,
+    selected_component_id="door-1",
+    highlighted_component_id="door-1",
+    show_hardware=True,
+    show_feature_markers=True,
+    show_door_swing=False,
+    show_drawer_open=False,
+)
+# -> tuple[InteractiveVisualComponent, ...]
+```
+
+### Toggle Rules
+
+- `hardware_visible`: only applies to HARDWARE, DOOR, DRAWER, and CABINET types.
+- `feature_markers_visible`: only applies to FEATURE_MARKER type.
+- `door_swing_visible`: forced False for non-DOOR types.
+- `drawer_open_visible`: forced False for non-DRAWER types.
+- `motion_hint` is derived automatically: "swing" for DOOR with swing enabled, "slide" for DRAWER with open enabled.
+
+### Metadata Flow
+
+When `build_preview_read_model` receives `interactive_components` in its source dict, it builds `PreviewItemReadModel` items from the interactive components, embedding `interaction_state`, `selected`, `highlighted`, `visible`, `hardware_visible`, `feature_markers_visible`, `door_swing_visible`, `drawer_open_visible`, and `motion_hint` as display metadata pairs.
+
+### Service Integration
+
+`ConfiguratorV2ServiceIntegration.refresh_preview()` accepts the same four toggle keyword arguments (`show_hardware`, `show_feature_markers`, `show_door_swing`, `show_drawer_open`). When any toggle is provided, the integration builds interactive components from the scene-projected visual components and routes them through the interactive pipeline. When no toggles are provided, the original visual-components-only path is used.
+
+### Rendering
+
+Rendering Interactive Components — swing arcs, drawer-open indicators, highlight glows, selection rings — remains **future work**. This layer captures the interaction *state* that a renderer would use, but does not render anything.

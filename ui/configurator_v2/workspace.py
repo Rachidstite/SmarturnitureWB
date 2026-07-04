@@ -22,6 +22,13 @@ from .furniture_visual_styles import (
     apply_furniture_visual_styles,
     style_summary_label,
 )
+from .interactive_components import (
+    INTERACTIVE_STATES,
+    InteractiveVisualComponent,
+    build_interactive_visual_components,
+    count_active_interactions,
+    interaction_summary_label,
+)
 from .visual_components import VisualComponent
 
 NAVIGATION_ENTRIES = (
@@ -432,6 +439,7 @@ class PreviewRegion(_ShellFrame):
         self.highlighted_selection_type = "NONE"
         self.visual_components: tuple[VisualComponent, ...] = ()
         self.visual_styles: tuple[FurnitureVisualStyle, ...] = ()
+        self.interactive_components: tuple[InteractiveVisualComponent, ...] = ()
         self._render_preview_state()
 
     def set_selection_highlight(self, selection: ConfiguratorSelection):
@@ -497,6 +505,37 @@ class PreviewRegion(_ShellFrame):
                 summary = style_summary_label(style) or "Unnamed style"
                 self._append_summary(label_text, summary)
 
+        if self.interactive_components:
+            counts = count_active_interactions(self.interactive_components)
+            total = len(self.interactive_components)
+            self._append_summary("Interactive Components", f"{total} active")
+            selected_ic = next(
+                (ic for ic in self.interactive_components if ic.interaction.overlay.selected),
+                None,
+            )
+            highlighted_ic = next(
+                (ic for ic in self.interactive_components if ic.interaction.overlay.highlighted),
+                None,
+            )
+            if selected_ic:
+                self._append_summary("  Selected", selected_ic.component_id or selected_ic.display_name)
+            if highlighted_ic:
+                self._append_summary("  Highlighted", highlighted_ic.component_id or highlighted_ic.display_name)
+
+            hw_visible = any(ic.interaction.visibility.hardware_visible for ic in self.interactive_components)
+            fm_visible = any(ic.interaction.visibility.feature_markers_visible for ic in self.interactive_components)
+            ds_visible = any(ic.interaction.visibility.door_swing_visible for ic in self.interactive_components)
+            do_visible = any(ic.interaction.visibility.drawer_open_visible for ic in self.interactive_components)
+
+            self._append_summary("  Hardware Visible", "yes" if hw_visible else "no")
+            self._append_summary("  Feature Markers Visible", "yes" if fm_visible else "no")
+            self._append_summary("  Door Swing Indicators", "yes" if ds_visible else "no")
+            self._append_summary("  Drawer Open Indicators", "yes" if do_visible else "no")
+
+            state_summary = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+            if state_summary:
+                self._append_summary("  State Counts", state_summary)
+
         placeholder_text = read_model.viewport_message or read_model.unsupported_reason or "Preview unavailable"
         if read_model.available_representations:
             placeholder_text = f"{placeholder_text} | Representations: {', '.join(read_model.available_representations)}"
@@ -530,6 +569,23 @@ class PreviewRegion(_ShellFrame):
             or build_preview_read_model(
                 {
                     "visual_components": self.visual_components,
+                }
+            )
+        )
+
+    def set_interactive_components(
+        self,
+        interactive: tuple[InteractiveVisualComponent, ...],
+        read_model: PreviewReadModel | None = None,
+    ):
+        self.interactive_components = tuple(interactive or ())
+        self.visual_components = ()
+        self.visual_styles = ()
+        self.set_read_model(
+            read_model
+            or build_preview_read_model(
+                {
+                    "interactive_components": self.interactive_components,
                 }
             )
         )
@@ -940,6 +996,17 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             read_model = build_preview_read_model({"visual_components": self.preview_visual_components})
         self.preview_read_model = read_model
         self.preview_region.set_visual_components(self.preview_visual_components, read_model=read_model)
+
+    def set_preview_interactive_components(
+        self,
+        interactive: tuple[InteractiveVisualComponent, ...],
+        read_model: PreviewReadModel | None = None,
+    ):
+        self.preview_visual_components = ()
+        if read_model is None:
+            read_model = build_preview_read_model({"interactive_components": interactive})
+        self.preview_read_model = read_model
+        self.preview_region.set_interactive_components(interactive, read_model=read_model)
 
     def set_message_center_read_model(self, read_model: MessageCenterReadModel):
         self.message_center_read_model = read_model

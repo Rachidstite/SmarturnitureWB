@@ -24,6 +24,10 @@ from .furniture_visual_styles import (
     build_furniture_visual_style,
     style_descriptor_pairs,
 )
+from .interactive_components import (
+    InteractiveVisualComponent,
+    interaction_descriptor_pairs,
+)
 from .scene_projection import (
     SceneNodeProjection,
     SceneProjection,
@@ -512,6 +516,45 @@ def _build_preview_item_from_visual_component(component: VisualComponent) -> Pre
     )
 
 
+def _build_preview_item_from_interactive_component(
+    interactive: InteractiveVisualComponent,
+) -> PreviewItemReadModel:
+    _reject_backend_like_object(interactive, "interactive component")
+    interaction = interactive.interaction
+    vis = interaction.visibility
+    overlay = interaction.overlay
+    motion = interaction.motion
+
+    metadata = (
+        ("component_id", interactive.component_id),
+        ("component_type", interactive.component_type),
+        ("interaction_state", interaction.state_label),
+        ("selected", "yes" if overlay.selected else "no"),
+        ("highlighted", "yes" if overlay.highlighted else "no"),
+        ("expanded", "yes" if overlay.expanded else "no"),
+        ("visible", "yes" if vis.visible else "no"),
+        ("hardware_visible", "yes" if vis.hardware_visible else "no"),
+        ("feature_markers_visible", "yes" if vis.feature_markers_visible else "no"),
+        ("door_swing_visible", "yes" if vis.door_swing_visible else "no"),
+        ("drawer_open_visible", "yes" if vis.drawer_open_visible else "no"),
+    )
+    if motion.motion_hint:
+        metadata = metadata + (("motion_hint", motion.motion_hint),)
+    filtered = tuple(
+        (k, v) for k, v in metadata if v not in ("", "no")
+    )
+    return PreviewItemReadModel(
+        item_id=interactive.component_id,
+        item_type=interactive.component_type or "",
+        label=interactive.display_name or interactive.component_id,
+        visible=vis.visible,
+        selected=overlay.selected,
+        display_metadata=filtered,
+        source_reference=interaction.source_reference,
+        representation=interaction.state_label,
+    )
+
+
 def _resolve_scene_projection(source: Any, data: dict[str, Any]) -> SceneProjection | None:
     scene_projection = _get_value(source, "scene_projection", data.get("scene_projection", None))
     if isinstance(scene_projection, SceneProjection):
@@ -579,6 +622,19 @@ def _resolve_visual_components(source: Any, data: dict[str, Any]) -> tuple[Visua
     return ()
 
 
+def _resolve_interactive_components(
+    source: Any, data: dict[str, Any]
+) -> tuple[InteractiveVisualComponent, ...] | None:
+    interactive = _get_value(source, "interactive_components", data.get("interactive_components", None))
+    if interactive is not None:
+        result = tuple(interactive or ())
+        for ic in result:
+            if not isinstance(ic, InteractiveVisualComponent):
+                raise TypeError("interactive_components must contain InteractiveVisualComponent instances")
+        return result
+    return None
+
+
 def _visual_component_bounds_label(components: tuple[VisualComponent, ...]) -> str:
     if not components:
         return ""
@@ -605,6 +661,7 @@ def build_preview_read_model(
     data = _as_dict(source)
     scene_projection = _resolve_scene_projection(source, data)
     visual_components = _resolve_visual_components(source, data)
+    interactive_components = _resolve_interactive_components(source, data)
     selection_source = _get_value(source, "selection", data.get("selection", None))
     items_source = _get_value(source, "items", data.get("items", ()))
     available_representations = _get_value(
@@ -637,7 +694,12 @@ def build_preview_read_model(
     selection_item = None
 
     if scene_projection is not None:
-        if visual_components:
+        if interactive_components is not None:
+            scene_items = tuple(
+                _build_preview_item_from_interactive_component(ic)
+                for ic in interactive_components
+            )
+        elif visual_components:
             scene_items = tuple(
                 _build_preview_item_from_visual_component(component)
                 for component in visual_components
@@ -686,61 +748,114 @@ def build_preview_read_model(
         items_source = scene_items
         selection_source = scene_projection.selection if scene_projection.selection.selected_node_id else selection_source
         highlighted_item_id = highlighted_item_id or scene_projection.selection.selected_node_id or scene_projection.highlight_target
-    elif visual_components:
-        scene_items = tuple(
-            _build_preview_item_from_visual_component(component)
-            for component in visual_components
-        )
-        scene_available = any(component.visibility for component in visual_components)
-        scene_bounds = _visual_component_bounds_label(visual_components)
-        node_count = len(visual_components)
-        selected_component = next(
-            (
-                component
-                for component in visual_components
-                if component.selection_state == "SELECTED" or component.highlight_state == "HIGHLIGHTED"
-            ),
-            None,
-        )
-        selected_node = _as_str(
-            highlighted_item_id
-            or (selected_component.id if selected_component is not None else "")
-            or data.get("selected_node", data.get("selected_node_id", ""))
-        )
-        highlighted_item_id = _as_str(
-            highlighted_item_id
-            or (selected_component.id if selected_component is not None else "")
-            or data.get("highlighted_item_id", "")
-        )
-        if selected_component is not None and not data.get("highlighted_item_type"):
-            data["highlighted_item_type"] = selected_component.component_type
-        if not preview_title:
-            preview_title = _as_str(
-                data.get(
-                    "preview_title",
-                    selected_component.label if selected_component is not None else "Preview",
+    elif visual_components or interactive_components is not None:
+        if interactive_components is not None:
+            scene_items = tuple(
+                _build_preview_item_from_interactive_component(ic)
+                for ic in interactive_components
+            )
+            scene_available = any(
+                ic.interaction.visibility.visible for ic in interactive_components
+            )
+            node_count = len(interactive_components)
+            selected_interactive = next(
+                (ic for ic in interactive_components if ic.interaction.overlay.selected),
+                None,
+            )
+            selected_node = _as_str(
+                highlighted_item_id
+                or (selected_interactive.component_id if selected_interactive is not None else "")
+                or data.get("selected_node", data.get("selected_node_id", ""))
+            )
+            highlighted_item_id = _as_str(
+                highlighted_item_id
+                or (selected_interactive.component_id if selected_interactive is not None else "")
+                or data.get("highlighted_item_id", "")
+            )
+            if selected_interactive is not None and not data.get("highlighted_item_type"):
+                data["highlighted_item_type"] = selected_interactive.component_type
+            if not preview_title:
+                preview_title = _as_str(
+                    data.get(
+                        "preview_title",
+                        selected_interactive.display_name if selected_interactive is not None else "Preview",
+                    )
                 )
-            )
-        if not preview_state or preview_state == "Unavailable":
-            preview_state = "Ready" if scene_items else "Unavailable"
-        if not viewport_message:
-            viewport_message = (
-                f"Preview focus: {selected_component.label}"
-                if selected_component is not None
-                else "Visual components ready"
-            )
-        if not available_representations:
-            available_representations = tuple(
-                component.representation_status or component.component_type
+            if not preview_state or preview_state == "Unavailable":
+                preview_state = "Ready" if scene_items else "Unavailable"
+            if not viewport_message:
+                viewport_message = (
+                    f"Preview focus: {selected_interactive.display_name}"
+                    if selected_interactive is not None
+                    else "Interactive components ready"
+                )
+            if not available_representations:
+                available_representations = tuple(
+                    ic.interaction.state_label or ic.component_type
+                    for ic in interactive_components
+                    if ic.interaction.visibility.visible
+                )
+            if not warnings_source:
+                warnings_source = tuple(
+                    w
+                    for ic in interactive_components
+                    for w in ic.interaction.warnings
+                )
+        else:
+            scene_items = tuple(
+                _build_preview_item_from_visual_component(component)
                 for component in visual_components
-                if component.visibility
             )
-        if not warnings_source:
-            warnings_source = tuple(
-                warning
-                for component in visual_components
-                for warning in component.warnings
+            scene_available = any(component.visibility for component in visual_components)
+            scene_bounds = _visual_component_bounds_label(visual_components)
+            node_count = len(visual_components)
+            selected_component = next(
+                (
+                    component
+                    for component in visual_components
+                    if component.selection_state == "SELECTED" or component.highlight_state == "HIGHLIGHTED"
+                ),
+                None,
             )
+            selected_node = _as_str(
+                highlighted_item_id
+                or (selected_component.id if selected_component is not None else "")
+                or data.get("selected_node", data.get("selected_node_id", ""))
+            )
+            highlighted_item_id = _as_str(
+                highlighted_item_id
+                or (selected_component.id if selected_component is not None else "")
+                or data.get("highlighted_item_id", "")
+            )
+            if selected_component is not None and not data.get("highlighted_item_type"):
+                data["highlighted_item_type"] = selected_component.component_type
+            if not preview_title:
+                preview_title = _as_str(
+                    data.get(
+                        "preview_title",
+                        selected_component.label if selected_component is not None else "Preview",
+                    )
+                )
+            if not preview_state or preview_state == "Unavailable":
+                preview_state = "Ready" if scene_items else "Unavailable"
+            if not viewport_message:
+                viewport_message = (
+                    f"Preview focus: {selected_component.label}"
+                    if selected_component is not None
+                    else "Visual components ready"
+                )
+            if not available_representations:
+                available_representations = tuple(
+                    component.representation_status or component.component_type
+                    for component in visual_components
+                    if component.visibility
+                )
+            if not warnings_source:
+                warnings_source = tuple(
+                    warning
+                    for component in visual_components
+                    for warning in component.warnings
+                )
         if not current_family:
             current_family = _as_str(data.get("current_family", ""))
         highlight_target = _as_str(data.get("highlight_target", highlighted_item_id or ""))
