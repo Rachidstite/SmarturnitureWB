@@ -88,6 +88,11 @@ from .presentation_state import (
 from .presentation_binding import (
     PresentationStateResolver,
 )
+from .presentation_synchronization import (
+    SynchronizedPresentation,
+    synchronize_presentation,
+    synchronize_descriptor_pairs,
+)
 from .presentation_visual_contract import (
     EMPHASIS_CRITICAL,
     EMPHASIS_HIGH,
@@ -208,6 +213,9 @@ __all__ = [
     "resolve_presentation_state",
     "resolve_presentation_states",
     "PresentationStateResolver",
+    "SynchronizedPresentation",
+    "synchronize_presentation",
+    "synchronize_descriptor_pairs",
     "EMPHASIS_CRITICAL",
     "EMPHASIS_HIGH",
     "EMPHASIS_LEVELS",

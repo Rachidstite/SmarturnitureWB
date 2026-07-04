@@ -29,6 +29,10 @@ from .interactive_components import (
     count_active_interactions,
     interaction_summary_label,
 )
+from .presentation_synchronization import (
+    SynchronizedPresentation,
+    synchronize_presentation,
+)
 from .visual_components import VisualComponent
 
 NAVIGATION_ENTRIES = (
@@ -1008,6 +1012,42 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.preview_read_model = read_model
         self.preview_region.set_interactive_components(interactive, read_model=read_model)
 
+    def synchronize_preview_interactive_components(
+        self,
+        interactive: tuple[InteractiveVisualComponent, ...],
+        *,
+        selected_ids: frozenset[str] | None = None,
+        hovered_id: str = "",
+        focused_id: str = "",
+        disabled_ids: frozenset[str] | None = None,
+        warning_ids: frozenset[str] | None = None,
+        error_ids: frozenset[str] | None = None,
+        preview_ids: frozenset[str] | None = None,
+        active_ids: frozenset[str] | None = None,
+        muted_ids: frozenset[str] | None = None,
+    ):
+        """Synchronize presentation state onto interactive components and update preview.
+
+        Runs the full presentation pipeline (binding → visual contract) on the
+        interactive component IDs, attaches the results to new frozen instances,
+        and routes them into the preview region.
+
+        The original *interactive* tuple is unchanged.
+        """
+        synchronized = _attach_synchronized_states(
+            interactive,
+            selected_ids=selected_ids,
+            hovered_id=hovered_id,
+            focused_id=focused_id,
+            disabled_ids=disabled_ids,
+            warning_ids=warning_ids,
+            error_ids=error_ids,
+            preview_ids=preview_ids,
+            active_ids=active_ids,
+            muted_ids=muted_ids,
+        )
+        self.set_preview_interactive_components(synchronized)
+
     def set_message_center_read_model(self, read_model: MessageCenterReadModel):
         self.message_center_read_model = read_model
 
@@ -1024,3 +1064,78 @@ def create_configurator_v2_workspace(
     service_bindings: ConfiguratorV2ServiceBindings | None = None,
 ) -> ConfiguratorV2Workspace:
     return ConfiguratorV2Workspace(parent=parent, service_bindings=service_bindings)
+
+
+# ── Presentation integration helper ─────────────────────────────────
+
+
+def _attach_synchronized_states(
+    interactives: tuple[InteractiveVisualComponent, ...],
+    *,
+    selected_ids: frozenset[str] | None = None,
+    hovered_id: str = "",
+    focused_id: str = "",
+    disabled_ids: frozenset[str] | None = None,
+    warning_ids: frozenset[str] | None = None,
+    error_ids: frozenset[str] | None = None,
+    preview_ids: frozenset[str] | None = None,
+    active_ids: frozenset[str] | None = None,
+    muted_ids: frozenset[str] | None = None,
+) -> tuple[InteractiveVisualComponent, ...]:
+    """Synchronize presentation state + visual contract onto interactive components.
+
+    Accepts a sequence of InteractiveVisualComponent instances and
+    presentation flag ID sets, runs the full synchronization pipeline,
+    and returns NEW InteractiveVisualComponent instances with the
+    ``presentation`` and ``visual_contract`` fields populated.
+
+    The original sequence is unchanged (frozen dataclasses).
+
+    This is a deterministic, side-effect free operation.
+    """
+    if not interactives:
+        return ()
+
+    ids = tuple(ic.component_id for ic in interactives)
+    snapshots = synchronize_presentation(
+        ids,
+        selected_ids=selected_ids,
+        hovered_id=hovered_id,
+        focused_id=focused_id,
+        disabled_ids=disabled_ids,
+        warning_ids=warning_ids,
+        error_ids=error_ids,
+        preview_ids=preview_ids,
+        active_ids=active_ids,
+        muted_ids=muted_ids,
+    )
+
+    result: list[InteractiveVisualComponent] = []
+    for ic, snap in zip(interactives, snapshots):
+        result.append(
+            InteractiveVisualComponent(
+                component_id=ic.component_id,
+                component_type=ic.component_type,
+                display_name=ic.display_name,
+                interaction=type(ic.interaction)(
+                    overlay=ic.interaction.overlay,
+                    visibility=ic.interaction.visibility,
+                    motion=ic.interaction.motion,
+                    state_label=ic.interaction.state_label,
+                    tooltip=ic.interaction.tooltip,
+                    warnings=ic.interaction.warnings,
+                    source_reference=ic.interaction.source_reference,
+                    presentation=(
+                        snap.presentation_state
+                        if not snap.presentation_state.is_neutral
+                        else None
+                    ),
+                    visual_contract=(
+                        snap.visual_contract
+                        if not snap.visual_contract.is_neutral
+                        else None
+                    ),
+                ),
+            )
+        )
+    return tuple(result)
