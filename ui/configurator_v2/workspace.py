@@ -17,6 +17,11 @@ from .read_models import (
     empty_review_panel_read_models,
 )
 from .projection_adapters import build_inspector_read_model, build_preview_read_model
+from .furniture_visual_styles import (
+    FurnitureVisualStyle,
+    apply_furniture_visual_styles,
+    style_summary_label,
+)
 from .visual_components import VisualComponent
 
 NAVIGATION_ENTRIES = (
@@ -426,6 +431,7 @@ class PreviewRegion(_ShellFrame):
         self.highlighted_selection_id = ""
         self.highlighted_selection_type = "NONE"
         self.visual_components: tuple[VisualComponent, ...] = ()
+        self.visual_styles: tuple[FurnitureVisualStyle, ...] = ()
         self._render_preview_state()
 
     def set_selection_highlight(self, selection: ConfiguratorSelection):
@@ -484,6 +490,13 @@ class PreviewRegion(_ShellFrame):
             read_model.viewport_message or read_model.unsupported_reason or "Preview unavailable",
         )
 
+        if self.visual_styles:
+            self._append_summary("Visual Styles", f"{len(self.visual_styles)} style(s) active")
+            for idx, style in enumerate(self.visual_styles):
+                label_text = f"  Style {idx + 1}"
+                summary = style_summary_label(style) or "Unnamed style"
+                self._append_summary(label_text, summary)
+
         placeholder_text = read_model.viewport_message or read_model.unsupported_reason or "Preview unavailable"
         if read_model.available_representations:
             placeholder_text = f"{placeholder_text} | Representations: {', '.join(read_model.available_representations)}"
@@ -511,6 +524,7 @@ class PreviewRegion(_ShellFrame):
         read_model: PreviewReadModel | None = None,
     ):
         self.visual_components = tuple(components or ())
+        self.visual_styles = apply_furniture_visual_styles(self.visual_components)
         self.set_read_model(
             read_model
             or build_preview_read_model(

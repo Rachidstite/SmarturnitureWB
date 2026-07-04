@@ -86,3 +86,58 @@ Integration is still pending:
 - manufacturing, cost, commercial, and release panels remain read-only containers
 
 Future sprints will connect the shell to existing Application Services and backend projections.
+
+## Furniture Visual Styles
+
+Visual Components describe *what* furniture element exists.
+Furniture Visual Styles describe *how* that element should appear.
+
+The style layer sits between Visual Components and the PreviewReadModel:
+
+    SceneProjection
+         ↓
+    Visual Components
+         ↓
+    Furniture Visual Styles  ← (this layer)
+         ↓
+    PreviewReadModel
+         ↓
+    PreviewRegion
+
+### Design Rules
+
+- **Presentation-only**: styles carry colour, finish, texture, door type, handle position, etc. — never geometry, machining logic, CNC data, or cost.
+- **No backend objects**: styles contain no FreeCAD, SceneNode, or backend geometry references.
+- **No renderer**: styles prepare hints for a future renderer, but do not render anything.
+- **Backward compatible**: VisualComponent subclasses remain unchanged. Style metadata is added via `display_metadata` pairs on `PreviewItemReadModel`.
+
+### Style Types
+
+| Style | Component Type | Fields |
+|---|---|---|
+| `DoorVisualStyle` | `DoorVisualComponent` | door_type (slab/shaker/glass/framed/flush), overlay_inset, handle_position |
+| `DrawerVisualStyle` | `DrawerVisualComponent` | front_type (slab/framed), internal_box, slide_type, handle_position |
+| `PanelVisualStyle` | `PanelVisualComponent` | material_finish, color_name, texture_descriptor, edge_banding_appearance |
+| `BackPanelVisualStyle` | `BackPanelVisualComponent` | thin_panel, recessed_panel, groove_indicator |
+| `HardwareVisualStyle` | `HardwareVisualComponent` | hinge, handle, drawer_slide, shelf_pin, minifix, confirmat |
+| `FeatureMarkerVisualStyle` | `FeatureMarkerComponent` | drilling, groove, cutout, edge_band_feature, machining_marker |
+
+### Builder API
+
+```python
+from .furniture_visual_styles import build_furniture_visual_style, apply_furniture_visual_styles
+
+style = build_furniture_visual_style(door_component)
+# -> DoorVisualStyle(door_type="shaker", overlay_inset="overlay", ...)
+
+styles = apply_furniture_visual_styles(components)
+# -> tuple[FurnitureVisualStyle, ...]
+```
+
+### Metadata Flow
+
+When `build_preview_read_model` processes visual components, it calls `build_furniture_visual_style` for each component and flattens the result into `display_metadata` pairs on `PreviewItemReadModel`. The `PreviewRegion` can then display style summaries via `style_summary_label()`.
+
+### Rendering
+
+Rendering Furniture Visual Styles into actual 3D or 2D visuals remains **future work**. This layer only captures what a renderer *would* need to know to display furniture elements correctly.

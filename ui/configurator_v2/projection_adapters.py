@@ -20,6 +20,10 @@ from .read_models import (
     empty_project_tree_read_model,
     empty_review_panel_read_models,
 )
+from .furniture_visual_styles import (
+    build_furniture_visual_style,
+    style_descriptor_pairs,
+)
 from .scene_projection import (
     SceneNodeProjection,
     SceneProjection,
@@ -484,6 +488,8 @@ def _build_preview_item_from_scene_node(
 
 def _build_preview_item_from_visual_component(component: VisualComponent) -> PreviewItemReadModel:
     _reject_backend_like_object(component, "visual component")
+    style = build_furniture_visual_style(component)
+    style_pairs = style_descriptor_pairs(style)
     metadata = component.display_metadata + (
         ("material", component.material_name),
         ("base_color", component.base_color),
@@ -493,7 +499,7 @@ def _build_preview_item_from_visual_component(component: VisualComponent) -> Pre
         ("selection_state", component.selection_state),
         ("highlight_state", component.highlight_state),
         ("display_state", component.display_state),
-    )
+    ) + style_pairs
     return PreviewItemReadModel(
         item_id=component.id,
         item_type=component.component_type,
