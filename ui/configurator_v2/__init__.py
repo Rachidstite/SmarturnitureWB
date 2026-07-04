@@ -133,7 +133,9 @@ from .visual_components import (
 )
 from .service_integration import (
     ConfiguratorV2ServiceIntegration,
+    EngineeringProjectionResult,
     attach_service_integration,
+    project_engineering_source,
 )
 
 __all__ = [
@@ -239,7 +241,9 @@ __all__ = [
     "resolve_visual_contracts",
     "visual_contract_descriptor_pairs",
     "ConfiguratorV2ServiceIntegration",
+    "EngineeringProjectionResult",
     "attach_service_integration",
+    "project_engineering_source",
     "InspectorFieldReadModel",
     "InspectorReadModel",
     "MessageCenterReadModel",

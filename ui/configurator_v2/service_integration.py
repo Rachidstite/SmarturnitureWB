@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from .interactive_components import (
     InteractiveVisualComponent,
     build_interactive_visual_components,
+)
+from .presentation_synchronization import (
+    SynchronizedPresentation,
+    synchronize_presentation,
 )
 from .projection_adapters import (
     build_inspector_read_model,
@@ -15,8 +19,8 @@ from .projection_adapters import (
     build_review_panel_read_models,
 )
 from .read_models import MessageReadModel, empty_inspector_read_model
-from .scene_projection import build_scene_projection
-from .visual_components import build_visual_components
+from .scene_projection import SceneProjection, build_scene_projection
+from .visual_components import VisualComponent, build_visual_components
 from .workspace import (
     ConfiguratorV2ServiceBindings,
     ConfiguratorV2Workspace,
@@ -332,6 +336,146 @@ class ConfiguratorV2ServiceIntegration:
         return read_models
 
 
+@dataclass(frozen=True)
+class EngineeringProjectionResult:
+    """Read-only result of projecting Engineering source through the adapter pipeline.
+
+    All fields are CV2-native frozen dataclasses — no Engineering types,
+    no domain types, no FreeCAD objects.
+
+    The ``visual_components`` and ``interactive_components`` fields are
+    mutually exclusive: interactive_components is populated when any
+    interaction toggle (show_hardware, show_door_swing, etc.) is provided;
+    otherwise visual_components is populated.
+    """
+
+    scene_projection: SceneProjection | None = None
+    visual_components: tuple[VisualComponent, ...] = field(default_factory=tuple)
+    interactive_components: tuple[InteractiveVisualComponent, ...] = field(
+        default_factory=tuple
+    )
+    synchronized_states: tuple[SynchronizedPresentation, ...] = field(
+        default_factory=tuple
+    )
+
+    def __post_init__(self):
+        if not isinstance(self.scene_projection, (SceneProjection, type(None))):
+            object.__setattr__(self, "scene_projection", None)
+        if not isinstance(self.visual_components, tuple):
+            object.__setattr__(self, "visual_components", ())
+        if not isinstance(self.interactive_components, tuple):
+            object.__setattr__(self, "interactive_components", ())
+        if not isinstance(self.synchronized_states, tuple):
+            object.__setattr__(self, "synchronized_states", ())
+
+
+def project_engineering_source(
+    source: Any,
+    *,
+    selected_component_id: str = "",
+    highlighted_component_id: str = "",
+    show_hardware: bool | None = None,
+    show_feature_markers: bool | None = None,
+    show_door_swing: bool | None = None,
+    show_drawer_open: bool | None = None,
+    selected_ids: frozenset[str] | None = None,
+    hovered_id: str = "",
+    focused_id: str = "",
+    disabled_ids: frozenset[str] | None = None,
+    warning_ids: frozenset[str] | None = None,
+    error_ids: frozenset[str] | None = None,
+    preview_ids: frozenset[str] | None = None,
+    active_ids: frozenset[str] | None = None,
+    muted_ids: frozenset[str] | None = None,
+) -> EngineeringProjectionResult:
+    """Project Engineering source data through the CV2 adapter pipeline.
+
+    This is the single entry point for Engineering data into CV2.
+    It composes the existing projection, visual component, interactive,
+    and presentation synchronization layers without exposing any
+    Engineering types to the UI.
+
+    Parameters
+    ----------
+    source : Duck-typed Engineering source (SceneGraph, dict, or any
+             object with ``all_nodes()``, ``nodes``, or ``children``).
+    All other parameters : Standard CV2 interactive + presentation flags.
+
+    Returns
+    -------
+    EngineeringProjectionResult with only CV2-native frozen dataclasses.
+
+    The function is deterministic and side-effect free.
+    """
+    scene_projection = build_scene_projection(
+        source,
+        selected_node_id=selected_component_id,
+        highlight_target=highlighted_component_id,
+    )
+
+    if scene_projection is None or not scene_projection.nodes:
+        return EngineeringProjectionResult()
+
+    visual_components = build_visual_components(scene_projection)
+
+    has_interactive_toggles = any(
+        x is not None
+        for x in [show_hardware, show_feature_markers, show_door_swing, show_drawer_open]
+    )
+
+    interactive_components: tuple[InteractiveVisualComponent, ...] = ()
+    synchronized_states: tuple[SynchronizedPresentation, ...] = ()
+
+    if has_interactive_toggles:
+        interactive_components = build_interactive_visual_components(
+            visual_components,
+            selected_component_id=selected_component_id,
+            highlighted_component_id=highlighted_component_id,
+            show_hardware=True if show_hardware is None else show_hardware,
+            show_feature_markers=True
+            if show_feature_markers is None
+            else show_feature_markers,
+            show_door_swing=False if show_door_swing is None else show_door_swing,
+            show_drawer_open=False if show_drawer_open is None else show_drawer_open,
+        )
+
+        has_presentation_flags = any(
+            x is not None
+            for x in [
+                selected_ids,
+                hovered_id,
+                focused_id,
+                disabled_ids,
+                warning_ids,
+                error_ids,
+                preview_ids,
+                active_ids,
+                muted_ids,
+            ]
+        )
+        if has_presentation_flags:
+            ids = tuple(ic.component_id for ic in interactive_components)
+            synchronized_states = synchronize_presentation(
+                ids,
+                selected_ids=selected_ids,
+                hovered_id=hovered_id,
+                focused_id=focused_id,
+                disabled_ids=disabled_ids,
+                warning_ids=warning_ids,
+                error_ids=error_ids,
+                preview_ids=preview_ids,
+                active_ids=active_ids,
+                muted_ids=muted_ids,
+            )
+
+    return EngineeringProjectionResult(
+        scene_projection=scene_projection,
+        visual_components=visual_components if not has_interactive_toggles else (),
+        interactive_components=interactive_components,
+        synchronized_states=synchronized_states,
+    )
+
+
 def attach_service_integration(
     workspace: ConfiguratorV2Workspace,
     service_bindings: ConfiguratorV2ServiceBindings | None = None,
@@ -347,4 +491,6 @@ def attach_service_integration(
 __all__ = [
     "ConfiguratorV2ServiceIntegration",
     "attach_service_integration",
+    "EngineeringProjectionResult",
+    "project_engineering_source",
 ]
