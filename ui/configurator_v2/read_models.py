@@ -38,6 +38,14 @@ def _ensure_string_pairs(value, field_name: str) -> tuple[tuple[str, str], ...]:
     return tuple(pairs)
 
 
+def _ensure_string_tuple(value, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (_ensure_str(value, field_name),)
+    return tuple(_ensure_str(item, field_name) for item in value)
+
+
 @dataclass(frozen=True)
 class ProjectTreeNodeReadModel:
     node_id: str = ""
@@ -143,6 +151,7 @@ class PreviewItemReadModel:
     selected: bool = False
     display_metadata: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     source_reference: str = ""
+    representation: str = ""
 
     def __post_init__(self):
         object.__setattr__(self, "item_id", _ensure_str(self.item_id, "item_id"))
@@ -152,24 +161,39 @@ class PreviewItemReadModel:
         object.__setattr__(self, "selected", _ensure_bool(self.selected, "selected"))
         object.__setattr__(self, "display_metadata", _ensure_string_pairs(self.display_metadata, "display_metadata"))
         object.__setattr__(self, "source_reference", _ensure_str(self.source_reference, "source_reference"))
+        object.__setattr__(self, "representation", _ensure_str(self.representation, "representation"))
 
 
 @dataclass(frozen=True)
 class PreviewReadModel:
+    preview_title: str = ""
     preview_mode: str = "Customer View"
+    preview_state: str = "Unavailable"
     items: tuple[PreviewItemReadModel, ...] = field(default_factory=tuple)
     highlighted_item_id: str = ""
+    highlighted_item_type: str = ""
+    current_family: str = ""
+    viewport_message: str = ""
+    available_representations: tuple[str, ...] = field(default_factory=tuple)
+    warnings: tuple[str, ...] = field(default_factory=tuple)
     stale: bool = False
     unsupported_reason: str = ""
 
     def __post_init__(self):
+        object.__setattr__(self, "preview_title", _ensure_str(self.preview_title, "preview_title"))
         object.__setattr__(self, "preview_mode", _ensure_str(self.preview_mode, "preview_mode"))
+        object.__setattr__(self, "preview_state", _ensure_str(self.preview_state, "preview_state"))
         object.__setattr__(
             self,
             "items",
             _ensure_instance_tuple(self.items, "items", PreviewItemReadModel),
         )
         object.__setattr__(self, "highlighted_item_id", _ensure_str(self.highlighted_item_id, "highlighted_item_id"))
+        object.__setattr__(self, "highlighted_item_type", _ensure_str(self.highlighted_item_type, "highlighted_item_type"))
+        object.__setattr__(self, "current_family", _ensure_str(self.current_family, "current_family"))
+        object.__setattr__(self, "viewport_message", _ensure_str(self.viewport_message, "viewport_message"))
+        object.__setattr__(self, "available_representations", _ensure_string_tuple(self.available_representations, "available_representations"))
+        object.__setattr__(self, "warnings", tuple(_ensure_str(warning, "warnings") for warning in (self.warnings or ())))
         object.__setattr__(self, "stale", _ensure_bool(self.stale, "stale"))
         object.__setattr__(self, "unsupported_reason", _ensure_str(self.unsupported_reason, "unsupported_reason"))
 

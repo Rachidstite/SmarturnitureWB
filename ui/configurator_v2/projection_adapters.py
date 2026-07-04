@@ -405,6 +405,43 @@ def _build_preview_item(item: Any) -> PreviewItemReadModel:
         selected=_as_bool(_get_value(item, "selected", False), False),
         display_metadata=_string_pairs(display_metadata),
         source_reference=_as_str(_get_value(item, "source_reference", _get_value(item, "source", ""))),
+        representation=_as_str(_get_value(item, "representation", data.get("representation", ""))),
+    )
+
+
+def _build_preview_item_from_selection(selection: Any, *, representation: str = "") -> PreviewItemReadModel:
+    _reject_backend_like_object(selection, "preview selection")
+    data = _as_dict(selection)
+    metadata = _get_value(selection, "metadata", data.get("metadata", {}))
+    if isinstance(metadata, Mapping):
+        metadata = dict(metadata)
+    else:
+        metadata = _as_dict(metadata)
+    display_metadata = tuple(
+        (key, _as_str(value))
+        for key, value in metadata.items()
+        if key not in {"warnings", "unsupported_reason", "suggested_action"}
+    )
+    item_id = _as_str(
+        _get_value(selection, "selection_id", data.get("selection_id", data.get("id", data.get("node_id", ""))))
+    )
+    item_type = _as_str(
+        _get_value(selection, "selection_type", data.get("selection_type", data.get("node_type", "NONE")))
+    )
+    label = _as_str(
+        _get_value(selection, "display_name", data.get("display_name", data.get("label", data.get("name", ""))))
+    )
+    if not label:
+        label = item_id
+    return PreviewItemReadModel(
+        item_id=item_id,
+        item_type=item_type,
+        label=label,
+        visible=True,
+        selected=True,
+        display_metadata=display_metadata,
+        source_reference=_as_str(_get_value(selection, "source_region", data.get("source_region", ""))),
+        representation=representation,
     )
 
 
@@ -420,11 +457,96 @@ def build_preview_read_model(
         return empty_preview_read_model()
     _reject_backend_like_object(source, "preview source")
     data = _as_dict(source)
+    selection_source = _get_value(source, "selection", data.get("selection", None))
     items_source = _get_value(source, "items", data.get("items", ()))
+    available_representations = _get_value(
+        source,
+        "available_representations",
+        data.get("available_representations", ()),
+    )
+    if isinstance(available_representations, str):
+        available_representations = (available_representations,)
+    viewport_message = _as_str(_get_value(source, "viewport_message", data.get("viewport_message", "")))
+    preview_title = _as_str(
+        _get_value(source, "preview_title", data.get("preview_title", data.get("title", "")))
+    )
+    current_family = _as_str(
+        _get_value(source, "current_family", data.get("current_family", data.get("product_family", "")))
+    )
+    preview_state = _as_str(
+        _get_value(source, "preview_state", data.get("preview_state", "Unavailable"))
+    )
+    warnings_source = _get_value(source, "warnings", data.get("warnings", ()))
+    if isinstance(warnings_source, str):
+        warnings_source = (warnings_source,)
+    selection_type_value = _as_str(
+        _get_value(selection_source, "selection_type", data.get("highlighted_item_type", data.get("selection_type", "NONE")))
+    )
+    selection_id_value = _as_str(
+        _get_value(selection_source, "selection_id", data.get("highlighted_item_id", data.get("selection_id", "")))
+    )
+    selection_label_value = _as_str(
+        _get_value(selection_source, "display_name", data.get("display_name", data.get("highlighted_item_label", "")))
+    )
+    if selection_source is not None and not items_source and (
+        selection_type_value not in ("", "NONE") or selection_id_value or selection_label_value
+    ):
+        items_source = (selection_source,)
+    selection_item = None
+    if selection_source is not None and (
+        selection_type_value not in ("", "NONE") or selection_id_value or selection_label_value
+    ):
+        selection_item = _build_preview_item_from_selection(
+            selection_source,
+            representation=_as_str(_get_value(source, "highlight_representation", data.get("highlight_representation", ""))),
+        )
+    elif highlighted_item_id:
+        selection_item = PreviewItemReadModel(
+            item_id=_as_str(highlighted_item_id),
+            item_type=_as_str(data.get("highlighted_item_type", "")),
+            label=_as_str(data.get("highlighted_item_label", highlighted_item_id)),
+            visible=True,
+            selected=True,
+            display_metadata=(),
+            source_reference=_as_str(data.get("source_reference", "")),
+            representation=_as_str(data.get("highlight_representation", "")),
+        )
+    if selection_item is not None:
+        if not highlighted_item_id:
+            highlighted_item_id = selection_item.item_id
+        if not data.get("highlighted_item_type"):
+            data["highlighted_item_type"] = selection_item.item_type
+        if not preview_title:
+            preview_title = selection_item.label or selection_item.item_id
+        if not preview_state or preview_state == "Unavailable":
+            preview_state = "Ready"
+        if not viewport_message:
+            viewport_message = f"Preview focus: {selection_item.label or selection_item.item_id}"
+        if not current_family:
+            current_family = _as_str(data.get("current_family", ""))
+    item_models = tuple(_build_preview_item(item) for item in (items_source or ()))
+    if selection_item is not None and not any(item.item_id == selection_item.item_id for item in item_models):
+        item_models = (selection_item,) + item_models
+    if not available_representations:
+        if item_models:
+            available_representations = tuple(
+                _as_str(item.representation or item.item_type or "Default") for item in item_models if item.visible
+            )
+        elif selection_item is not None:
+            available_representations = (
+                _as_str(selection_item.representation or selection_item.item_type or "Default"),
+            )
     return PreviewReadModel(
+        preview_title=preview_title or "Preview",
         preview_mode=_as_str(preview_mode if preview_mode is not None else data.get("preview_mode", "Customer View")),
-        items=tuple(_build_preview_item(item) for item in (items_source or ())),
+        preview_state=preview_state,
+        items=item_models,
         highlighted_item_id=_as_str(highlighted_item_id if highlighted_item_id is not None else data.get("highlighted_item_id", "")),
+        highlighted_item_type=_as_str(data.get("highlighted_item_type", selection_item.item_type if selection_item else "")),
+        current_family=current_family,
+        viewport_message=viewport_message or _as_str(data.get("viewport_message", "")),
+        available_representations=tuple(_as_str(item) for item in (available_representations or ())),
+        warnings=tuple(_as_str(warning) for warning in (warnings_source or ())),
         stale=_as_bool(stale if stale is not None else data.get("stale", False), False),
         unsupported_reason=_as_str(unsupported_reason if unsupported_reason is not None else data.get("unsupported_reason", "")),
     )

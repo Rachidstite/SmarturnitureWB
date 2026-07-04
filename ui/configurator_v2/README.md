@@ -55,6 +55,13 @@ Inspector:
 - Inspector rendering is read-model driven and read-only
 - unsupported selections are shown as messages and display metadata, not exceptions
 
+Preview:
+
+- PreviewRegion consumes PreviewReadModel only
+- preview data comes from projection adapters and service integration
+- the widget renders titles, state, representations, warnings, and placeholder messages
+- selection highlighting remains as a compatibility hook, but no geometry is accessed directly
+
 Integration is still pending:
 
 - Application Services are not called yet

@@ -16,7 +16,7 @@ from .read_models import (
     empty_project_tree_read_model,
     empty_review_panel_read_models,
 )
-from .projection_adapters import build_inspector_read_model
+from .projection_adapters import build_inspector_read_model, build_preview_read_model
 
 NAVIGATION_ENTRIES = (
     "Dashboard",
@@ -394,7 +394,7 @@ class PreviewRegion(_ShellFrame):
     def __init__(self, parent=None):
         super().__init__(
             "Preview",
-            "Live preview placeholder backed by SceneGraph and FreeCAD later.",
+            "Read-model driven preview placeholder backed by projection data.",
             parent=parent,
         )
         self.preview_modes: tuple[str, ...] = ConfiguratorV2ShellModel().preview_modes
@@ -402,16 +402,84 @@ class PreviewRegion(_ShellFrame):
         for mode in self.preview_modes:
             self.preview_mode_selector.addItem(mode)
         self.body_layout.addWidget(self.preview_mode_selector)
-        self.preview_placeholder = QtWidgets.QLabel("Live preview placeholder")
+        self.read_model = empty_preview_read_model()
+        self.preview_title_value = QtWidgets.QLabel("")
+        self.preview_state_value = QtWidgets.QLabel("")
+        self.current_object_value = QtWidgets.QLabel("")
+        self.current_family_value = QtWidgets.QLabel("")
+        self.preview_status_value = QtWidgets.QLabel("")
+        self.representation_value = QtWidgets.QLabel("")
+        self.highlight_target_value = QtWidgets.QLabel("")
+        self.warning_value = QtWidgets.QLabel("")
+        self.viewport_message_value = QtWidgets.QLabel("")
+        self.preview_placeholder = QtWidgets.QLabel("Preview unavailable")
         if hasattr(self.preview_placeholder, "setMinimumHeight"):
             self.preview_placeholder.setMinimumHeight(240)
-        self.body_layout.addWidget(self.preview_placeholder)
+        self.render_rows: list[str] = []
+        self.summary_labels: dict[str, object] = {}
         self.highlighted_selection_id = ""
         self.highlighted_selection_type = "NONE"
+        self._render_preview_state()
 
     def set_selection_highlight(self, selection: ConfiguratorSelection):
         self.highlighted_selection_id = selection.selection_id
         self.highlighted_selection_type = selection.selection_type
+        self._render_preview_state()
+
+    def _set_label_text(self, widget, value: str):
+        if hasattr(widget, "setText"):
+            widget.setText(value)
+
+    def _append_summary(self, label_text: str, value_text: str):
+        label_widget = QtWidgets.QLabel()
+        self._set_label_text(label_widget, label_text)
+        self.body_layout.addWidget(label_widget)
+        value_widget = QtWidgets.QLabel()
+        self._set_label_text(value_widget, value_text)
+        self.body_layout.addWidget(value_widget)
+        self.summary_labels[label_text] = value_widget
+        self.render_rows.append(f"{label_text}: {value_text}")
+
+    def _render_preview_state(self):
+        _clear_layout(self.body_layout)
+        self.summary_labels = {}
+        self.render_rows = []
+
+        read_model = self.read_model or empty_preview_read_model()
+        if hasattr(self.preview_mode_selector, "setCurrentText"):
+            self.preview_mode_selector.setCurrentText(read_model.preview_mode or "Customer View")
+        self.body_layout.addWidget(self.preview_mode_selector)
+        self._append_summary("Preview Title", read_model.preview_title or "Preview")
+        self._append_summary("Preview Mode", read_model.preview_mode or "Customer View")
+        self._append_summary("Preview State", read_model.preview_state or "Unavailable")
+        self._append_summary("Current Object", read_model.highlighted_item_id or self.highlighted_selection_id or "None")
+        self._append_summary("Current Type", read_model.highlighted_item_type or self.highlighted_selection_type or "NONE")
+        self._append_summary("Current Family", read_model.current_family or "Not selected")
+        self._append_summary(
+            "Representation Availability",
+            ", ".join(read_model.available_representations) if read_model.available_representations else "Unavailable",
+        )
+        self._append_summary("Highlight Target", read_model.highlighted_item_id or self.highlighted_selection_id or "None")
+        self._append_summary("Warnings", ", ".join(read_model.warnings) if read_model.warnings else "None")
+        self._append_summary(
+            "Viewport Message",
+            read_model.viewport_message or read_model.unsupported_reason or "Preview unavailable",
+        )
+
+        placeholder_text = read_model.viewport_message or read_model.unsupported_reason or "Preview unavailable"
+        if read_model.available_representations:
+            placeholder_text = f"{placeholder_text} | Representations: {', '.join(read_model.available_representations)}"
+        self.preview_placeholder = QtWidgets.QLabel()
+        self._set_label_text(self.preview_placeholder, placeholder_text)
+        if hasattr(self.preview_placeholder, "setMinimumHeight"):
+            self.preview_placeholder.setMinimumHeight(240)
+        self.body_layout.addWidget(self.preview_placeholder)
+
+    def set_read_model(self, read_model: PreviewReadModel):
+        self.read_model = read_model or empty_preview_read_model()
+        self.highlighted_selection_id = self.read_model.highlighted_item_id or self.highlighted_selection_id
+        self.highlighted_selection_type = self.read_model.highlighted_item_type or self.highlighted_selection_type
+        self._render_preview_state()
 
 
 class ProductContextRegion(_ShellFrame):
@@ -763,6 +831,30 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         selection = selection or ConfiguratorSelection()
         self.current_selection = selection
         self.set_inspector_read_model(build_inspector_read_model(selection))
+        self.set_preview_read_model(
+            build_preview_read_model(
+                {
+                    "selection": selection,
+                    "current_family": self.current_product_family,
+                    "preview_title": self.current_product_family or selection.display_name or "Preview",
+                    "preview_state": "Ready" if selection.selection_type not in ("", "NONE") else "Unavailable",
+                    "viewport_message": (
+                        f"Focus on {selection.display_name or selection.selection_id or 'current selection'}"
+                        if selection.selection_type not in ("", "NONE")
+                        else "Select a project or product to populate preview"
+                    ),
+                    "available_representations": (
+                        ("Customer View", "Design View")
+                        if selection.selection_type not in ("", "NONE")
+                        else ()
+                    ),
+                    "highlight_representation": "Selection Focus"
+                    if selection.selection_type not in ("", "NONE")
+                    else "",
+                    "warnings": (),
+                }
+            )
+        )
         self.preview_region.set_selection_highlight(selection)
 
     def clear_selection(self):
@@ -781,6 +873,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def set_preview_read_model(self, read_model: PreviewReadModel):
         self.preview_read_model = read_model
+        self.preview_region.set_read_model(read_model)
 
     def set_message_center_read_model(self, read_model: MessageCenterReadModel):
         self.message_center_read_model = read_model

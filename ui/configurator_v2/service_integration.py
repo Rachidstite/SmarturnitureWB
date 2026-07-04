@@ -82,6 +82,32 @@ class ConfiguratorV2ServiceIntegration:
             return None
         return selection
 
+    def _workspace_preview_source(self):
+        selection = getattr(self.workspace, "current_selection", None)
+        source = {}
+        if getattr(self.workspace, "current_product_family", None) is not None:
+            source["current_family"] = self.workspace.current_product_family
+        if getattr(self.workspace, "current_product", None) is not None:
+            source["preview_title"] = self.workspace.current_product
+        if selection and getattr(selection, "selection_id", ""):
+            source["selection"] = selection
+            source["highlighted_item_id"] = selection.selection_id
+            source["highlighted_item_type"] = getattr(selection, "selection_type", "")
+            source["preview_state"] = "Ready"
+            source["viewport_message"] = (
+                f"Focus on {getattr(selection, 'display_name', '') or selection.selection_id}"
+            )
+            source["available_representations"] = ("Customer View", "Design View")
+            if getattr(selection, "source_region", ""):
+                source["source_reference"] = selection.source_region
+        if not source and getattr(self.workspace, "current_product_family", None) is not None:
+            source["current_family"] = self.workspace.current_product_family
+            source["preview_title"] = self.workspace.current_product_family
+            source["preview_state"] = "Unavailable"
+            source["viewport_message"] = "Preview integration not available yet"
+            source["available_representations"] = ()
+        return source or None
+
     def refresh_project_tree(self, source: Any = None):
         source = source if source is not None else self._workspace_project_source()
         if not source:
@@ -127,14 +153,16 @@ class ConfiguratorV2ServiceIntegration:
         return read_model
 
     def refresh_preview(self, source: Any = None):
-        if source is None:
-            selection = getattr(self.workspace, "current_selection", None)
-            highlighted_item_id = getattr(selection, "selection_id", "") if selection else ""
+        source = source if source is not None else self._workspace_preview_source()
+        if not source:
             read_model = build_preview_read_model(
                 {
-                    "highlighted_item_id": highlighted_item_id,
+                    "preview_title": "Preview",
+                    "preview_state": "Unavailable",
+                    "viewport_message": "Preview integration not available yet",
+                    "available_representations": (),
+                    "warnings": (),
                     "unsupported_reason": "Preview integration not available yet",
-                    "items": (),
                 },
                 stale=False,
             )
@@ -148,6 +176,13 @@ class ConfiguratorV2ServiceIntegration:
             return read_model
 
         read_model = build_preview_read_model(source)
+        if read_model.unsupported_reason:
+            self.push_message(
+                severity="UNSUPPORTED",
+                text=read_model.unsupported_reason,
+                category="Preview integration",
+                source_reference="ConfiguratorV2ServiceIntegration.refresh_preview",
+            )
         self.workspace.set_preview_read_model(read_model)
         return read_model
 
