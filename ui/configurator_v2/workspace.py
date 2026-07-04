@@ -541,6 +541,33 @@ class PreviewRegion(_ShellFrame):
             if state_summary:
                 self._append_summary("  State Counts", state_summary)
 
+        # ── Presentation-aware display ───────────────────────────
+        if self.interactive_components:
+            synced_components = [
+                ic for ic in self.interactive_components
+                if ic.interaction.presentation is not None
+                or ic.interaction.visual_contract is not None
+            ]
+            if synced_components:
+                self._append_summary("Presentation Sync", f"{len(synced_components)} component(s) synced")
+                for ic in synced_components[:5]:
+                    label = f"  {ic.component_id or ic.display_name}"
+                    parts = []
+                    p = ic.interaction.presentation
+                    vc = ic.interaction.visual_contract
+                    if p is not None and not p.is_neutral:
+                        parts.append(p.dominant_flag)
+                        parts.append(f"sev={p.visual_severity}")
+                    if vc is not None and not vc.is_neutral:
+                        parts.append(vc.emphasis_level)
+                        parts.append(vc.outline_intent)
+                        if vc.opacity_intent != "NORMAL":
+                            parts.append(vc.opacity_intent)
+                    if parts:
+                        self._append_summary(label, " | ".join(parts))
+                    else:
+                        self._append_summary(label, "neutral")
+
         placeholder_text = read_model.viewport_message or read_model.unsupported_reason or "Preview unavailable"
         if read_model.available_representations:
             placeholder_text = f"{placeholder_text} | Representations: {', '.join(read_model.available_representations)}"
