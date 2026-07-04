@@ -26,6 +26,7 @@ from .visual_components import (
     VisualComponent,
 )
 from .presentation_state import FurniturePresentationState
+from .presentation_visual_contract import PresentationVisualContract
 
 # ── Interaction states ───────────────────────────────────────────────
 
@@ -173,6 +174,7 @@ class ComponentInteractionState:
     warnings: tuple[str, ...] = field(default_factory=tuple)
     source_reference: str = ""
     presentation: FurniturePresentationState | None = None
+    visual_contract: PresentationVisualContract | None = None
 
     def __post_init__(self):
         if not isinstance(self.overlay, ComponentInteractionOverlay):
