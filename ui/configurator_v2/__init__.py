@@ -43,6 +43,10 @@ from .projection_adapters import (
     build_project_tree_read_model,
     build_review_panel_read_models,
 )
+from .service_integration import (
+    ConfiguratorV2ServiceIntegration,
+    attach_service_integration,
+)
 
 __all__ = [
     "ACTION_NAMES",
@@ -74,6 +78,8 @@ __all__ = [
     "build_preview_read_model",
     "build_message_center_read_model",
     "build_review_panel_read_models",
+    "ConfiguratorV2ServiceIntegration",
+    "attach_service_integration",
     "InspectorFieldReadModel",
     "InspectorReadModel",
     "MessageCenterReadModel",

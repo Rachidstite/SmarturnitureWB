@@ -486,6 +486,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.current_product = None
         self.current_product_state = "Draft"
         self.current_selection = ConfiguratorSelection()
+        self.service_integration = None
         self.project_tree_read_model = empty_project_tree_read_model()
         self.inspector_read_model = empty_inspector_read_model()
         self.preview_read_model = empty_preview_read_model()
@@ -560,6 +561,9 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def clear_selection(self):
         self.set_selection(ConfiguratorSelection())
+
+    def attach_service_integration(self, service_integration):
+        self.service_integration = service_integration
 
     def set_project_tree_read_model(self, read_model: ProjectTreeReadModel):
         self.project_tree_read_model = read_model

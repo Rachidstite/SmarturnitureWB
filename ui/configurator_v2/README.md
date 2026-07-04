@@ -41,6 +41,13 @@ Projection Adapters:
 - adapters do not compute backend truth
 - UI consumers receive read models only
 
+Service Integration:
+
+- services are called only through the integration controller
+- UI widgets consume read models only
+- unsupported capabilities become messages, not fake data
+- future sprints will wire real actions gradually
+
 Integration is still pending:
 
 - Application Services are not called yet
