@@ -410,6 +410,11 @@ class PreviewRegion(_ShellFrame):
         self.preview_status_value = QtWidgets.QLabel("")
         self.representation_value = QtWidgets.QLabel("")
         self.highlight_target_value = QtWidgets.QLabel("")
+        self.scene_available_value = QtWidgets.QLabel("")
+        self.node_count_value = QtWidgets.QLabel("")
+        self.scene_bounds_value = QtWidgets.QLabel("")
+        self.selected_node_value = QtWidgets.QLabel("")
+        self.representation_status_value = QtWidgets.QLabel("")
         self.warning_value = QtWidgets.QLabel("")
         self.viewport_message_value = QtWidgets.QLabel("")
         self.preview_placeholder = QtWidgets.QLabel("Preview unavailable")
@@ -452,14 +457,25 @@ class PreviewRegion(_ShellFrame):
         self._append_summary("Preview Title", read_model.preview_title or "Preview")
         self._append_summary("Preview Mode", read_model.preview_mode or "Customer View")
         self._append_summary("Preview State", read_model.preview_state or "Unavailable")
-        self._append_summary("Current Object", read_model.highlighted_item_id or self.highlighted_selection_id or "None")
+        self._append_summary("Scene Available", "Yes" if read_model.scene_available else "No")
+        self._append_summary("Node Count", str(read_model.node_count))
+        self._append_summary("Bounds", read_model.scene_bounds or "Unavailable")
+        self._append_summary("Selected Node", read_model.selected_node or "None")
+        self._append_summary(
+            "Current Object",
+            read_model.selected_node or read_model.highlighted_item_id or self.highlighted_selection_id or "None",
+        )
         self._append_summary("Current Type", read_model.highlighted_item_type or self.highlighted_selection_type or "NONE")
         self._append_summary("Current Family", read_model.current_family or "Not selected")
         self._append_summary(
             "Representation Availability",
             ", ".join(read_model.available_representations) if read_model.available_representations else "Unavailable",
         )
-        self._append_summary("Highlight Target", read_model.highlighted_item_id or self.highlighted_selection_id or "None")
+        self._append_summary("Representation Status", read_model.representation_status or "Unavailable")
+        self._append_summary(
+            "Highlight Target",
+            read_model.highlight_target or read_model.highlighted_item_id or self.highlighted_selection_id or "None",
+        )
         self._append_summary("Warnings", ", ".join(read_model.warnings) if read_model.warnings else "None")
         self._append_summary(
             "Viewport Message",
@@ -477,7 +493,12 @@ class PreviewRegion(_ShellFrame):
 
     def set_read_model(self, read_model: PreviewReadModel):
         self.read_model = read_model or empty_preview_read_model()
-        self.highlighted_selection_id = self.read_model.highlighted_item_id or self.highlighted_selection_id
+        self.highlighted_selection_id = (
+            self.read_model.selected_node
+            or self.read_model.highlight_target
+            or self.read_model.highlighted_item_id
+            or self.highlighted_selection_id
+        )
         self.highlighted_selection_type = self.read_model.highlighted_item_type or self.highlighted_selection_type
         self._render_preview_state()
 

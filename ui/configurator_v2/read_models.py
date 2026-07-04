@@ -15,6 +15,12 @@ def _ensure_bool(value, field_name: str) -> bool:
     return value
 
 
+def _ensure_int(value, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{field_name} must be an int")
+    return value
+
+
 def _ensure_instance_tuple(value, field_name: str, expected_type):
     if value is None:
         return ()
@@ -170,10 +176,16 @@ class PreviewReadModel:
     preview_mode: str = "Customer View"
     preview_state: str = "Unavailable"
     items: tuple[PreviewItemReadModel, ...] = field(default_factory=tuple)
+    scene_available: bool = False
+    scene_bounds: str = ""
+    node_count: int = 0
+    selected_node: str = ""
     highlighted_item_id: str = ""
     highlighted_item_type: str = ""
+    highlight_target: str = ""
     current_family: str = ""
     viewport_message: str = ""
+    representation_status: str = "Unavailable"
     available_representations: tuple[str, ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)
     stale: bool = False
@@ -188,10 +200,16 @@ class PreviewReadModel:
             "items",
             _ensure_instance_tuple(self.items, "items", PreviewItemReadModel),
         )
+        object.__setattr__(self, "scene_available", _ensure_bool(self.scene_available, "scene_available"))
+        object.__setattr__(self, "scene_bounds", _ensure_str(self.scene_bounds, "scene_bounds"))
+        object.__setattr__(self, "node_count", _ensure_int(self.node_count, "node_count"))
+        object.__setattr__(self, "selected_node", _ensure_str(self.selected_node, "selected_node"))
         object.__setattr__(self, "highlighted_item_id", _ensure_str(self.highlighted_item_id, "highlighted_item_id"))
         object.__setattr__(self, "highlighted_item_type", _ensure_str(self.highlighted_item_type, "highlighted_item_type"))
+        object.__setattr__(self, "highlight_target", _ensure_str(self.highlight_target, "highlight_target"))
         object.__setattr__(self, "current_family", _ensure_str(self.current_family, "current_family"))
         object.__setattr__(self, "viewport_message", _ensure_str(self.viewport_message, "viewport_message"))
+        object.__setattr__(self, "representation_status", _ensure_str(self.representation_status, "representation_status"))
         object.__setattr__(self, "available_representations", _ensure_string_tuple(self.available_representations, "available_representations"))
         object.__setattr__(self, "warnings", tuple(_ensure_str(warning, "warnings") for warning in (self.warnings or ())))
         object.__setattr__(self, "stale", _ensure_bool(self.stale, "stale"))

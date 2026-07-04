@@ -20,6 +20,11 @@ from .read_models import (
     empty_project_tree_read_model,
     empty_review_panel_read_models,
 )
+from .scene_projection import (
+    SceneNodeProjection,
+    SceneProjection,
+    build_scene_projection,
+)
 
 _SEVERITY_ORDER = {
     "BLOCKER": 5,
@@ -445,6 +450,90 @@ def _build_preview_item_from_selection(selection: Any, *, representation: str = 
     )
 
 
+def _build_preview_item_from_scene_node(
+    node: SceneNodeProjection,
+    *,
+    selected_node_id: str = "",
+    highlight_target: str = "",
+    representation: str = "Scene Projection",
+) -> PreviewItemReadModel:
+    selected = bool(
+        node.node_id
+        and node.node_id
+        in {
+            _as_str(selected_node_id),
+            _as_str(highlight_target),
+        }
+    )
+    metadata = node.display_metadata + (
+        ("visible", str(node.visible)),
+        ("selectable", str(node.selectable)),
+    )
+    return PreviewItemReadModel(
+        item_id=node.node_id,
+        item_type=node.node_type or "SCENE_NODE",
+        label=node.display_name or node.node_id,
+        visible=node.visible,
+        selected=selected,
+        display_metadata=metadata,
+        source_reference=node.source_reference,
+        representation=representation,
+    )
+
+
+def _resolve_scene_projection(source: Any, data: dict[str, Any]) -> SceneProjection | None:
+    scene_projection = _get_value(source, "scene_projection", data.get("scene_projection", None))
+    if isinstance(scene_projection, SceneProjection):
+        return scene_projection
+    if scene_projection is not None:
+        return build_scene_projection(
+            scene_projection,
+            selected_node_id=_as_str(_get_value(source, "selected_node_id", data.get("selected_node_id", ""))),
+            highlight_target=_as_str(_get_value(source, "highlight_target", data.get("highlight_target", ""))),
+            representation_status=_as_str(
+                _get_value(source, "representation_status", data.get("representation_status", ""))
+            ),
+            warnings=_get_value(source, "warnings", data.get("warnings", ())),
+            source_reference=_as_str(_get_value(source, "source_reference", data.get("source_reference", ""))),
+        )
+    if isinstance(source, SceneProjection):
+        return source
+    if isinstance(source, Mapping) and "scene_graph" in source:
+        return build_scene_projection(
+            source.get("scene_graph"),
+            selected_node_id=_as_str(_get_value(source, "selected_node_id", data.get("selected_node_id", ""))),
+            highlight_target=_as_str(_get_value(source, "highlight_target", data.get("highlight_target", ""))),
+            representation_status=_as_str(
+                _get_value(source, "representation_status", data.get("representation_status", ""))
+            ),
+            warnings=_get_value(source, "warnings", data.get("warnings", ())),
+            source_reference=_as_str(_get_value(source, "source_reference", data.get("source_reference", ""))),
+        )
+    if hasattr(source, "all_nodes") and callable(getattr(source, "all_nodes")):
+        return build_scene_projection(
+            source,
+            selected_node_id=_as_str(_get_value(source, "selected_node_id", data.get("selected_node_id", ""))),
+            highlight_target=_as_str(_get_value(source, "highlight_target", data.get("highlight_target", ""))),
+            representation_status=_as_str(
+                _get_value(source, "representation_status", data.get("representation_status", ""))
+            ),
+            warnings=_get_value(source, "warnings", data.get("warnings", ())),
+            source_reference=_as_str(_get_value(source, "source_reference", data.get("source_reference", ""))),
+        )
+    if hasattr(source, "nodes") and not isinstance(source, (str, bytes)):
+        return build_scene_projection(
+            source,
+            selected_node_id=_as_str(_get_value(source, "selected_node_id", data.get("selected_node_id", ""))),
+            highlight_target=_as_str(_get_value(source, "highlight_target", data.get("highlight_target", ""))),
+            representation_status=_as_str(
+                _get_value(source, "representation_status", data.get("representation_status", ""))
+            ),
+            warnings=_get_value(source, "warnings", data.get("warnings", ())),
+            source_reference=_as_str(_get_value(source, "source_reference", data.get("source_reference", ""))),
+        )
+    return None
+
+
 def build_preview_read_model(
     source: Any = None,
     *,
@@ -457,6 +546,7 @@ def build_preview_read_model(
         return empty_preview_read_model()
     _reject_backend_like_object(source, "preview source")
     data = _as_dict(source)
+    scene_projection = _resolve_scene_projection(source, data)
     selection_source = _get_value(source, "selection", data.get("selection", None))
     items_source = _get_value(source, "items", data.get("items", ()))
     available_representations = _get_value(
@@ -473,78 +563,150 @@ def build_preview_read_model(
     current_family = _as_str(
         _get_value(source, "current_family", data.get("current_family", data.get("product_family", "")))
     )
-    preview_state = _as_str(
-        _get_value(source, "preview_state", data.get("preview_state", "Unavailable"))
-    )
+    preview_state = _as_str(_get_value(source, "preview_state", data.get("preview_state", "Unavailable")))
     warnings_source = _get_value(source, "warnings", data.get("warnings", ()))
     if isinstance(warnings_source, str):
         warnings_source = (warnings_source,)
-    selection_type_value = _as_str(
-        _get_value(selection_source, "selection_type", data.get("highlighted_item_type", data.get("selection_type", "NONE")))
+    scene_items: tuple[PreviewItemReadModel, ...] = ()
+    scene_available = False
+    scene_bounds = ""
+    node_count = 0
+    selected_node = ""
+    highlight_target = _as_str(_get_value(source, "highlight_target", data.get("highlight_target", "")))
+    representation_status = _as_str(
+        _get_value(source, "representation_status", data.get("representation_status", "Unavailable"))
     )
-    selection_id_value = _as_str(
-        _get_value(selection_source, "selection_id", data.get("highlighted_item_id", data.get("selection_id", "")))
-    )
-    selection_label_value = _as_str(
-        _get_value(selection_source, "display_name", data.get("display_name", data.get("highlighted_item_label", "")))
-    )
-    if selection_source is not None and not items_source and (
-        selection_type_value not in ("", "NONE") or selection_id_value or selection_label_value
-    ):
-        items_source = (selection_source,)
     selection_item = None
-    if selection_source is not None and (
-        selection_type_value not in ("", "NONE") or selection_id_value or selection_label_value
-    ):
-        selection_item = _build_preview_item_from_selection(
-            selection_source,
-            representation=_as_str(_get_value(source, "highlight_representation", data.get("highlight_representation", ""))),
+
+    if scene_projection is not None:
+        scene_items = tuple(
+            _build_preview_item_from_scene_node(
+                node,
+                selected_node_id=scene_projection.selection.selected_node_id,
+                highlight_target=scene_projection.highlight_target,
+                representation=scene_projection.representation_status or "Scene Projection",
+            )
+            for node in scene_projection.nodes
         )
-    elif highlighted_item_id:
-        selection_item = PreviewItemReadModel(
-            item_id=_as_str(highlighted_item_id),
-            item_type=_as_str(data.get("highlighted_item_type", "")),
-            label=_as_str(data.get("highlighted_item_label", highlighted_item_id)),
-            visible=True,
-            selected=True,
-            display_metadata=(),
-            source_reference=_as_str(data.get("source_reference", "")),
-            representation=_as_str(data.get("highlight_representation", "")),
-        )
-    if selection_item is not None:
-        if not highlighted_item_id:
-            highlighted_item_id = selection_item.item_id
-        if not data.get("highlighted_item_type"):
-            data["highlighted_item_type"] = selection_item.item_type
+        scene_available = scene_projection.scene_available
+        scene_bounds = scene_projection.bounds.display_label
+        node_count = scene_projection.node_count or len(scene_projection.nodes)
+        selected_node = scene_projection.selection.selected_node_id
+        highlight_target = scene_projection.highlight_target or scene_projection.selection.highlight_target
+        representation_status = scene_projection.representation_status or representation_status
+        warnings_source = scene_projection.warnings or warnings_source
         if not preview_title:
-            preview_title = selection_item.label or selection_item.item_id
-        if not preview_state or preview_state == "Unavailable":
-            preview_state = "Ready"
-        if not viewport_message:
-            viewport_message = f"Preview focus: {selection_item.label or selection_item.item_id}"
+            preview_title = scene_projection.selection.display_name or _as_str(data.get("preview_title", ""))
         if not current_family:
             current_family = _as_str(data.get("current_family", ""))
-    item_models = tuple(_build_preview_item(item) for item in (items_source or ()))
-    if selection_item is not None and not any(item.item_id == selection_item.item_id for item in item_models):
-        item_models = (selection_item,) + item_models
-    if not available_representations:
-        if item_models:
-            available_representations = tuple(
-                _as_str(item.representation or item.item_type or "Default") for item in item_models if item.visible
+        if not preview_state or preview_state == "Unavailable":
+            preview_state = "Ready" if scene_available else "Unavailable"
+        if not viewport_message:
+            viewport_message = (
+                scene_projection.selection.display_name
+                or scene_projection.highlight_target
+                or "Scene projection ready"
             )
-        elif selection_item is not None:
-            available_representations = (
-                _as_str(selection_item.representation or selection_item.item_type or "Default"),
+        if not available_representations:
+            available_representations = ("Customer View", "Design View") if scene_available else ()
+        items_source = scene_items
+        selection_source = scene_projection.selection if scene_projection.selection.selected_node_id else selection_source
+        highlighted_item_id = highlighted_item_id or scene_projection.selection.selected_node_id or scene_projection.highlight_target
+    else:
+        selection_type_value = _as_str(
+            _get_value(selection_source, "selection_type", data.get("highlighted_item_type", data.get("selection_type", "NONE")))
+        )
+        selection_id_value = _as_str(
+            _get_value(selection_source, "selection_id", data.get("highlighted_item_id", data.get("selection_id", "")))
+        )
+        selection_label_value = _as_str(
+            _get_value(selection_source, "display_name", data.get("display_name", data.get("highlighted_item_label", "")))
+        )
+        if selection_source is not None and not items_source and (
+            selection_type_value not in ("", "NONE") or selection_id_value or selection_label_value
+        ):
+            items_source = (selection_source,)
+        if selection_source is not None and (
+            selection_type_value not in ("", "NONE") or selection_id_value or selection_label_value
+        ):
+            selection_item = _build_preview_item_from_selection(
+                selection_source,
+                representation=_as_str(_get_value(source, "highlight_representation", data.get("highlight_representation", ""))),
             )
+        elif highlighted_item_id:
+            selection_item = PreviewItemReadModel(
+                item_id=_as_str(highlighted_item_id),
+                item_type=_as_str(data.get("highlighted_item_type", "")),
+                label=_as_str(data.get("highlighted_item_label", highlighted_item_id)),
+                visible=True,
+                selected=True,
+                display_metadata=(),
+                source_reference=_as_str(data.get("source_reference", "")),
+                representation=_as_str(data.get("highlight_representation", "")),
+            )
+        if selection_item is not None:
+            if not highlighted_item_id:
+                highlighted_item_id = selection_item.item_id
+            if not data.get("highlighted_item_type"):
+                data["highlighted_item_type"] = selection_item.item_type
+            if not preview_title:
+                preview_title = selection_item.label or selection_item.item_id
+        has_preview_content = bool(items_source) or selection_item is not None
+        if not preview_state or preview_state == "Unavailable":
+            preview_state = "Ready" if has_preview_content else "Unavailable"
+        if not viewport_message:
+            if selection_item is not None:
+                viewport_message = f"Preview focus: {selection_item.label or selection_item.item_id}"
+            elif highlighted_item_id:
+                viewport_message = f"Preview focus: {highlighted_item_id}"
+            else:
+                viewport_message = "Preview unavailable"
+        if not current_family:
+            current_family = _as_str(data.get("current_family", ""))
+        item_models = tuple(_build_preview_item(item) for item in (items_source or ()))
+        if selection_item is not None and not any(item.item_id == selection_item.item_id for item in item_models):
+            item_models = (selection_item,) + item_models
+        if not available_representations:
+            if item_models:
+                available_representations = tuple(
+                    _as_str(item.representation or item.item_type or "Default") for item in item_models if item.visible
+                )
+            elif selection_item is not None:
+                available_representations = (
+                    _as_str(selection_item.representation or selection_item.item_type or "Default"),
+                )
+        scene_available = bool(item_models)
+        node_count = len(item_models)
+        selected_node = _as_str(highlighted_item_id or data.get("selected_node", data.get("selected_node_id", "")))
+        scene_bounds = _as_str(data.get("scene_bounds", ""))
+        highlight_target = _as_str(data.get("highlight_target", highlighted_item_id or ""))
+        representation_status = _as_str(
+            _get_value(source, "representation_status", data.get("representation_status", "Unavailable"))
+        )
+        scene_items = item_models
+
     return PreviewReadModel(
         preview_title=preview_title or "Preview",
         preview_mode=_as_str(preview_mode if preview_mode is not None else data.get("preview_mode", "Customer View")),
         preview_state=preview_state,
-        items=item_models,
+        items=scene_items,
+        scene_available=scene_available,
+        scene_bounds=scene_bounds,
+        node_count=node_count,
+        selected_node=selected_node,
         highlighted_item_id=_as_str(highlighted_item_id if highlighted_item_id is not None else data.get("highlighted_item_id", "")),
-        highlighted_item_type=_as_str(data.get("highlighted_item_type", selection_item.item_type if selection_item else "")),
+        highlighted_item_type=_as_str(
+            data.get(
+                "highlighted_item_type",
+                scene_projection.selection.node_type if scene_projection is not None else (
+                    selection_item.item_type if selection_item is not None else ""
+                ),
+            )
+        ),
+        highlight_target=_as_str(highlight_target or highlighted_item_id or data.get("highlight_target", "")),
         current_family=current_family,
         viewport_message=viewport_message or _as_str(data.get("viewport_message", "")),
+        representation_status=representation_status,
         available_representations=tuple(_as_str(item) for item in (available_representations or ())),
         warnings=tuple(_as_str(warning) for warning in (warnings_source or ())),
         stale=_as_bool(stale if stale is not None else data.get("stale", False), False),

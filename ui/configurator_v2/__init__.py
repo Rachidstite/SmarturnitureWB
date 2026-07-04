@@ -43,6 +43,13 @@ from .projection_adapters import (
     build_project_tree_read_model,
     build_review_panel_read_models,
 )
+from .scene_projection import (
+    SceneBoundsProjection,
+    SceneNodeProjection,
+    SceneProjection,
+    SceneSelectionProjection,
+    build_scene_projection,
+)
 from .service_integration import (
     ConfiguratorV2ServiceIntegration,
     attach_service_integration,
@@ -78,6 +85,11 @@ __all__ = [
     "build_preview_read_model",
     "build_message_center_read_model",
     "build_review_panel_read_models",
+    "SceneBoundsProjection",
+    "SceneNodeProjection",
+    "SceneProjection",
+    "SceneSelectionProjection",
+    "build_scene_projection",
     "ConfiguratorV2ServiceIntegration",
     "attach_service_integration",
     "InspectorFieldReadModel",

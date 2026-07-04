@@ -11,6 +11,7 @@ from .projection_adapters import (
     build_review_panel_read_models,
 )
 from .read_models import MessageReadModel, empty_inspector_read_model
+from .scene_projection import build_scene_projection
 from .workspace import (
     ConfiguratorV2ServiceBindings,
     ConfiguratorV2Workspace,
@@ -108,6 +109,39 @@ class ConfiguratorV2ServiceIntegration:
             source["available_representations"] = ()
         return source or None
 
+    def _scene_projection_source(self, source: Any = None):
+        if source is None:
+            return None
+        if isinstance(source, dict):
+            if source.get("scene_projection") is not None:
+                return source.get("scene_projection")
+            if source.get("scene_graph") is not None:
+                return build_scene_projection(
+                    source.get("scene_graph"),
+                    selected_node_id=str(source.get("selected_node_id", "") or ""),
+                    highlight_target=str(source.get("highlight_target", "") or ""),
+                    representation_status=str(source.get("representation_status", "") or ""),
+                    warnings=source.get("warnings", ()),
+                    source_reference=str(source.get("source_reference", "") or ""),
+                )
+            return None
+        if hasattr(source, "scene_projection"):
+            scene_projection = getattr(source, "scene_projection", None)
+            if scene_projection is not None:
+                return scene_projection
+        if hasattr(source, "scene_graph") and getattr(source, "scene_graph", None) is not None:
+            return build_scene_projection(
+                getattr(source, "scene_graph"),
+                selected_node_id=str(getattr(source, "selected_node_id", "") or ""),
+                highlight_target=str(getattr(source, "highlight_target", "") or ""),
+                representation_status=str(getattr(source, "representation_status", "") or ""),
+                warnings=getattr(source, "warnings", ()),
+                source_reference=str(getattr(source, "source_reference", "") or ""),
+            )
+        if hasattr(source, "all_nodes") and callable(getattr(source, "all_nodes")):
+            return build_scene_projection(source)
+        return None
+
     def refresh_project_tree(self, source: Any = None):
         source = source if source is not None else self._workspace_project_source()
         if not source:
@@ -174,6 +208,13 @@ class ConfiguratorV2ServiceIntegration:
                 source_reference="ConfiguratorV2ServiceIntegration.refresh_preview",
             )
             return read_model
+
+        scene_projection = self._scene_projection_source(source)
+        if scene_projection is not None:
+            source = {
+                **(source if isinstance(source, dict) else {}),
+                "scene_projection": scene_projection,
+            }
 
         read_model = build_preview_read_model(source)
         if read_model.unsupported_reason:

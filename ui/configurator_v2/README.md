@@ -59,8 +59,16 @@ Preview:
 
 - PreviewRegion consumes PreviewReadModel only
 - preview data comes from projection adapters and service integration
-- the widget renders titles, state, representations, warnings, and placeholder messages
+- the widget renders titles, scene availability, bounds, node counts, state, representations, warnings, and placeholder messages
 - selection highlighting remains as a compatibility hook, but no geometry is accessed directly
+
+Scene Projection Layer:
+
+- SceneGraph is projected into SceneProjection before the UI sees it
+- SceneProjection contains only safe presentation data
+- Projection adapters convert SceneProjection into PreviewReadModel
+- PreviewRegion stays renderer-agnostic and does not touch geometry objects
+- this keeps the UI compatible with a future standalone renderer
 
 Integration is still pending:
 
