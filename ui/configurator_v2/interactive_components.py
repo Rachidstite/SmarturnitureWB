@@ -25,6 +25,7 @@ from .visual_components import (
     HardwareVisualComponent,
     VisualComponent,
 )
+from .presentation_state import FurniturePresentationState
 
 # ── Interaction states ───────────────────────────────────────────────
 
@@ -171,6 +172,7 @@ class ComponentInteractionState:
     tooltip: str = ""
     warnings: tuple[str, ...] = field(default_factory=tuple)
     source_reference: str = ""
+    presentation: FurniturePresentationState | None = None
 
     def __post_init__(self):
         if not isinstance(self.overlay, ComponentInteractionOverlay):

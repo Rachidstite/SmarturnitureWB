@@ -77,6 +77,17 @@ from .interactive_components import (
     interaction_descriptor_pairs,
     interaction_summary_label,
 )
+from .presentation_state import (
+    PRESENTATION_FLAGS,
+    FurniturePresentationState,
+    neutral_presentation_state,
+    presentation_state_descriptor_pairs,
+    resolve_presentation_state,
+    resolve_presentation_states,
+)
+from .presentation_binding import (
+    PresentationStateResolver,
+)
 from .visual_components import (
     VISUAL_COMPONENT_STATES,
     BackPanelVisualComponent,
@@ -166,6 +177,13 @@ __all__ = [
     "count_active_interactions",
     "interaction_descriptor_pairs",
     "interaction_summary_label",
+    "PRESENTATION_FLAGS",
+    "FurniturePresentationState",
+    "neutral_presentation_state",
+    "presentation_state_descriptor_pairs",
+    "resolve_presentation_state",
+    "resolve_presentation_states",
+    "PresentationStateResolver",
     "ConfiguratorV2ServiceIntegration",
     "attach_service_integration",
     "InspectorFieldReadModel",
