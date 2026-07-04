@@ -218,22 +218,96 @@ class ProjectTreeRegion(_ShellFrame):
         self.on_select = on_select
         self.selected_node = None
         self.tree_nodes: tuple[str, ...] = ConfiguratorV2ShellModel().project_tree_nodes
-        for index, node_name in enumerate(self.tree_nodes, start=1):
-            label = QtWidgets.QLabel(f"{index}. {node_name}")
-            self.body_layout.addWidget(label)
+        self.read_model = empty_project_tree_read_model()
+        self.selected_node_id = ""
+        self.node_labels: dict[str, object] = {}
+        self.node_metadata: dict[str, dict[str, str]] = {}
+        self.render_rows: list[str] = []
+        self._node_lookup: dict[str, object] = {}
+        self.body_layout.addWidget(QtWidgets.QLabel("No project tree loaded"))
 
-    def select_node(self, node_name: str):
-        self.selected_node = node_name
-        if callable(self.on_select):
-            self.on_select(
-                ConfiguratorSelection(
-                    selection_type="PROJECT",
-                    selection_id=node_name,
-                    display_name=node_name,
-                    source_region="ProjectTreeRegion",
-                    metadata={"tree_node": node_name},
-                )
+    def _flatten_nodes(self, nodes):
+        for node in nodes or ():
+            yield node
+            yield from self._flatten_nodes(getattr(node, "children", ()) or ())
+
+    def _rebuild_render_state(self):
+        if hasattr(self.body_layout, "items"):
+            self.body_layout.items = []
+        self.node_labels.clear()
+        self.node_metadata.clear()
+        self.render_rows = []
+        self._node_lookup = {}
+
+        if not getattr(self.read_model, "root_nodes", None):
+            self.render_rows.append("No project tree loaded")
+            return
+
+        def visit(node, depth=0):
+            self._node_lookup[node.node_id] = node
+            metadata_bits = [
+                f"state={node.state}" if node.state else "",
+                "supported" if node.is_supported else "unsupported",
+                "stale" if node.is_stale else "",
+            ]
+            metadata_text = ", ".join(bit for bit in metadata_bits if bit)
+            row_text = f"{'  ' * depth}{node.label}"
+            if node.node_id == self.selected_node_id:
+                row_text = f"> {row_text}"
+            if metadata_text:
+                row_text = f"{row_text} [{metadata_text}]"
+            self.render_rows.append(row_text)
+            label = QtWidgets.QLabel(row_text)
+            self.body_layout.addWidget(label)
+            self.node_labels[node.node_id] = label
+            self.node_metadata[node.node_id] = {
+                "state": node.state,
+                "is_supported": str(node.is_supported),
+                "is_stale": str(node.is_stale),
+                "label": node.label,
+                "node_type": node.node_type,
+                "parent_id": node.parent_id,
+            }
+            for child in node.children:
+                visit(child, depth + 1)
+
+        for root_node in self.read_model.root_nodes:
+            visit(root_node)
+
+    def set_read_model(self, read_model: ProjectTreeReadModel):
+        self.read_model = read_model or empty_project_tree_read_model()
+        self.selected_node_id = getattr(self.read_model, "selected_node_id", "") or ""
+        self.selected_node = self.selected_node_id or None
+        self._rebuild_render_state()
+
+    def select_node(self, node_id: str):
+        self.selected_node = node_id
+        self.selected_node_id = node_id
+        node = self._node_lookup.get(node_id)
+        if node is None:
+            selection = ConfiguratorSelection(
+                selection_type="PROJECT",
+                selection_id=node_id,
+                display_name=node_id,
+                source_region="ProjectTreeRegion",
+                metadata={"tree_node": node_id},
             )
+        else:
+            selection = ConfiguratorSelection(
+                selection_type=(node.node_type or "PROJECT").upper(),
+                selection_id=node.node_id,
+                display_name=node.label or node.node_id,
+                source_region="ProjectTreeRegion",
+                metadata={
+                    "tree_node": node.node_id,
+                    "state": node.state,
+                    "is_supported": str(node.is_supported),
+                    "is_stale": str(node.is_stale),
+                    "parent_id": node.parent_id,
+                },
+            )
+        if callable(self.on_select):
+            self.on_select(selection)
 
 
 class PreviewRegion(_ShellFrame):
@@ -567,6 +641,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def set_project_tree_read_model(self, read_model: ProjectTreeReadModel):
         self.project_tree_read_model = read_model
+        self.project_tree_region.set_read_model(read_model)
 
     def set_inspector_read_model(self, read_model: InspectorReadModel):
         self.inspector_read_model = read_model
