@@ -17,6 +17,7 @@ from .read_models import (
     empty_review_panel_read_models,
 )
 from .projection_adapters import build_inspector_read_model, build_preview_read_model
+from .visual_components import VisualComponent
 
 NAVIGATION_ENTRIES = (
     "Dashboard",
@@ -424,6 +425,7 @@ class PreviewRegion(_ShellFrame):
         self.summary_labels: dict[str, object] = {}
         self.highlighted_selection_id = ""
         self.highlighted_selection_type = "NONE"
+        self.visual_components: tuple[VisualComponent, ...] = ()
         self._render_preview_state()
 
     def set_selection_highlight(self, selection: ConfiguratorSelection):
@@ -501,6 +503,22 @@ class PreviewRegion(_ShellFrame):
         )
         self.highlighted_selection_type = self.read_model.highlighted_item_type or self.highlighted_selection_type
         self._render_preview_state()
+
+    def set_visual_components(
+        self,
+        components: tuple[VisualComponent, ...],
+        *,
+        read_model: PreviewReadModel | None = None,
+    ):
+        self.visual_components = tuple(components or ())
+        self.set_read_model(
+            read_model
+            or build_preview_read_model(
+                {
+                    "visual_components": self.visual_components,
+                }
+            )
+        )
 
 
 class ProductContextRegion(_ShellFrame):
@@ -785,6 +803,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.project_tree_read_model = empty_project_tree_read_model()
         self.inspector_read_model = empty_inspector_read_model()
         self.preview_read_model = empty_preview_read_model()
+        self.preview_visual_components: tuple[VisualComponent, ...] = ()
         self.message_center_read_model = empty_message_center_read_model()
         self.review_panel_read_models = empty_review_panel_read_models(
             self.review_panel_names
@@ -893,8 +912,20 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.inspector_region.set_read_model(read_model)
 
     def set_preview_read_model(self, read_model: PreviewReadModel):
+        self.preview_visual_components = ()
         self.preview_read_model = read_model
         self.preview_region.set_read_model(read_model)
+
+    def set_preview_visual_components(
+        self,
+        components: tuple[VisualComponent, ...],
+        read_model: PreviewReadModel | None = None,
+    ):
+        self.preview_visual_components = tuple(components or ())
+        if read_model is None:
+            read_model = build_preview_read_model({"visual_components": self.preview_visual_components})
+        self.preview_read_model = read_model
+        self.preview_region.set_visual_components(self.preview_visual_components, read_model=read_model)
 
     def set_message_center_read_model(self, read_model: MessageCenterReadModel):
         self.message_center_read_model = read_model

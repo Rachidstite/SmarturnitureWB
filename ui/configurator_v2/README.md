@@ -62,11 +62,20 @@ Preview:
 - the widget renders titles, scene availability, bounds, node counts, state, representations, warnings, and placeholder messages
 - selection highlighting remains as a compatibility hook, but no geometry is accessed directly
 
+Visual Component Library:
+
+- SceneProjection is translated into presentation-only visual components before preview consumption
+- visual components expose furniture concepts such as Cabinet, Door, Drawer, Shelf, Divider, Back Panel, Hardware, and Feature Marker
+- visual components contain style-ready metadata only: labels, colors, icons, visibility, state, bounds, warnings, and theme keys
+- visual components do not contain geometry, SceneNode instances, FreeCAD objects, or renderer-specific objects
+- this keeps preview logic independent from both SceneGraph internals and any future rendering backend
+
 Scene Projection Layer:
 
 - SceneGraph is projected into SceneProjection before the UI sees it
 - SceneProjection contains only safe presentation data
-- Projection adapters convert SceneProjection into PreviewReadModel
+- SceneProjection flows into Visual Components, then into PreviewReadModel, then into PreviewRegion
+- Projection adapters reuse SceneProjection and do not duplicate SceneGraph traversal
 - PreviewRegion stays renderer-agnostic and does not touch geometry objects
 - this keeps the UI compatible with a future standalone renderer
 

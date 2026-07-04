@@ -25,6 +25,7 @@ from .scene_projection import (
     SceneProjection,
     build_scene_projection,
 )
+from .visual_components import VisualComponent, build_visual_components
 
 _SEVERITY_ORDER = {
     "BLOCKER": 5,
@@ -481,6 +482,30 @@ def _build_preview_item_from_scene_node(
     )
 
 
+def _build_preview_item_from_visual_component(component: VisualComponent) -> PreviewItemReadModel:
+    _reject_backend_like_object(component, "visual component")
+    metadata = component.display_metadata + (
+        ("material", component.material_name),
+        ("base_color", component.base_color),
+        ("accent_color", component.accent_color),
+        ("icon_name", component.icon_name),
+        ("future_theme_key", component.future_theme_key),
+        ("selection_state", component.selection_state),
+        ("highlight_state", component.highlight_state),
+        ("display_state", component.display_state),
+    )
+    return PreviewItemReadModel(
+        item_id=component.id,
+        item_type=component.component_type,
+        label=component.label or component.display_name or component.id,
+        visible=component.visibility,
+        selected=component.selection_state == "SELECTED" or component.highlight_state == "HIGHLIGHTED",
+        display_metadata=tuple((key, value) for key, value in metadata if value != ""),
+        source_reference=component.source_reference,
+        representation=component.representation_status,
+    )
+
+
 def _resolve_scene_projection(source: Any, data: dict[str, Any]) -> SceneProjection | None:
     scene_projection = _get_value(source, "scene_projection", data.get("scene_projection", None))
     if isinstance(scene_projection, SceneProjection):
@@ -534,6 +559,32 @@ def _resolve_scene_projection(source: Any, data: dict[str, Any]) -> SceneProject
     return None
 
 
+def _resolve_visual_components(source: Any, data: dict[str, Any]) -> tuple[VisualComponent, ...]:
+    visual_components = _get_value(source, "visual_components", data.get("visual_components", ()))
+    if visual_components:
+        components = tuple(visual_components or ())
+        for component in components:
+            if not isinstance(component, VisualComponent):
+                raise TypeError("visual_components must contain VisualComponent instances")
+        return components
+    scene_projection = _resolve_scene_projection(source, data)
+    if scene_projection is not None:
+        return build_visual_components(scene_projection)
+    return ()
+
+
+def _visual_component_bounds_label(components: tuple[VisualComponent, ...]) -> str:
+    if not components:
+        return ""
+    min_x = min(component.bounding_box.minimum[0] for component in components)
+    min_y = min(component.bounding_box.minimum[1] for component in components)
+    min_z = min(component.bounding_box.minimum[2] for component in components)
+    max_x = max(component.bounding_box.maximum[0] for component in components)
+    max_y = max(component.bounding_box.maximum[1] for component in components)
+    max_z = max(component.bounding_box.maximum[2] for component in components)
+    return f"min=({min_x}, {min_y}, {min_z}) max=({max_x}, {max_y}, {max_z})"
+
+
 def build_preview_read_model(
     source: Any = None,
     *,
@@ -547,6 +598,7 @@ def build_preview_read_model(
     _reject_backend_like_object(source, "preview source")
     data = _as_dict(source)
     scene_projection = _resolve_scene_projection(source, data)
+    visual_components = _resolve_visual_components(source, data)
     selection_source = _get_value(source, "selection", data.get("selection", None))
     items_source = _get_value(source, "items", data.get("items", ()))
     available_representations = _get_value(
@@ -579,18 +631,34 @@ def build_preview_read_model(
     selection_item = None
 
     if scene_projection is not None:
-        scene_items = tuple(
-            _build_preview_item_from_scene_node(
-                node,
-                selected_node_id=scene_projection.selection.selected_node_id,
-                highlight_target=scene_projection.highlight_target,
-                representation=scene_projection.representation_status or "Scene Projection",
+        if visual_components:
+            scene_items = tuple(
+                _build_preview_item_from_visual_component(component)
+                for component in visual_components
             )
-            for node in scene_projection.nodes
-        )
+            highlighted_component = next(
+                (
+                    component
+                    for component in visual_components
+                    if component.highlight_state == "HIGHLIGHTED" or component.selection_state == "SELECTED"
+                ),
+                None,
+            )
+            if highlighted_component is not None and not data.get("highlighted_item_type"):
+                data["highlighted_item_type"] = highlighted_component.component_type
+        else:
+            scene_items = tuple(
+                _build_preview_item_from_scene_node(
+                    node,
+                    selected_node_id=scene_projection.selection.selected_node_id,
+                    highlight_target=scene_projection.highlight_target,
+                    representation=scene_projection.representation_status or "Scene Projection",
+                )
+                for node in scene_projection.nodes
+            )
         scene_available = scene_projection.scene_available
         scene_bounds = scene_projection.bounds.display_label
-        node_count = scene_projection.node_count or len(scene_projection.nodes)
+        node_count = len(visual_components) or scene_projection.node_count or len(scene_projection.nodes)
         selected_node = scene_projection.selection.selected_node_id
         highlight_target = scene_projection.highlight_target or scene_projection.selection.highlight_target
         representation_status = scene_projection.representation_status or representation_status
@@ -612,6 +680,67 @@ def build_preview_read_model(
         items_source = scene_items
         selection_source = scene_projection.selection if scene_projection.selection.selected_node_id else selection_source
         highlighted_item_id = highlighted_item_id or scene_projection.selection.selected_node_id or scene_projection.highlight_target
+    elif visual_components:
+        scene_items = tuple(
+            _build_preview_item_from_visual_component(component)
+            for component in visual_components
+        )
+        scene_available = any(component.visibility for component in visual_components)
+        scene_bounds = _visual_component_bounds_label(visual_components)
+        node_count = len(visual_components)
+        selected_component = next(
+            (
+                component
+                for component in visual_components
+                if component.selection_state == "SELECTED" or component.highlight_state == "HIGHLIGHTED"
+            ),
+            None,
+        )
+        selected_node = _as_str(
+            highlighted_item_id
+            or (selected_component.id if selected_component is not None else "")
+            or data.get("selected_node", data.get("selected_node_id", ""))
+        )
+        highlighted_item_id = _as_str(
+            highlighted_item_id
+            or (selected_component.id if selected_component is not None else "")
+            or data.get("highlighted_item_id", "")
+        )
+        if selected_component is not None and not data.get("highlighted_item_type"):
+            data["highlighted_item_type"] = selected_component.component_type
+        if not preview_title:
+            preview_title = _as_str(
+                data.get(
+                    "preview_title",
+                    selected_component.label if selected_component is not None else "Preview",
+                )
+            )
+        if not preview_state or preview_state == "Unavailable":
+            preview_state = "Ready" if scene_items else "Unavailable"
+        if not viewport_message:
+            viewport_message = (
+                f"Preview focus: {selected_component.label}"
+                if selected_component is not None
+                else "Visual components ready"
+            )
+        if not available_representations:
+            available_representations = tuple(
+                component.representation_status or component.component_type
+                for component in visual_components
+                if component.visibility
+            )
+        if not warnings_source:
+            warnings_source = tuple(
+                warning
+                for component in visual_components
+                for warning in component.warnings
+            )
+        if not current_family:
+            current_family = _as_str(data.get("current_family", ""))
+        highlight_target = _as_str(data.get("highlight_target", highlighted_item_id or ""))
+        representation_status = _as_str(
+            _get_value(source, "representation_status", data.get("representation_status", "Ready"))
+        )
     else:
         selection_type_value = _as_str(
             _get_value(selection_source, "selection_type", data.get("highlighted_item_type", data.get("selection_type", "NONE")))

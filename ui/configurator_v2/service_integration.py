@@ -12,6 +12,7 @@ from .projection_adapters import (
 )
 from .read_models import MessageReadModel, empty_inspector_read_model
 from .scene_projection import build_scene_projection
+from .visual_components import build_visual_components
 from .workspace import (
     ConfiguratorV2ServiceBindings,
     ConfiguratorV2Workspace,
@@ -211,9 +212,11 @@ class ConfiguratorV2ServiceIntegration:
 
         scene_projection = self._scene_projection_source(source)
         if scene_projection is not None:
+            visual_components = build_visual_components(scene_projection)
             source = {
                 **(source if isinstance(source, dict) else {}),
                 "scene_projection": scene_projection,
+                "visual_components": visual_components,
             }
 
         read_model = build_preview_read_model(source)
@@ -224,7 +227,13 @@ class ConfiguratorV2ServiceIntegration:
                 category="Preview integration",
                 source_reference="ConfiguratorV2ServiceIntegration.refresh_preview",
             )
-        self.workspace.set_preview_read_model(read_model)
+        if scene_projection is not None:
+            self.workspace.set_preview_visual_components(
+                source.get("visual_components", ()),
+                read_model,
+            )
+        else:
+            self.workspace.set_preview_read_model(read_model)
         return read_model
 
     def refresh_validation(self, source: Any = None):
