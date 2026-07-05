@@ -1254,6 +1254,219 @@ def build_manufacturing_review_projection(
     )
 
 
+def _val_rule_label(violation: Any, data: dict[str, Any]) -> str:
+    """Extract a safe display label from a validation violation object."""
+    label = _as_str(
+        _get_value(
+            violation, "rule_label",
+            _get_value(
+                violation, "label",
+                _get_value(
+                    violation, "rule",
+                    data.get("rule_label",
+                             data.get("label",
+                                      data.get("rule", ""))),
+                ),
+            ),
+        )
+    )
+    name = _as_str(
+        _get_value(
+            violation, "rule_name",
+            _get_value(
+                violation, "name",
+                data.get("rule_name",
+                         data.get("name", "")),
+            ),
+        )
+    )
+    return label or name
+
+
+def _val_severity(violation: Any, data: dict[str, Any]) -> str:
+    """Extract a safe severity string from a validation violation."""
+    severity = _as_str(
+        _get_value(violation, "violation_severity",
+        _get_value(violation, "severity",
+        data.get("violation_severity",
+        data.get("severity", "")))))
+    return severity.upper() if severity else "INFO"
+
+
+def _val_status(violation: Any, data: dict[str, Any]) -> str:
+    """Extract a safe status string from a validation violation."""
+    status = _as_str(
+        _get_value(violation, "violation_status",
+        _get_value(violation, "status",
+        data.get("violation_status",
+        data.get("status", "")))))
+    return status.upper() if status else "UNKNOWN"
+
+
+def _val_message(violation: Any, data: dict[str, Any]) -> str:
+    """Extract a safe message string from a validation violation."""
+    return _as_str(
+        _get_value(violation, "violation_message",
+        _get_value(violation, "message",
+        _get_value(violation, "detail",
+        data.get("violation_message",
+        data.get("message",
+        data.get("detail", "")))))))
+
+
+def build_validation_review_projection(
+    source: Any = None,
+) -> ReviewPanelReadModel:
+    """Project duck-typed validation source into a ReviewPanelReadModel.
+
+    Accepts:
+    - An object with ``violations`` attribute (iterable of violation objects)
+    - A dict with ``\"violations\"`` key
+    - A list/tuple of violation objects directly
+
+    Each violation object may expose (via attribute or dict key):
+    - ``rule_label`` / ``label`` / ``rule`` / ``name`` — display label
+    - ``violation_severity`` / ``severity`` — e.g. ERROR, WARNING, INFO
+    - ``violation_status`` / ``status`` — e.g. PASS, FAIL
+    - ``violation_message`` / ``message`` / ``detail`` — detail text
+    - ``component_id`` — optional linked component ID
+
+    Results are grouped into sections: Errors, Warnings, Passed, Info, Other.
+
+    Returns a ReviewPanelReadModel with panel_name=\"Validation\".
+    No raw validation objects leak into the output.
+    """
+    _reject_backend_like_object(source, "validation source")
+
+    if source is None:
+        return ReviewPanelReadModel(
+            panel_name="Validation",
+            available=False,
+        )
+
+    # ── Extract raw violations ─────────────────────────────────────
+    data = _as_dict(source)
+    raw_violations = _get_value(source, "violations", data.get("violations", None))
+
+    if raw_violations is None:
+        if isinstance(source, (list, tuple)):
+            raw_violations = source
+        elif hasattr(source, "__iter__") and not isinstance(source, (str, bytes, Mapping)):
+            raw_violations = list(source)
+        else:
+            raw_violations = ()
+
+    if not raw_violations:
+        return ReviewPanelReadModel(
+            panel_name="Validation",
+            sections=(
+                ReviewSectionReadModel(
+                    section_name="Validation Rules",
+                    rows=(("Status", "No validation data"),),
+                    warnings=("Validation data not available",),
+                ),
+            ),
+            available=False,
+        )
+
+    # ── Convert each violation to a row ────────────────────────────
+    error_rows: list[tuple[str, str]] = []
+    warning_rows: list[tuple[str, str]] = []
+    passed_rows: list[tuple[str, str]] = []
+    info_rows: list[tuple[str, str]] = []
+    other_rows: list[tuple[str, str]] = []
+    all_warnings: list[str] = []
+
+    for violation in raw_violations:
+        _reject_backend_like_object(violation, "validation violation")
+        v_data = _as_dict(violation)
+
+        label = _val_rule_label(violation, v_data)
+        severity = _val_severity(violation, v_data)
+        status = _val_status(violation, v_data)
+        message = _val_message(violation, v_data)
+        cid = _as_str(
+            _get_value(violation, "component_id",
+            _get_value(violation, "cid",
+            v_data.get("component_id",
+            v_data.get("cid", "")))))
+
+        # Build the value part of the row
+        value_parts: list[str] = []
+        if severity:
+            value_parts.append(severity)
+        if message:
+            value_parts.append(message)
+        if cid:
+            value_parts.append(f"[{cid}]")
+        value = " | ".join(value_parts) if value_parts else status
+
+        row = (label, value)
+
+        # Classify into sections — severity takes precedence for validation
+        if severity == "ERROR" or status == "FAIL":
+            error_rows.append(row)
+            if message:
+                all_warnings.append(f"{label}: {message}")
+        elif severity == "WARNING" or status == "WARNING":
+            warning_rows.append(row)
+            if message:
+                all_warnings.append(f"{label}: {message}")
+        elif status == "PASS":
+            passed_rows.append(row)
+        elif severity == "INFO":
+            info_rows.append(row)
+        else:
+            other_rows.append(row)
+
+    # ── Build sections ─────────────────────────────────────────────
+    sections: list[ReviewSectionReadModel] = []
+
+    if error_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Errors",
+                rows=tuple(error_rows),
+                warnings=tuple(all_warnings),
+            )
+        )
+    if warning_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Warnings",
+                rows=tuple(warning_rows),
+                warnings=tuple(all_warnings),
+            )
+        )
+    if passed_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Passed",
+                rows=tuple(passed_rows),
+            )
+        )
+    if info_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Info",
+                rows=tuple(info_rows),
+            )
+        )
+    if other_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Other",
+                rows=tuple(other_rows),
+            )
+        )
+
+    return ReviewPanelReadModel(
+        panel_name="Validation",
+        sections=tuple(sections),
+        available=True,
+    )
+
+
 __all__ = [
     "build_project_tree_read_model",
     "build_inspector_read_model",
@@ -1261,4 +1474,5 @@ __all__ = [
     "build_message_center_read_model",
     "build_review_panel_read_models",
     "build_manufacturing_review_projection",
+    "build_validation_review_projection",
 ]
