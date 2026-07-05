@@ -1745,6 +1745,292 @@ def build_cost_review_projection(
     )
 
 
+def _com_label(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe display label from a commercial item."""
+    label = _as_str(
+        _get_value(
+            item, "item_label",
+            _get_value(
+                item, "label",
+                _get_value(
+                    item, "name",
+                    data.get("item_label",
+                             data.get("label",
+                                      data.get("name", ""))),
+                ),
+            ),
+        )
+    )
+    return label
+
+
+def _com_status(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe status string from a commercial item."""
+    status = _as_str(
+        _get_value(item, "item_status",
+        _get_value(item, "status",
+        data.get("item_status",
+        data.get("status", "")))))
+    return status.upper() if status else ""
+
+
+def _com_severity(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe severity string from a commercial item."""
+    severity = _as_str(
+        _get_value(item, "item_severity",
+        _get_value(item, "severity",
+        data.get("item_severity",
+        data.get("severity", "")))))
+    return severity.upper() if severity else ""
+
+
+def _com_category(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe category string from a commercial item."""
+    return _as_str(
+        _get_value(item, "item_category",
+        _get_value(item, "category",
+        data.get("item_category",
+        data.get("category", "")))))
+
+
+def _com_value(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe value/amount string from a commercial item.
+
+    Projects already-computed values only — never calculates.
+    """
+    return _as_str(
+        _get_value(item, "item_value",
+        _get_value(item, "value",
+        _get_value(item, "amount",
+        data.get("item_value",
+        data.get("value",
+        data.get("amount", "")))))))
+
+
+def _com_currency(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe currency string from a commercial item."""
+    return _as_str(
+        _get_value(item, "item_currency",
+        _get_value(item, "currency",
+        data.get("item_currency",
+        data.get("currency", "")))))
+
+
+def _com_message(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe message/summary/detail string from a commercial item."""
+    return _as_str(
+        _get_value(item, "item_message",
+        _get_value(item, "message",
+        _get_value(item, "summary",
+        _get_value(item, "detail",
+        data.get("item_message",
+        data.get("message",
+        data.get("summary",
+        data.get("detail", "")))))))))
+
+
+def _com_note(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe customer-visible note from a commercial item."""
+    return _as_str(
+        _get_value(item, "customer_note",
+        _get_value(item, "note",
+        data.get("customer_note",
+        data.get("note", "")))))
+
+
+def build_commercial_review_projection(
+    source: Any = None,
+) -> ReviewPanelReadModel:
+    """Project duck-typed commercial source into a ReviewPanelReadModel.
+
+    Accepts:
+    - An object with ``commercial_items`` or ``line_items`` attribute
+    - A dict with ``\"commercial_items\"`` or ``\"line_items\"`` key
+    - A list/tuple of commercial item objects directly
+
+    Each commercial item may expose (via attribute or dict key):
+    - ``item_label`` / ``label`` / ``name`` — display label
+    - ``item_status`` / ``status`` — e.g. DRAFT, CONFIRMED, SENT
+    - ``item_severity`` / ``severity`` — e.g. INFO, WARNING
+    - ``item_category`` / ``category`` — e.g. Pricing, Discounts, Terms, Summary
+    - ``item_value`` / ``value`` / ``amount`` — already-computed value
+    - ``item_currency`` / ``currency`` — e.g. USD, EUR
+    - ``item_message`` / ``message`` / ``summary`` / ``detail`` — detail text
+    - ``customer_note`` / ``note`` — customer-visible note
+    - ``component_id`` — optional linked component ID
+
+    Items are grouped into sections by category: Pricing, Discounts, Terms,
+    Summary, Notes, Other.
+
+    Does NOT calculate quotation, discount, profit, margin, markup, tax,
+    or pricing recommendations. Only projects already-existing values.
+
+    Returns a ReviewPanelReadModel with panel_name=\"Commercial\".
+    No raw commercial objects leak into the output.
+    """
+    _reject_backend_like_object(source, "commercial source")
+
+    if source is None:
+        return ReviewPanelReadModel(
+            panel_name="Commercial",
+            available=False,
+        )
+
+    # ── Extract raw commercial items ───────────────────────────────
+    data = _as_dict(source)
+    raw_items = _get_value(source, "commercial_items",
+                 _get_value(source, "line_items",
+                 data.get("commercial_items",
+                 data.get("line_items", None))))
+
+    if raw_items is None:
+        if isinstance(source, (list, tuple)):
+            raw_items = source
+        elif hasattr(source, "__iter__") and not isinstance(source, (str, bytes, Mapping)):
+            raw_items = list(source)
+        else:
+            raw_items = ()
+
+    if not raw_items:
+        return ReviewPanelReadModel(
+            panel_name="Commercial",
+            sections=(
+                ReviewSectionReadModel(
+                    section_name="Commercial Items",
+                    rows=(("Status", "No commercial data"),),
+                    warnings=("Commercial data not available",),
+                ),
+            ),
+            available=False,
+        )
+
+    # ── Convert each item to a row ─────────────────────────────────
+    pricing_rows: list[tuple[str, str]] = []
+    discount_rows: list[tuple[str, str]] = []
+    terms_rows: list[tuple[str, str]] = []
+    summary_rows: list[tuple[str, str]] = []
+    notes_rows: list[tuple[str, str]] = []
+    other_rows: list[tuple[str, str]] = []
+    all_warnings: list[str] = []
+
+    for item in raw_items:
+        _reject_backend_like_object(item, "commercial item")
+        item_data = _as_dict(item)
+
+        label = _com_label(item, item_data)
+        category = _com_category(item, item_data)
+        status = _com_status(item, item_data)
+        severity = _com_severity(item, item_data)
+        value = _com_value(item, item_data)
+        currency = _com_currency(item, item_data)
+        message = _com_message(item, item_data)
+        note = _com_note(item, item_data)
+        cid = _as_str(
+            _get_value(item, "component_id",
+            _get_value(item, "cid",
+            item_data.get("component_id",
+            item_data.get("cid", "")))))
+
+        # Build the value part of the row
+        value_parts: list[str] = []
+        if value:
+            value_parts.append(value)
+        if currency:
+            value_parts.append(currency)
+        if status:
+            value_parts.append(status)
+        if severity:
+            value_parts.append(severity)
+        if message:
+            value_parts.append(message)
+        if note:
+            value_parts.append(f"[note: {note}]")
+        if cid:
+            value_parts.append(f"[{cid}]")
+        row_value = " | ".join(value_parts) if value_parts else label
+
+        row = (label, row_value)
+
+        # Group by category — case-insensitive
+        cat_lower = category.lower()
+        if cat_lower in ("pricing", "price"):
+            pricing_rows.append(row)
+        elif cat_lower in ("discount", "discounts"):
+            discount_rows.append(row)
+        elif cat_lower in ("terms", "term"):
+            terms_rows.append(row)
+        elif cat_lower in ("summary", "total", "totals"):
+            summary_rows.append(row)
+        elif cat_lower in ("note", "notes", "customer_note"):
+            notes_rows.append(row)
+        else:
+            other_rows.append(row)
+
+        if severity and severity in ("WARNING", "ERROR", "BLOCKER"):
+            all_warnings.append(f"{label}: {message or severity}")
+        if status and status in ("FAIL", "WARNING"):
+            all_warnings.append(f"{label}: {message or status}")
+
+    # ── Build sections ─────────────────────────────────────────────
+    sections: list[ReviewSectionReadModel] = []
+
+    if pricing_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Pricing",
+                rows=tuple(pricing_rows),
+            )
+        )
+    if discount_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Discounts",
+                rows=tuple(discount_rows),
+            )
+        )
+    if terms_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Terms",
+                rows=tuple(terms_rows),
+            )
+        )
+    if summary_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Summary",
+                rows=tuple(summary_rows),
+            )
+        )
+    if notes_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Notes",
+                rows=tuple(notes_rows),
+            )
+        )
+    if other_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Other",
+                rows=tuple(other_rows),
+            )
+        )
+    if all_warnings and not any(s.warnings for s in sections):
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Warnings",
+                warnings=tuple(sorted(set(all_warnings))),
+            )
+        )
+
+    return ReviewPanelReadModel(
+        panel_name="Commercial",
+        sections=tuple(sections),
+        available=True,
+    )
+
+
 __all__ = [
     "build_project_tree_read_model",
     "build_inspector_read_model",
@@ -1754,4 +2040,5 @@ __all__ = [
     "build_manufacturing_review_projection",
     "build_validation_review_projection",
     "build_cost_review_projection",
+    "build_commercial_review_projection",
 ]
