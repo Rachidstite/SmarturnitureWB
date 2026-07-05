@@ -1467,6 +1467,284 @@ def build_validation_review_projection(
     )
 
 
+def _cost_item_label(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe display label from a cost item object."""
+    label = _as_str(
+        _get_value(
+            item, "item_label",
+            _get_value(
+                item, "label",
+                _get_value(
+                    item, "name",
+                    data.get("item_label",
+                             data.get("label",
+                                      data.get("name", ""))),
+                ),
+            ),
+        )
+    )
+    return label
+
+
+def _cost_category(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe category string from a cost item."""
+    cat = _as_str(
+        _get_value(item, "item_category",
+        _get_value(item, "category",
+        data.get("item_category",
+        data.get("category", "")))))
+    return cat
+
+
+def _cost_status(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe status string from a cost item."""
+    status = _as_str(
+        _get_value(item, "item_status",
+        _get_value(item, "status",
+        data.get("item_status",
+        data.get("status", "")))))
+    return status.upper() if status else ""
+
+
+def _cost_severity(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe severity string from a cost item."""
+    severity = _as_str(
+        _get_value(item, "item_severity",
+        _get_value(item, "severity",
+        data.get("item_severity",
+        data.get("severity", "")))))
+    return severity.upper() if severity else ""
+
+
+def _cost_amount(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe amount/value string from a cost item.
+
+    Returns the amount as a string if present, else empty string.
+    Does NOT calculate or infer amounts.
+    """
+    return _as_str(
+        _get_value(item, "item_amount",
+        _get_value(item, "amount",
+        _get_value(item, "value",
+        data.get("item_amount",
+        data.get("amount",
+        data.get("value", "")))))))
+
+
+def _cost_currency(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe currency string from a cost item."""
+    return _as_str(
+        _get_value(item, "item_currency",
+        _get_value(item, "currency",
+        data.get("item_currency",
+        data.get("currency", "")))))
+
+
+def _cost_message(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe message/detail string from a cost item."""
+    return _as_str(
+        _get_value(item, "item_message",
+        _get_value(item, "message",
+        _get_value(item, "detail",
+        data.get("item_message",
+        data.get("message",
+        data.get("detail", "")))))))
+
+
+def build_cost_review_projection(
+    source: Any = None,
+) -> ReviewPanelReadModel:
+    """Project duck-typed cost source into a ReviewPanelReadModel.
+
+    Accepts:
+    - An object with ``cost_items`` or ``line_items`` attribute
+    - A dict with ``\"cost_items\"`` or ``\"line_items\"`` key
+    - A list/tuple of cost item objects directly
+
+    Each cost item may expose (via attribute or dict key):
+    - ``item_label`` / ``label`` / ``name`` — display label
+    - ``item_category`` / ``category`` — e.g. Material, Labor, Hardware, Total
+    - ``item_status`` / ``status`` — e.g. ESTIMATED, CONFIRMED
+    - ``item_severity`` / ``severity`` — e.g. INFO, WARNING
+    - ``item_amount`` / ``amount`` / ``value`` — numeric amount as string
+    - ``item_currency`` / ``currency`` — e.g. USD, EUR
+    - ``item_message`` / ``message`` / ``detail`` — detail text
+    - ``component_id`` — optional linked component ID
+
+    Items are grouped into sections by category: Totals, Material, Labor,
+    Hardware, Waste, Margin, Other.
+
+    Does NOT calculate cost, margin, profit, or waste. Only projects
+    already-existing values.
+
+    Returns a ReviewPanelReadModel with panel_name=\"Cost\".
+    No raw cost objects leak into the output.
+    """
+    _reject_backend_like_object(source, "cost source")
+
+    if source is None:
+        return ReviewPanelReadModel(
+            panel_name="Cost",
+            available=False,
+        )
+
+    # ── Extract raw cost items ─────────────────────────────────────
+    data = _as_dict(source)
+    raw_items = _get_value(source, "cost_items",
+                 _get_value(source, "line_items",
+                 data.get("cost_items",
+                 data.get("line_items", None))))
+
+    if raw_items is None:
+        if isinstance(source, (list, tuple)):
+            raw_items = source
+        elif hasattr(source, "__iter__") and not isinstance(source, (str, bytes, Mapping)):
+            raw_items = list(source)
+        else:
+            raw_items = ()
+
+    if not raw_items:
+        return ReviewPanelReadModel(
+            panel_name="Cost",
+            sections=(
+                ReviewSectionReadModel(
+                    section_name="Cost Breakdown",
+                    rows=(("Status", "No cost data"),),
+                    warnings=("Cost data not available",),
+                ),
+            ),
+            available=False,
+        )
+
+    # ── Convert each cost item to a row ────────────────────────────
+    totals_rows: list[tuple[str, str]] = []
+    material_rows: list[tuple[str, str]] = []
+    labor_rows: list[tuple[str, str]] = []
+    hardware_rows: list[tuple[str, str]] = []
+    waste_rows: list[tuple[str, str]] = []
+    margin_rows: list[tuple[str, str]] = []
+    other_rows: list[tuple[str, str]] = []
+    all_warnings: list[str] = []
+
+    for item in raw_items:
+        _reject_backend_like_object(item, "cost item")
+        item_data = _as_dict(item)
+
+        label = _cost_item_label(item, item_data)
+        category = _cost_category(item, item_data)
+        status = _cost_status(item, item_data)
+        severity = _cost_severity(item, item_data)
+        amount = _cost_amount(item, item_data)
+        currency = _cost_currency(item, item_data)
+        message = _cost_message(item, item_data)
+        cid = _as_str(
+            _get_value(item, "component_id",
+            _get_value(item, "cid",
+            item_data.get("component_id",
+            item_data.get("cid", "")))))
+
+        # Build the value part of the row
+        value_parts: list[str] = []
+        if amount:
+            value_parts.append(amount)
+        if currency:
+            value_parts.append(currency)
+        if status:
+            value_parts.append(status)
+        if severity:
+            value_parts.append(severity)
+        if message:
+            value_parts.append(message)
+        if cid:
+            value_parts.append(f"[{cid}]")
+        value = " | ".join(value_parts) if value_parts else label
+
+        row = (label, value)
+
+        # Group by category — case-insensitive
+        cat_lower = category.lower()
+        if cat_lower in ("total", "totals"):
+            totals_rows.append(row)
+        elif cat_lower == "material":
+            material_rows.append(row)
+        elif cat_lower == "labor":
+            labor_rows.append(row)
+        elif cat_lower == "hardware":
+            hardware_rows.append(row)
+        elif cat_lower == "waste":
+            waste_rows.append(row)
+        elif cat_lower == "margin":
+            margin_rows.append(row)
+        else:
+            other_rows.append(row)
+
+        if severity and severity in ("WARNING", "ERROR", "BLOCKER"):
+            all_warnings.append(f"{label}: {message or severity}")
+        if status and status in ("FAIL", "WARNING"):
+            all_warnings.append(f"{label}: {message or status}")
+
+    # ── Build sections ─────────────────────────────────────────────
+    sections: list[ReviewSectionReadModel] = []
+
+    # Totals first (if present) — highest business value
+    if totals_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Totals",
+                rows=tuple(totals_rows),
+            )
+        )
+
+    if material_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Material",
+                rows=tuple(material_rows),
+            )
+        )
+    if labor_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Labor",
+                rows=tuple(labor_rows),
+            )
+        )
+    if hardware_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Hardware",
+                rows=tuple(hardware_rows),
+            )
+        )
+    if waste_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Waste",
+                rows=tuple(waste_rows),
+            )
+        )
+    if margin_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Margin",
+                rows=tuple(margin_rows),
+            )
+        )
+    if other_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Other",
+                rows=tuple(other_rows),
+            )
+        )
+
+    return ReviewPanelReadModel(
+        panel_name="Cost",
+        sections=tuple(sections),
+        available=True,
+    )
+
+
 __all__ = [
     "build_project_tree_read_model",
     "build_inspector_read_model",
@@ -1475,4 +1753,5 @@ __all__ = [
     "build_review_panel_read_models",
     "build_manufacturing_review_projection",
     "build_validation_review_projection",
+    "build_cost_review_projection",
 ]
