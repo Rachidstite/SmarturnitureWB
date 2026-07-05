@@ -84,6 +84,12 @@ class TestFactoryActionRecommendationContract(unittest.TestCase):
         cls._ar = ar
         return rm, fr, ba, ar
 
+    @classmethod
+    def tearDownClass(cls):
+        for key in list(sys.modules):
+            if key.startswith(("factory_operational_intelligence", "ui.configurator_v2")):
+                del sys.modules[key]
+
     def _make_blocking_item(self, category, panel, severity, message="", item_id=""):
         ba = self._ba
         return ba.FactoryBlockingItem(

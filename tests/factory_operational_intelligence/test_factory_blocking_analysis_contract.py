@@ -76,6 +76,12 @@ class TestFactoryBlockingAnalysisContract(unittest.TestCase):
         cls._ba = ba
         return rm, fr, ba
 
+    @classmethod
+    def tearDownClass(cls):
+        for key in list(sys.modules):
+            if key.startswith(("factory_operational_intelligence", "ui.configurator_v2")):
+                del sys.modules[key]
+
     def _make_panel(self, panel_name, sections=()):
         rm, _, _ = self._import_once()
         return rm.ReviewPanelReadModel(
