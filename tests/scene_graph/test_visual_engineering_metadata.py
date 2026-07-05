@@ -32,6 +32,13 @@ class TestVisualEngineeringMetadata(unittest.TestCase):
                 "hardware_markers",
                 "material_label",
                 "finish_label",
+                "minifix_holes",
+                "confirmat_holes",
+                "shelf_pin_holes",
+                "drawer_slide_holes",
+                "hinge_cup_holes",
+                "hinge_plate_positions",
+                "screw_holes",
             ],
         )
 
@@ -42,6 +49,13 @@ class TestVisualEngineeringMetadata(unittest.TestCase):
         self.assertEqual(metadata.hardware_markers, ())
         self.assertEqual(metadata.material_label, "")
         self.assertEqual(metadata.finish_label, "")
+        self.assertEqual(metadata.minifix_holes, ())
+        self.assertEqual(metadata.confirmat_holes, ())
+        self.assertEqual(metadata.shelf_pin_holes, ())
+        self.assertEqual(metadata.drawer_slide_holes, ())
+        self.assertEqual(metadata.hinge_cup_holes, ())
+        self.assertEqual(metadata.hinge_plate_positions, ())
+        self.assertEqual(metadata.screw_holes, ())
 
     def test_empty_metadata_does_not_break_renderer_resolution(self):
         from scene_graph.renderer import SceneRenderer
