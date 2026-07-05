@@ -12,6 +12,7 @@ from .presentation_synchronization import (
     synchronize_presentation,
 )
 from .projection_adapters import (
+    build_cost_review_projection,
     build_inspector_read_model,
     build_manufacturing_review_projection,
     build_message_center_read_model,
@@ -319,11 +320,23 @@ class ConfiguratorV2ServiceIntegration:
         return merged
 
     def refresh_cost_review(self, source: Any = None):
-        return self._refresh_review_panels(
-            source=source,
-            message_text="Cost review integration not available yet",
-            source_reference="ConfiguratorV2ServiceIntegration.refresh_cost_review",
+        if source is None:
+            return self._refresh_review_panels(
+                source=source,
+                message_text="Cost review integration not available yet",
+                source_reference="ConfiguratorV2ServiceIntegration.refresh_cost_review",
+            )
+        panel = build_cost_review_projection(source)
+        existing = tuple(self.workspace.review_panel_read_models or ())
+        names = self.workspace.review_panel_names
+        merged = tuple(
+            panel if name == "Cost"
+            else existing[i] if i < len(existing)
+            else ReviewPanelReadModel(panel_name=name)
+            for i, name in enumerate(names)
         )
+        self.workspace.set_review_panel_read_models(merged)
+        return merged
 
     def refresh_commercial_review(self, source: Any = None):
         return self._refresh_review_panels(
