@@ -52,6 +52,7 @@ class FactoryBlockingItem:
     """A structured blocking or warning item following ADR-FOI-2.
 
     Attributes:
+        blocking_item_id: Stable deterministic identifier (<PANEL>:<CATEGORY>:<index>).
         operational_category: One of the approved FOI categories (ENGINEERING, MANUFACTURING, etc.)
         source_panel: The ReviewPanelReadModel panel_name that produced this item.
         severity: BLOCKED, ERROR, WARNING, or INFO.
@@ -61,6 +62,7 @@ class FactoryBlockingItem:
         component_id: Optional component reference (may be empty).
     """
 
+    blocking_item_id: str = ""
     operational_category: str = ""
     source_panel: str = ""
     severity: str = _SEVERITY_INFO
@@ -109,21 +111,32 @@ def _build_impact(severity: str, panel_name: str) -> str:
     return template.format(panel=panel_name)
 
 
-def _build_blocking_item(reason: Any) -> FactoryBlockingItem:
+def _build_blocking_item(
+    reason: Any,
+    index: int,
+) -> FactoryBlockingItem:
     """Convert a single FactoryReadinessReason into a FactoryBlockingItem.
 
     The reason_text from FactoryReadinessReason is used as the human_message.
     The operational_category is derived from the source_panel.
     The operational_impact is built from severity + panel_name.
+    The blocking_item_id is deterministic: <panel>:<category>:<index>.
     The technical_detail is empty unless the reason carries extra info — we
     never invent technical details.
     """
     panel_name = getattr(reason, "source_panel", "") or ""
     severity = getattr(reason, "severity", _SEVERITY_INFO) or _SEVERITY_INFO
     reason_text = getattr(reason, "reason_text", "") or ""
+    category = _map_category(panel_name)
+
+    # Deterministic ID: Normalize panel and category, append index
+    panel_norm = panel_name.upper().replace(" ", "_")
+    cat_norm = category.upper().replace(" ", "_")
+    blocking_item_id = f"{panel_norm}:{cat_norm}:{index}"
 
     return FactoryBlockingItem(
-        operational_category=_map_category(panel_name),
+        blocking_item_id=blocking_item_id,
+        operational_category=category,
         source_panel=panel_name,
         severity=severity,
         human_message=reason_text,
@@ -190,8 +203,8 @@ def build_factory_blocking_analysis_read_model(
     blocking_items: list[FactoryBlockingItem] = []
     source_panels_set: set[str] = set(readiness_source_panels)
 
-    for reason in reasons:
-        item = _build_blocking_item(reason)
+    for index, reason in enumerate(reasons):
+        item = _build_blocking_item(reason, index)
         blocking_items.append(item)
         if item.source_panel:
             source_panels_set.add(item.source_panel)

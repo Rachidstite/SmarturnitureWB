@@ -179,6 +179,61 @@ class TestFactoryBlockingAnalysisContract(unittest.TestCase):
         self.assertIn("Manufacturing", result.source_panels)
         self.assertIn("Validation", result.source_panels)
 
+    # ── Blocking Item ID ─────────────────────────────────────────
+
+    def test_blocking_item_id_present(self):
+        """Every blocking item has a non-empty blocking_item_id."""
+        rm, fr, ba = self._import_once()
+        readiness = self._make_readiness(
+            fr.BLOCKED,
+            (self._make_reason("Critical", "Release", "BLOCKED"),),
+        )
+        result = ba.build_factory_blocking_analysis_read_model(readiness)
+        self.assertTrue(len(result.blocking_items[0].blocking_item_id) > 0)
+
+    def test_blocking_item_id_format(self):
+        """ID format: <PANEL>:<CATEGORY>:<index>."""
+        rm, fr, ba = self._import_once()
+        readiness = self._make_readiness(
+            fr.BLOCKED,
+            (self._make_reason("Critical", "Release", "BLOCKED"),),
+        )
+        result = ba.build_factory_blocking_analysis_read_model(readiness)
+        item_id = result.blocking_items[0].blocking_item_id
+        parts = item_id.split(":")
+        self.assertEqual(len(parts), 3)
+        self.assertEqual(parts[0], "RELEASE")
+        self.assertEqual(parts[1], "RELEASE")
+        self.assertEqual(parts[2], "0")
+
+    def test_blocking_item_id_unique_across_reasons(self):
+        """Multiple reasons produce unique blocking_item_id values."""
+        rm, fr, ba = self._import_once()
+        readiness = self._make_readiness(
+            fr.NOT_READY,
+            (
+                self._make_reason("Error A", "Validation", "ERROR"),
+                self._make_reason("Error B", "Manufacturing", "ERROR"),
+            ),
+        )
+        result = ba.build_factory_blocking_analysis_read_model(readiness)
+        ids = [item.blocking_item_id for item in result.blocking_items]
+        self.assertEqual(len(set(ids)), 2)
+
+    def test_blocking_item_id_deterministic(self):
+        """Same reasons produce identical IDs across calls."""
+        rm, fr, ba = self._import_once()
+        readiness = self._make_readiness(
+            fr.BLOCKED,
+            (self._make_reason("Critical", "Manufacturing", "BLOCKED"),),
+        )
+        r1 = ba.build_factory_blocking_analysis_read_model(readiness)
+        r2 = ba.build_factory_blocking_analysis_read_model(readiness)
+        self.assertEqual(
+            r1.blocking_items[0].blocking_item_id,
+            r2.blocking_items[0].blocking_item_id,
+        )
+
     # ── Preserves severity ───────────────────────────────────────
 
     def test_preserves_blocked_severity(self):

@@ -84,9 +84,10 @@ class TestFactoryActionRecommendationContract(unittest.TestCase):
         cls._ar = ar
         return rm, fr, ba, ar
 
-    def _make_blocking_item(self, category, panel, severity, message=""):
+    def _make_blocking_item(self, category, panel, severity, message="", item_id=""):
         ba = self._ba
         return ba.FactoryBlockingItem(
+            blocking_item_id=item_id or f"{panel.upper().replace(' ', '_')}:{category.upper().replace(' ', '_')}:0",
             operational_category=category,
             source_panel=panel,
             severity=severity,
@@ -156,14 +157,15 @@ class TestFactoryActionRecommendationContract(unittest.TestCase):
 
     # ── Recommendation references blocking item ──────────────────
 
-    def test_recommendation_references_blocking_category(self):
+    def test_recommendation_references_blocking_item_id(self):
         rm, fr, ba, ar = self._import_once()
         analysis = self._make_blocking_analysis(
             "BLOCKED",
             (self._make_blocking_item("MANUFACTURING", "Manufacturing", "BLOCKED"),),
         )
         result = ar.build_factory_action_recommendation_read_model(analysis)
-        self.assertEqual(result.recommendations[0].blocking_reference, "MANUFACTURING")
+        expected_id = "MANUFACTURING:MANUFACTURING:0"
+        self.assertEqual(result.recommendations[0].blocking_reference, expected_id)
 
     def test_multiple_blocking_items_produce_multi_recommendations(self):
         rm, fr, ba, ar = self._import_once()
@@ -177,6 +179,34 @@ class TestFactoryActionRecommendationContract(unittest.TestCase):
         )
         result = ar.build_factory_action_recommendation_read_model(analysis)
         self.assertEqual(len(result.recommendations), 3)
+
+    def test_blocking_item_id_unique_in_multiple_items(self):
+        """Each recommendation references a distinct blocking_item_id."""
+        rm, fr, ba, ar = self._import_once()
+        analysis = self._make_blocking_analysis(
+            "BLOCKED",
+            (
+                self._make_blocking_item("MANUFACTURING", "Manufacturing", "BLOCKED",
+                    item_id="MANUFACTURING:MANUFACTURING:0"),
+                self._make_blocking_item("ENGINEERING", "Validation", "ERROR",
+                    item_id="VALIDATION:ENGINEERING:1"),
+            ),
+        )
+        result = ar.build_factory_action_recommendation_read_model(analysis)
+        ids = [r.blocking_reference for r in result.recommendations]
+        self.assertEqual(len(set(ids)), 2, "Each recommendation must reference a unique blocking_item_id")
+
+    def test_blocking_item_id_deterministic(self):
+        """Same blocking items produce same blocking_reference across calls."""
+        rm, fr, ba, ar = self._import_once()
+        items = (self._make_blocking_item("MANUFACTURING", "Manufacturing", "BLOCKED"),)
+        analysis = self._make_blocking_analysis("BLOCKED", items)
+        r1 = ar.build_factory_action_recommendation_read_model(analysis)
+        r2 = ar.build_factory_action_recommendation_read_model(analysis)
+        self.assertEqual(
+            r1.recommendations[0].blocking_reference,
+            r2.recommendations[0].blocking_reference,
+        )
 
     # ── Knowledge source preserved ───────────────────────────────
 

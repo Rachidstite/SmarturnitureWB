@@ -193,6 +193,7 @@ def _build_recommendation(
     category = getattr(blocking_item, "operational_category", "") or ""
     severity = getattr(blocking_item, "severity", "") or ""
     source_panel = getattr(blocking_item, "source_panel", "") or ""
+    item_id = getattr(blocking_item, "blocking_item_id", "") or ""
 
     rid = f"REC-{index + 1:04d}"
 
@@ -202,7 +203,7 @@ def _build_recommendation(
         # No automated recommendation available
         return {
             "recommendation_id": rid,
-            "blocking_reference": category,
+            "blocking_reference": item_id,
             "knowledge_source": UNKNOWN_SOURCE,
             "knowledge_reference": "",
             "responsible_domain": source_panel or "Unknown",
@@ -220,7 +221,7 @@ def _build_recommendation(
 
     return {
         "recommendation_id": rid,
-        "blocking_reference": category,
+        "blocking_reference": item_id,
         "knowledge_source": mapping["knowledge_source"],
         "knowledge_reference": mapping["knowledge_reference"],
         "responsible_domain": mapping["responsible_domain"],
