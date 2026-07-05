@@ -13,12 +13,13 @@ from .presentation_synchronization import (
 )
 from .projection_adapters import (
     build_inspector_read_model,
+    build_manufacturing_review_projection,
     build_message_center_read_model,
     build_preview_read_model,
     build_project_tree_read_model,
     build_review_panel_read_models,
 )
-from .read_models import MessageReadModel, empty_inspector_read_model
+from .read_models import MessageReadModel, ReviewPanelReadModel, empty_inspector_read_model
 from .scene_projection import SceneProjection, build_scene_projection
 from .visual_components import VisualComponent, build_visual_components
 from .workspace import (
@@ -286,11 +287,23 @@ class ConfiguratorV2ServiceIntegration:
         )
 
     def refresh_manufacturing_review(self, source: Any = None):
-        return self._refresh_review_panels(
-            source=source,
-            message_text="Manufacturing review integration not available yet",
-            source_reference="ConfiguratorV2ServiceIntegration.refresh_manufacturing_review",
+        if source is None:
+            return self._refresh_review_panels(
+                source=source,
+                message_text="Manufacturing review integration not available yet",
+                source_reference="ConfiguratorV2ServiceIntegration.refresh_manufacturing_review",
+            )
+        panel = build_manufacturing_review_projection(source)
+        existing = tuple(self.workspace.review_panel_read_models or ())
+        names = self.workspace.review_panel_names
+        merged = tuple(
+            panel if name == "Manufacturing"
+            else existing[i] if i < len(existing)
+            else ReviewPanelReadModel(panel_name=name)
+            for i, name in enumerate(names)
         )
+        self.workspace.set_review_panel_read_models(merged)
+        return merged
 
     def refresh_cost_review(self, source: Any = None):
         return self._refresh_review_panels(
