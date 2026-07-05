@@ -7,6 +7,11 @@
 # No engines, workflows, services, or domain imports.
 # ──────────────────────────────────────────────────────────────────────
 
+from .blocking_analysis import (
+    FactoryBlockingAnalysisReadModel,
+    FactoryBlockingItem,
+    build_factory_blocking_analysis_read_model,
+)
 from .factory_readiness import (
     BLOCKED,
     NEEDS_REVIEW,
@@ -27,4 +32,7 @@ __all__ = [
     "FactoryReadinessReason",
     "FactoryReadinessReadModel",
     "build_factory_readiness_read_model",
+    "FactoryBlockingItem",
+    "FactoryBlockingAnalysisReadModel",
+    "build_factory_blocking_analysis_read_model",
 ]
