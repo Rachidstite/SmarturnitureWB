@@ -12,6 +12,15 @@ from .blocking_analysis import (
     FactoryBlockingItem,
     build_factory_blocking_analysis_read_model,
 )
+from .factory_action_recommendation import (
+    HIGH,
+    LOW,
+    MEDIUM,
+    NONE,
+    FactoryRecommendation,
+    FactoryRecommendationReadModel,
+    build_factory_action_recommendation_read_model,
+)
 from .factory_readiness import (
     BLOCKED,
     NEEDS_REVIEW,
@@ -35,4 +44,11 @@ __all__ = [
     "FactoryBlockingItem",
     "FactoryBlockingAnalysisReadModel",
     "build_factory_blocking_analysis_read_model",
+    "HIGH",
+    "MEDIUM",
+    "LOW",
+    "NONE",
+    "FactoryRecommendation",
+    "FactoryRecommendationReadModel",
+    "build_factory_action_recommendation_read_model",
 ]
