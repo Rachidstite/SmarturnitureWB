@@ -910,6 +910,9 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.review_panel_read_models = empty_review_panel_read_models(
             self.review_panel_names
         )
+        self.foi_presentation_read_model: ReviewPanelReadModel = ReviewPanelReadModel(
+            panel_name="Factory Operations",
+        )
 
         root_layout = QtWidgets.QVBoxLayout(self)
         content_layout = QtWidgets.QHBoxLayout()
@@ -1120,6 +1123,14 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         read_models: tuple[ReviewPanelReadModel, ...],
     ):
         self.review_panel_read_models = tuple(read_models or ())
+
+    def set_foi_presentation_read_model(
+        self,
+        read_model: ReviewPanelReadModel | None = None,
+    ):
+        self.foi_presentation_read_model = read_model or ReviewPanelReadModel(
+            panel_name="Factory Operations",
+        )
 
 
 def create_configurator_v2_workspace(

@@ -23,6 +23,13 @@ from .projection_adapters import (
     build_review_panel_read_models,
     build_validation_review_projection,
 )
+from .foi_presentation_adapter import build_foi_presentation_read_model
+from factory_operational_intelligence import (
+    build_factory_readiness_read_model,
+    build_factory_blocking_analysis_read_model,
+    build_factory_action_recommendation_read_model,
+    build_production_decision_read_model,
+)
 from .read_models import MessageReadModel, ReviewPanelReadModel, empty_inspector_read_model
 from .scene_projection import SceneProjection, build_scene_projection
 from .visual_components import VisualComponent, build_visual_components
@@ -377,6 +384,41 @@ class ConfiguratorV2ServiceIntegration:
         )
         self.workspace.set_review_panel_read_models(merged)
         return merged
+
+    def refresh_factory_operations(self):
+        """Run the full FOI pipeline and store results in workspace.
+
+        Reads the existing 5 review panels from workspace, runs:
+        FOI-1 (Readiness) → FOI-2 (Blocking Analysis) → FOI-3 (Recommendations)
+        → FOI-4 (Production Decision)
+
+        Then builds a CV2 presentation read model and stores it on workspace.
+
+        Side-effect free on the review panels — the original panels are unchanged.
+        """
+        review_panels = tuple(self.workspace.review_panel_read_models or ())
+
+        # FOI-1: Readiness
+        readiness = build_factory_readiness_read_model(review_panels)
+
+        # FOI-2: Blocking Analysis
+        blocking = build_factory_blocking_analysis_read_model(readiness)
+
+        # FOI-3: Recommendations
+        recommendations = build_factory_action_recommendation_read_model(blocking)
+
+        # FOI-4: Production Decision
+        decision = build_production_decision_read_model(readiness, blocking, recommendations)
+
+        # Present as CV2 review panel
+        panel = build_foi_presentation_read_model(
+            readiness=readiness,
+            blocking=blocking,
+            recommendations=recommendations,
+            decision=decision,
+        )
+        self.workspace.set_foi_presentation_read_model(panel)
+        return panel
 
     def _refresh_review_panels(
         self,

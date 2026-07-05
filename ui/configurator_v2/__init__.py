@@ -142,6 +142,9 @@ from .service_integration import (
     attach_service_integration,
     project_engineering_source,
 )
+from .foi_presentation_adapter import (
+    build_foi_presentation_read_model,
+)
 
 __all__ = [
     "ACTION_NAMES",
@@ -254,6 +257,7 @@ __all__ = [
     "EngineeringProjectionResult",
     "attach_service_integration",
     "project_engineering_source",
+    "build_foi_presentation_read_model",
     "InspectorFieldReadModel",
     "InspectorReadModel",
     "MessageCenterReadModel",
