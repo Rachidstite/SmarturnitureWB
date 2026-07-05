@@ -2031,6 +2031,293 @@ def build_commercial_review_projection(
     )
 
 
+def _rel_label(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe display label from a release item."""
+    label = _as_str(
+        _get_value(
+            item, "item_label",
+            _get_value(
+                item, "label",
+                _get_value(
+                    item, "name",
+                    data.get("item_label",
+                             data.get("label",
+                                      data.get("name", ""))),
+                ),
+            ),
+        )
+    )
+    return label
+
+
+def _rel_status(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe status string from a release item."""
+    status = _as_str(
+        _get_value(item, "item_status",
+        _get_value(item, "status",
+        data.get("item_status",
+        data.get("status", "")))))
+    return status.upper() if status else ""
+
+
+def _rel_severity(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe severity string from a release item."""
+    severity = _as_str(
+        _get_value(item, "item_severity",
+        _get_value(item, "severity",
+        data.get("item_severity",
+        data.get("severity", "")))))
+    return severity.upper() if severity else ""
+
+
+def _rel_category(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe category string from a release item."""
+    return _as_str(
+        _get_value(item, "item_category",
+        _get_value(item, "category",
+        data.get("item_category",
+        data.get("category", "")))))
+
+
+def _rel_message(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe message/detail string from a release item."""
+    return _as_str(
+        _get_value(item, "item_message",
+        _get_value(item, "message",
+        _get_value(item, "detail",
+        data.get("item_message",
+        data.get("message",
+        data.get("detail", "")))))))
+
+
+def _rel_timestamp(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe timestamp/date string from a release item.
+
+    Projects already-existing timestamps only — never infers or computes dates.
+    """
+    return _as_str(
+        _get_value(item, "item_timestamp",
+        _get_value(item, "timestamp",
+        _get_value(item, "date",
+        data.get("item_timestamp",
+        data.get("timestamp",
+        data.get("date", "")))))))
+
+
+def _rel_reviewer(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe reviewer/approver label from a release item."""
+    return _as_str(
+        _get_value(item, "reviewer",
+        _get_value(item, "approver",
+        data.get("reviewer",
+        data.get("approver", "")))))
+
+
+def _rel_note(item: Any, data: dict[str, Any]) -> str:
+    """Extract a safe note string from a release item."""
+    return _as_str(
+        _get_value(item, "customer_note",
+        _get_value(item, "note",
+        data.get("customer_note",
+        data.get("note", "")))))
+
+
+def build_release_review_projection(
+    source: Any = None,
+) -> ReviewPanelReadModel:
+    """Project duck-typed release source into a ReviewPanelReadModel.
+
+    Accepts:
+    - An object with ``release_items``, ``checklist_items``, or ``approvals``
+    - A dict with ``\"release_items\"``, ``\"checklist_items\"``, or ``\"approvals\"``
+    - A list/tuple of release item objects directly
+
+    Each release item may expose (via attribute or dict key):
+    - ``item_label`` / ``label`` / ``name`` — display label
+    - ``item_status`` / ``status`` — e.g. RELEASED, PENDING, BLOCKED
+    - ``item_severity`` / ``severity`` — e.g. INFO, WARNING, BLOCKER
+    - ``item_category`` / ``category`` — e.g. Checklist, Approval, Blocked, Note
+    - ``item_message`` / ``message`` / ``detail`` — detail text
+    - ``item_timestamp`` / ``timestamp`` / ``date`` — already-computed date
+    - ``reviewer`` / ``approver`` — approver label
+    - ``customer_note`` / ``note`` — attached note
+    - ``component_id`` — optional linked component ID
+
+    Items are grouped into sections by category: Checklist, Approvals, Ready,
+    Blocked, Notes, Warnings, Other.
+
+    Does NOT calculate release readiness, approval status, blocking status,
+    or infer any release decision. Only projects already-existing values.
+
+    Returns a ReviewPanelReadModel with panel_name=\"Release\".
+    No raw release objects leak into the output.
+    """
+    _reject_backend_like_object(source, "release source")
+
+    if source is None:
+        return ReviewPanelReadModel(
+            panel_name="Release",
+            available=False,
+        )
+
+    # ── Extract raw release items ──────────────────────────────────
+    data = _as_dict(source)
+    raw_items = _get_value(source, "release_items",
+                 _get_value(source, "checklist_items",
+                 _get_value(source, "approvals",
+                 data.get("release_items",
+                 data.get("checklist_items",
+                 data.get("approvals", None))))))
+
+    if raw_items is None:
+        if isinstance(source, (list, tuple)):
+            raw_items = source
+        elif hasattr(source, "__iter__") and not isinstance(source, (str, bytes, Mapping)):
+            raw_items = list(source)
+        else:
+            raw_items = ()
+
+    if not raw_items:
+        return ReviewPanelReadModel(
+            panel_name="Release",
+            sections=(
+                ReviewSectionReadModel(
+                    section_name="Release Checklist",
+                    rows=(("Status", "No release data"),),
+                    warnings=("Release data not available",),
+                ),
+            ),
+            available=False,
+        )
+
+    # ── Convert each item to a row ─────────────────────────────────
+    checklist_rows: list[tuple[str, str]] = []
+    approval_rows: list[tuple[str, str]] = []
+    ready_rows: list[tuple[str, str]] = []
+    blocked_rows: list[tuple[str, str]] = []
+    notes_rows: list[tuple[str, str]] = []
+    other_rows: list[tuple[str, str]] = []
+    all_warnings: list[str] = []
+
+    for item in raw_items:
+        _reject_backend_like_object(item, "release item")
+        item_data = _as_dict(item)
+
+        label = _rel_label(item, item_data)
+        category = _rel_category(item, item_data)
+        status = _rel_status(item, item_data)
+        severity = _rel_severity(item, item_data)
+        message = _rel_message(item, item_data)
+        timestamp = _rel_timestamp(item, item_data)
+        reviewer = _rel_reviewer(item, item_data)
+        note = _rel_note(item, item_data)
+        cid = _as_str(
+            _get_value(item, "component_id",
+            _get_value(item, "cid",
+            item_data.get("component_id",
+            item_data.get("cid", "")))))
+
+        # Build the value part of the row
+        value_parts: list[str] = []
+        if status:
+            value_parts.append(status)
+        if severity:
+            value_parts.append(severity)
+        if message:
+            value_parts.append(message)
+        if timestamp:
+            value_parts.append(timestamp)
+        if reviewer:
+            value_parts.append(f"[by: {reviewer}]")
+        if note:
+            value_parts.append(f"[note: {note}]")
+        if cid:
+            value_parts.append(f"[{cid}]")
+        row_value = " | ".join(value_parts) if value_parts else label
+
+        row = (label, row_value)
+
+        # Group by category — case-insensitive
+        cat_lower = category.lower()
+        if cat_lower in ("checklist", "checklist item", "checklist_item"):
+            checklist_rows.append(row)
+        elif cat_lower in ("approval", "approvals", "signoff", "sign-off"):
+            approval_rows.append(row)
+        elif cat_lower in ("ready", "released", "done", "complete"):
+            ready_rows.append(row)
+        elif cat_lower in ("blocked", "blocker", "fail"):
+            blocked_rows.append(row)
+        elif cat_lower in ("note", "notes", "customer_note"):
+            notes_rows.append(row)
+        else:
+            other_rows.append(row)
+
+        if severity and severity in ("WARNING", "ERROR", "BLOCKER"):
+            all_warnings.append(f"{label}: {message or severity}")
+        if status and status in ("BLOCKED", "FAIL", "WARNING"):
+            all_warnings.append(f"{label}: {message or status}")
+
+    # ── Build sections ─────────────────────────────────────────────
+    sections: list[ReviewSectionReadModel] = []
+
+    if blocked_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Blocked",
+                rows=tuple(blocked_rows),
+                warnings=tuple(all_warnings),
+            )
+        )
+    if checklist_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Checklist",
+                rows=tuple(checklist_rows),
+            )
+        )
+    if approval_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Approvals",
+                rows=tuple(approval_rows),
+            )
+        )
+    if ready_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Ready",
+                rows=tuple(ready_rows),
+            )
+        )
+    if notes_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Notes",
+                rows=tuple(notes_rows),
+            )
+        )
+    if other_rows:
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Other",
+                rows=tuple(other_rows),
+            )
+        )
+    if all_warnings and not any(s.warnings for s in sections):
+        sections.append(
+            ReviewSectionReadModel(
+                section_name="Warnings",
+                warnings=tuple(sorted(set(all_warnings))),
+            )
+        )
+
+    return ReviewPanelReadModel(
+        panel_name="Release",
+        sections=tuple(sections),
+        available=True,
+    )
+
+
 __all__ = [
     "build_project_tree_read_model",
     "build_inspector_read_model",
@@ -2041,4 +2328,5 @@ __all__ = [
     "build_validation_review_projection",
     "build_cost_review_projection",
     "build_commercial_review_projection",
+    "build_release_review_projection",
 ]

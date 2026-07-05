@@ -44,6 +44,7 @@ from .projection_adapters import (
     build_message_center_read_model,
     build_preview_read_model,
     build_project_tree_read_model,
+    build_release_review_projection,
     build_review_panel_read_models,
     build_validation_review_projection,
 )
@@ -175,6 +176,7 @@ __all__ = [
     "build_validation_review_projection",
     "build_cost_review_projection",
     "build_commercial_review_projection",
+    "build_release_review_projection",
     "build_review_panel_read_models",
     "SceneBoundsProjection",
     "SceneNodeProjection",
