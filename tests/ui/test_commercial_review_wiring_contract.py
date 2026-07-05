@@ -1,0 +1,287 @@
+# ──────────────────────────────────────────────────────────────────────
+# SmartFurnitureWB — Configurator V2
+# Commercial Review Wiring Contract Tests
+#
+# Verifies:
+# - refresh_commercial_review wires source through build_commercial_review_projection
+# - outputs ReviewPanelReadModel with commercial facts as UI-safe rows
+# - no raw commercial objects leak
+# - existing review panel path remains compatible
+# - missing/None source falls back safely
+# - deterministic
+# - input not mutated
+# - no commercial/domain/cost/manufacturing/FreeCAD/Qt imports
+# - no engine/workflow naming
+# - no commercial calculation in service_integration.py
+# ──────────────────────────────────────────────────────────────────────
+
+from __future__ import annotations
+
+import importlib
+import sys
+import types
+import unittest
+from unittest.mock import Mock, patch
+
+
+class _FakeComItem:
+    def __init__(self, label="", category="", status="", severity="",
+                 value="", currency="", message="", note="", component_id=""):
+        self.item_label = label
+        self.item_category = category
+        self.item_status = status
+        self.item_severity = severity
+        self.item_value = value
+        self.item_currency = currency
+        self.item_message = message
+        self.customer_note = note
+        self.component_id = component_id
+
+
+class _FakeComSource:
+    def __init__(self, items):
+        self.commercial_items = list(items)
+
+
+class _FakeWidget:
+    def __init__(self, *args, **kwargs):
+        self._layout = None; self._object_name = ""; self._enabled = True; self._text = ""
+    def setLayout(self, l): self._layout = l
+    def setObjectName(self, n): self._object_name = n
+    def objectName(self): return self._object_name
+    def setEnabled(self, e): self._enabled = bool(e)
+    def setMinimumHeight(self, _): return None
+    def setWordWrap(self, _): return None
+    def setText(self, t): self._text = t
+    def text(self): return self._text
+
+
+class _FakeLayout:
+    def __init__(self, *a, **kw): self.items = []
+    def addWidget(self, w): self.items.append(w)
+    def addLayout(self, l): self.items.append(l)
+    def addRow(self, *a): self.items.append(a)
+
+
+class _FakeComboBox(_FakeWidget):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw); self.items = []
+        self.currentIndexChanged = types.SimpleNamespace(connect=lambda cb: None)
+    def addItem(self, t): self.items.append(t)
+
+
+class _FakeSignal:
+    def connect(self, _cb): return None
+
+class _FakeButton(_FakeWidget):
+    def __init__(self, t="", *a, **kw):
+        super().__init__(*a, **kw); self._text = t; self.clicked = _FakeSignal()
+
+class _FakeTabWidget(_FakeWidget):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw); self.tabs = []
+    def addTab(self, w, t): self.tabs.append((w, t))
+
+
+def _fake_qt():
+    return types.SimpleNamespace(
+        QtWidgets=types.SimpleNamespace(QWidget=_FakeWidget, QFrame=_FakeWidget,
+            QVBoxLayout=_FakeLayout, QHBoxLayout=_FakeLayout,
+            QFormLayout=_FakeLayout, QComboBox=_FakeComboBox,
+            QPushButton=_FakeButton, QLabel=_FakeWidget, QTabWidget=_FakeTabWidget),
+        QtCore=types.SimpleNamespace(),
+    )
+
+
+class _WorkspaceStub:
+    def __init__(self, panel_names):
+        self.review_panel_names = panel_names
+        self.review_panel_read_models = ()
+        self.message_center_read_model = types.SimpleNamespace(messages=())
+    def set_review_panel_read_models(self, m):
+        self.review_panel_read_models = tuple(m or ())
+    def set_message_center_read_model(self, m): pass
+
+
+class TestCommercialReviewWiringContract(unittest.TestCase):
+
+    @classmethod
+    def _import_modules(cls):
+        for k in list(sys.modules):
+            if k.startswith("ui.configurator_v2"): del sys.modules[k]
+        with patch.dict(sys.modules, {"core.qt_compat": _fake_qt()}):
+            ws = importlib.import_module("ui.configurator_v2.workspace")
+            si = importlib.import_module("ui.configurator_v2.service_integration")
+            rm = importlib.import_module("ui.configurator_v2.read_models")
+            pa = importlib.import_module("ui.configurator_v2.projection_adapters")
+        return rm, pa, ws, si
+
+    # ── Rule 1: wires source through adapter ─────────────────────
+
+    def test_wires_commercial_source_through_adapter(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        source = _FakeComSource([
+            _FakeComItem("Base Price", "Pricing", value="1500", currency="USD"),
+            _FakeComItem("Net 30", "Terms", message="Payment due in 30 days"),
+        ])
+        result = i.refresh_commercial_review(source)
+        self.assertIsInstance(result, tuple)
+        panel = [p for p in result if p.panel_name == "Commercial"][0]
+        self.assertTrue(panel.available)
+        snames = {s.section_name for s in panel.sections}
+        self.assertIn("Pricing", snames)
+        self.assertIn("Terms", snames)
+
+    # ── Rule 2: returns ReviewPanelReadModel ─────────────────────
+
+    def test_returns_tuple_of_review_panel_read_models(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        source = _FakeComSource([_FakeComItem("Price", "Pricing", value="500")])
+        for p in i.refresh_commercial_review(source):
+            self.assertIsInstance(p, rm.ReviewPanelReadModel)
+
+    # ── Rule 3: UI-safe rows ─────────────────────────────────────
+
+    def test_output_contains_commercial_facts_as_ui_safe_rows(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        source = _FakeComSource([_FakeComItem("Price", "Pricing", value="500")])
+        result = i.refresh_commercial_review(source)
+        panel = [p for p in result if p.panel_name == "Commercial"][0]
+        for sec in panel.sections:
+            for row in sec.rows:
+                self.assertIsInstance(row, tuple)
+                self.assertEqual(len(row), 2)
+                self.assertIsInstance(row[0], str)
+                self.assertIsInstance(row[1], str)
+
+    # ── Rule 4: no raw objects leak ──────────────────────────────
+
+    def test_no_raw_commercial_objects_leak(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        source = _FakeComSource([_FakeComItem("Price", "Pricing", value="500")])
+        i.refresh_commercial_review(source)
+        for p in w.review_panel_read_models:
+            self.assertFalse(hasattr(p, "all_nodes"))
+            self.assertFalse(hasattr(p, "Shape"))
+            for sec in p.sections:
+                for row in sec.rows:
+                    self.assertNotIn("item_value", row[1].lower())
+
+    # ── Rule 5: existing path unchanged ──────────────────────────
+
+    def test_existing_review_path_unchanged(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        result = i._refresh_review_panels(
+            source=None, message_text="T", source_reference="t")
+        self.assertIsInstance(result, tuple)
+        for p in result:
+            self.assertIsInstance(p, rm.ReviewPanelReadModel)
+
+    def test_other_refresh_methods_unchanged(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        result = i.refresh_release_review(None)
+        self.assertIsInstance(result, tuple)
+        for p in result:
+            self.assertIsInstance(p, rm.ReviewPanelReadModel)
+
+    # ── Rule 6: missing/empty source falls back ──────────────────
+
+    def test_none_source_falls_back_safely(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        result = i.refresh_commercial_review(None)
+        self.assertIsInstance(result, tuple)
+        self.assertGreaterEqual(len(result), 5)
+
+    def test_empty_items_falls_back_safely(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        result = i.refresh_commercial_review([])
+        self.assertIsInstance(result, tuple)
+        panel = [p for p in result if p.panel_name == "Commercial"][0]
+        self.assertFalse(panel.available)
+
+    # ── Rule 7: deterministic ────────────────────────────────────
+
+    def test_deterministic(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        source = _FakeComSource([
+            _FakeComItem("A", "Pricing", value="100"),
+            _FakeComItem("B", "Discount", value="10"),
+        ])
+        self.assertEqual(
+            i.refresh_commercial_review(source),
+            i.refresh_commercial_review(source),
+        )
+
+    # ── Rule 8: no input mutation ────────────────────────────────
+
+    def test_no_input_mutation(self):
+        rm, pa, ws, si = self._import_modules()
+        w = _WorkspaceStub(ws.ConfiguratorV2ShellModel().review_panels)
+        b = ws.ConfiguratorV2ServiceBindings()
+        i = si.ConfiguratorV2ServiceIntegration(workspace=w, service_bindings=b)
+        items = [_FakeComItem("Price", "Pricing", value="500")]
+        source = _FakeComSource(items)
+        orig = items[0].item_label
+        i.refresh_commercial_review(source)
+        self.assertEqual(items[0].item_label, orig)
+
+    # ── Rule 9: no forbidden imports ─────────────────────────────
+
+    def test_no_forbidden_imports(self):
+        with open("ui/configurator_v2/service_integration.py") as f:
+            content = f.read()
+        lines = [l for l in content.splitlines()
+                 if l.strip().startswith(("import ", "from "))]
+        text = "\n".join(lines)
+        for t in ("domain.", "commercial_outputs.", "cost_intelligence.",
+                   "manufacturing.", "optimization.", "FreeCAD",
+                   "QtWidgets", "QtCore", "QtGui"):
+            self.assertNotIn(t, text, msg=f"service_integration.py must not import '{t}'")
+
+    # ── Rule 10: no engine/workflow naming ───────────────────────
+
+    def test_no_engine_workflow_naming(self):
+        rm, pa, ws, si = self._import_modules()
+        n = si.ConfiguratorV2ServiceIntegration.refresh_commercial_review.__name__
+        for t in ("engine", "workflow", "event", "bus",
+                   "store", "controller", "registry", "renderer"):
+            self.assertNotIn(t, n.lower(), msg=f"'{n}' should not contain '{t}'")
+
+    # ── Rule 11: no commercial calculation ───────────────────────
+
+    def test_no_commercial_calculation(self):
+        """service_integration.py contains no sum() calls that could aggregate."""
+        with open("ui/configurator_v2/service_integration.py") as f:
+            content = f.read()
+        self.assertNotIn("sum(", content, "no sum() — no commercial calculation")
+
+
+if __name__ == "__main__":
+    unittest.main()
