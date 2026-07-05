@@ -24,6 +24,7 @@ from .projection_adapters import (
     build_validation_review_projection,
 )
 from .foi_presentation_adapter import build_foi_presentation_read_model
+from factory_dashboard import build_factory_dashboard_read_model
 from factory_operational_intelligence import (
     build_factory_readiness_read_model,
     build_factory_blocking_analysis_read_model,
@@ -410,6 +411,14 @@ class ConfiguratorV2ServiceIntegration:
         # FOI-4: Production Decision
         decision = build_production_decision_read_model(readiness, blocking, recommendations)
 
+        # Store FOI intermediates on workspace for refresh_dashboard to reuse
+        self.workspace.set_foi_read_models(
+            readiness=readiness,
+            blocking=blocking,
+            recommendations=recommendations,
+            decision=decision,
+        )
+
         # Present as CV2 review panel
         panel = build_foi_presentation_read_model(
             readiness=readiness,
@@ -419,6 +428,36 @@ class ConfiguratorV2ServiceIntegration:
         )
         self.workspace.set_foi_presentation_read_model(panel)
         return panel
+
+    def refresh_dashboard(self):
+        """Build a FactoryDashboardReadModel from FOI outputs already stored on workspace.
+
+        Reuses FOI read models produced by the most recent call to
+        refresh_factory_operations() — never duplicates the FOI pipeline.
+
+        Returns FactoryDashboardReadModel (or empty read model when no FOI
+        data is available).
+        """
+        from factory_dashboard import FactoryDashboardReadModel as _DashModel
+
+        readiness = getattr(self.workspace, "_foi_readiness", None)
+        blocking = getattr(self.workspace, "_foi_blocking", None)
+        recommendations = getattr(self.workspace, "_foi_recommendations", None)
+        decision = getattr(self.workspace, "_foi_decision", None)
+
+        if not any(x is not None for x in (readiness, blocking, recommendations, decision)):
+            empty = _DashModel()
+            self.workspace.set_factory_dashboard_read_model(empty)
+            return empty
+
+        dashboard = build_factory_dashboard_read_model(
+            readiness=readiness,
+            blocking=blocking,
+            recommendations=recommendations,
+            decision=decision,
+        )
+        self.workspace.set_factory_dashboard_read_model(dashboard)
+        return dashboard
 
     def _refresh_review_panels(
         self,

@@ -36,6 +36,8 @@ from .presentation_synchronization import (
 )
 from .visual_components import VisualComponent
 
+from factory_dashboard import FactoryDashboardReadModel
+
 NAVIGATION_ENTRIES = (
     "Dashboard",
     "Projects",
@@ -913,6 +915,11 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.foi_presentation_read_model: ReviewPanelReadModel = ReviewPanelReadModel(
             panel_name="Factory Operations",
         )
+        self._foi_readiness: Any = None
+        self._foi_blocking: Any = None
+        self._foi_recommendations: Any = None
+        self._foi_decision: Any = None
+        self.factory_dashboard_read_model: FactoryDashboardReadModel | None = None
 
         root_layout = QtWidgets.QVBoxLayout(self)
         content_layout = QtWidgets.QHBoxLayout()
@@ -1131,6 +1138,27 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.foi_presentation_read_model = read_model or ReviewPanelReadModel(
             panel_name="Factory Operations",
         )
+
+    def set_foi_read_models(
+        self,
+        *,
+        readiness: Any = None,
+        blocking: Any = None,
+        recommendations: Any = None,
+        decision: Any = None,
+    ):
+        """Store FOI intermediate read models so refresh_dashboard can reuse them."""
+        self._foi_readiness = readiness
+        self._foi_blocking = blocking
+        self._foi_recommendations = recommendations
+        self._foi_decision = decision
+
+    def set_factory_dashboard_read_model(
+        self,
+        read_model: FactoryDashboardReadModel | None = None,
+    ):
+        from factory_dashboard import FactoryDashboardReadModel as _DashModel
+        self.factory_dashboard_read_model = read_model or _DashModel()
 
 
 def create_configurator_v2_workspace(
