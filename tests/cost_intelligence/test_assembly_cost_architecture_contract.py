@@ -41,13 +41,21 @@ class TestAssemblyCostArchitectureContract(unittest.TestCase):
 
         self.assertNotIn("assembly_cost", names)
 
-    def test_manufacturing_cost_pipeline_does_not_consume_assembly_labor_yet(self):
+    def test_manufacturing_cost_pipeline_now_consumes_labor_cost_builder(self):
         import cost_intelligence.manufacturing_cost_pipeline_builder as pipeline
 
         source = inspect.getsource(pipeline)
 
-        self.assertNotIn("LaborCostBuilder", source)
-        self.assertNotIn("assembly_labor_cost", source)
+        self.assertIn("LaborCostBuilder", source)
+
+    def test_manufacturing_cost_pipeline_still_does_not_expose_assembly_labor_cost_as_separate_item(self):
+        from cost_intelligence.manufacturing_cost_report import (
+            ManufacturingCostReport,
+        )
+
+        names = [field.name for field in fields(ManufacturingCostReport)]
+
+        self.assertNotIn("assembly_cost", names)
 
     def test_quotation_breakdown_does_not_yet_expose_assembly_cost(self):
         from cost_intelligence.quotation_breakdown_report import (

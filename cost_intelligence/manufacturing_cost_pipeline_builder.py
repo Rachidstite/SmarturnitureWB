@@ -13,19 +13,33 @@ from cost_intelligence.manufacturing_cost_risk_report_builder import (
 from cost_intelligence.manufacturing_cost_summary_builder import (
     ManufacturingCostSummaryBuilder,
 )
+from manufacturing.labor_cost_builder import LaborCostBuilder
+from manufacturing.manufacturing_duration_builder import (
+    ManufacturingDurationBuilder,
+)
 from manufacturing.manufacturing_metrics_builder import ManufacturingMetricsBuilder
 
 
 class ManufacturingCostPipelineBuilder:
 
-    def build(self, production_package, hardware_cost=0.0):
+    def build(self, production_package, hardware_cost=0.0,
+              cnc_hourly_rate=0.0, drilling_hourly_rate=0.0,
+              edge_banding_hourly_rate=0.0, assembly_hourly_rate=0.0):
         metrics_report = ManufacturingMetricsBuilder().build(production_package)
         context = ManufacturingCostContextBuilder().build(metrics_report)
+        duration_report = ManufacturingDurationBuilder().build(metrics_report)
+        labor_cost_report = LaborCostBuilder(
+            cnc_hourly_rate=cnc_hourly_rate,
+            drilling_hourly_rate=drilling_hourly_rate,
+            edge_banding_hourly_rate=edge_banding_hourly_rate,
+            assembly_hourly_rate=assembly_hourly_rate,
+        ).build(duration_report)
         insights = ManufacturingCostInsightsBuilder().build(context)
         risk_report = ManufacturingCostRiskReportBuilder().build(insights)
         cost_report = ManufacturingCostCalculator().calculate(
             context,
             hardware_cost=hardware_cost,
+            labor_cost_report=labor_cost_report,
         )
         return ManufacturingCostSummaryBuilder().build(
             cost_report, risk_report, insights

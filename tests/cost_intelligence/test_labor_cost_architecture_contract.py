@@ -41,13 +41,13 @@ class TestLaborCostArchitectureContract(unittest.TestCase):
         self.assertGreater(report.drilling_labor_cost, 0.0)
         self.assertGreater(report.edge_banding_labor_cost, 0.0)
 
-    def test_labor_cost_builder_is_not_consumed_by_cost_intelligence_pipeline(self):
+    def test_labor_cost_builder_is_now_consumed_by_cost_intelligence_pipeline(self):
         import cost_intelligence.manufacturing_cost_pipeline_builder as pipeline
 
         source = inspect.getsource(pipeline)
 
-        self.assertNotIn("LaborCostBuilder", source)
-        self.assertNotIn("total_labor_cost", source)
+        self.assertIn("LaborCostBuilder", source)
+        self.assertIn("labor_cost_report", source)
 
     def test_labor_report_contains_unique_and_overlapping_labor_categories(self):
         from dataclasses import fields
@@ -60,13 +60,13 @@ class TestLaborCostArchitectureContract(unittest.TestCase):
         self.assertIn("drilling_labor_cost", names)
         self.assertIn("edge_banding_labor_cost", names)
 
-    def test_current_architecture_should_not_add_total_labor_cost_blindly(self):
+    def test_current_architecture_now_integrates_total_labor_cost(self):
         """
-        This protects against double-counting:
-        drilling_cost + drilling_labor_cost
-        edge_banding_cost + edge_banding_labor_cost
+        Labor cost is now integrated into the manufacturing cost report.
+        The calculator combines labor_cost_report fields into the
+        ManufacturingCostReport and adds total_labor_cost to
+        total_manufacturing_cost.
         """
-
         from cost_intelligence.manufacturing_cost_report import (
             ManufacturingCostReport,
         )
@@ -74,7 +74,11 @@ class TestLaborCostArchitectureContract(unittest.TestCase):
 
         names = [field.name for field in fields(ManufacturingCostReport)]
 
-        self.assertNotIn("total_labor_cost", names)
+        self.assertIn("total_labor_cost", names)
+        self.assertIn("cnc_labor_cost", names)
+        self.assertIn("drilling_labor_cost", names)
+        self.assertIn("edge_banding_labor_cost", names)
+        self.assertIn("assembly_labor_cost", names)
 
 
 if __name__ == "__main__":

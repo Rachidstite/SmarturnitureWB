@@ -40,7 +40,7 @@ class TestManufacturingCostCalculator(unittest.TestCase):
         self.assertEqual(report.panel_handling_cost, 0.0)
         self.assertEqual(report.total_manufacturing_cost, 1445.0)
         self.assertEqual(report.currency, "MAD")
-        self.assertIs(report.warnings, warnings)
+        self.assertEqual(report.warnings, warnings)
 
     def test_zero_context_returns_zero_manufacturing_cost(self):
         from cost_intelligence.manufacturing_cost_context import (

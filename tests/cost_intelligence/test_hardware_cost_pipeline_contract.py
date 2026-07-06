@@ -41,11 +41,21 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
     )
     @patch(
         "cost_intelligence.manufacturing_cost_pipeline_builder."
+        "ManufacturingDurationBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_cost_pipeline_builder."
+        "LaborCostBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_cost_pipeline_builder."
         "ManufacturingMetricsBuilder"
     )
     def test_manufacturing_cost_pipeline_accepts_hardware_cost_input(
         self,
         metrics_builder_class,
+        labor_cost_builder_class,
+        duration_builder_class,
         context_builder_class,
         insights_builder_class,
         risk_report_builder_class,
@@ -59,12 +69,16 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
         production_package = object()
         metrics_report = object()
         context = self._zero_metrics_context()
+        duration_report = object()
+        labor_cost_report = object()
         insights = object()
         risk_report = object()
         cost_report = object()
         summary = object()
 
         metrics_builder_class.return_value.build.return_value = metrics_report
+        duration_builder_class.return_value.build.return_value = duration_report
+        labor_cost_builder_class.return_value.build.return_value = labor_cost_report
         context_builder_class.return_value.build.return_value = context
         insights_builder_class.return_value.build.return_value = insights
         risk_report_builder_class.return_value.build.return_value = risk_report
@@ -80,6 +94,12 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
         metrics_builder_class.return_value.build.assert_called_once_with(
             production_package
         )
+        duration_builder_class.return_value.build.assert_called_once_with(
+            metrics_report
+        )
+        labor_cost_builder_class.return_value.build.assert_called_once_with(
+            duration_report
+        )
         context_builder_class.return_value.build.assert_called_once_with(
             metrics_report
         )
@@ -90,6 +110,7 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
         cost_calculator_class.return_value.calculate.assert_called_once_with(
             context,
             hardware_cost=48.0,
+            labor_cost_report=labor_cost_report,
         )
         summary_builder_class.return_value.build.assert_called_once_with(
             cost_report,
@@ -119,11 +140,21 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
     )
     @patch(
         "cost_intelligence.manufacturing_cost_pipeline_builder."
+        "ManufacturingDurationBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_cost_pipeline_builder."
+        "LaborCostBuilder"
+    )
+    @patch(
+        "cost_intelligence.manufacturing_cost_pipeline_builder."
         "ManufacturingMetricsBuilder"
     )
     def test_manufacturing_cost_pipeline_preserves_existing_total_when_hardware_cost_absent(
         self,
         metrics_builder_class,
+        labor_cost_builder_class,
+        duration_builder_class,
         context_builder_class,
         insights_builder_class,
         risk_report_builder_class,
@@ -137,6 +168,8 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
         production_package = object()
         metrics_report = object()
         context = self._zero_metrics_context()
+        duration_report = object()
+        labor_cost_report = object()
         insights = object()
         risk_report = object()
         cost_report = SimpleNamespace(total_manufacturing_cost=123.45)
@@ -150,6 +183,8 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
         )
 
         metrics_builder_class.return_value.build.return_value = metrics_report
+        duration_builder_class.return_value.build.return_value = duration_report
+        labor_cost_builder_class.return_value.build.return_value = labor_cost_report
         context_builder_class.return_value.build.return_value = context
         insights_builder_class.return_value.build.return_value = insights
         risk_report_builder_class.return_value.build.return_value = risk_report
@@ -163,6 +198,12 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
         metrics_builder_class.return_value.build.assert_called_once_with(
             production_package
         )
+        duration_builder_class.return_value.build.assert_called_once_with(
+            metrics_report
+        )
+        labor_cost_builder_class.return_value.build.assert_called_once_with(
+            duration_report
+        )
         context_builder_class.return_value.build.assert_called_once_with(
             metrics_report
         )
@@ -173,6 +214,7 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
         cost_calculator_class.return_value.calculate.assert_called_once_with(
             context,
             hardware_cost=0.0,
+            labor_cost_report=labor_cost_report,
         )
         summary_builder_class.return_value.build.assert_called_once_with(
             cost_report,

@@ -4,12 +4,20 @@ from cost_intelligence.manufacturing_cost_rules_builder import (
 )
 
 
+def _get_labor_field(report, field_name: str) -> float:
+    """Safely read a numeric field from an optional labor cost report."""
+    if report is None:
+        return 0.0
+    return float(getattr(report, field_name, 0.0) or 0.0)
+
+
 class ManufacturingCostCalculator:
 
     def __init__(self, rules=None):
         self.rules = rules or ManufacturingCostRulesBuilder().default()
 
-    def calculate(self, context, *, pricing_catalog=None, hardware_cost=0.0):
+    def calculate(self, context, *, pricing_catalog=None, hardware_cost=0.0,
+                  labor_cost_report=None):
         hardware_cost = hardware_cost or 0.0
         material_cost = context.total_panel_area_m2 * self.rules.material_area_rate
         edge_banding_cost = self._calculate_edge_banding_cost(
@@ -27,6 +35,18 @@ class ManufacturingCostCalculator:
             context.total_panels * self.rules.panel_handling_rate
         )
 
+        # Labor costs from optional labor_cost_report (backward compatible)
+        cnc_labor_cost = _get_labor_field(labor_cost_report, "cnc_labor_cost")
+        drilling_labor_cost = _get_labor_field(labor_cost_report, "drilling_labor_cost")
+        edge_banding_labor_cost = _get_labor_field(labor_cost_report, "edge_banding_labor_cost")
+        assembly_labor_cost = _get_labor_field(labor_cost_report, "assembly_labor_cost")
+        total_labor_cost = _get_labor_field(labor_cost_report, "total_labor_cost")
+
+        labor_warnings = list(
+            getattr(labor_cost_report, "warnings", []) if labor_cost_report is not None else []
+        )
+        combined_warnings = context.warnings + labor_warnings
+
         return ManufacturingCostReport(
             material_cost=material_cost,
             edge_banding_cost=edge_banding_cost,
@@ -34,6 +54,11 @@ class ManufacturingCostCalculator:
             hardware_cost=hardware_cost,
             complexity_cost=complexity_cost,
             panel_handling_cost=panel_handling_cost,
+            cnc_labor_cost=cnc_labor_cost,
+            drilling_labor_cost=drilling_labor_cost,
+            edge_banding_labor_cost=edge_banding_labor_cost,
+            assembly_labor_cost=assembly_labor_cost,
+            total_labor_cost=total_labor_cost,
             total_manufacturing_cost=(
                 material_cost
                 + edge_banding_cost
@@ -41,9 +66,10 @@ class ManufacturingCostCalculator:
                 + hardware_cost
                 + complexity_cost
                 + panel_handling_cost
+                + total_labor_cost
             ),
             currency=self.rules.currency,
-            warnings=context.warnings,
+            warnings=combined_warnings,
         )
 
     def _calculate_edge_banding_cost(self, context, pricing_catalog):
