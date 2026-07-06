@@ -1,0 +1,164 @@
+# ──────────────────────────────────────────────────────────────────────
+# SmartFurnitureWB — Factory Dashboard
+# Manufacturing Review Summary
+#
+# Lightweight summary of manufacturing review items from existing
+# renderer viewport command metadata.
+#
+# This module is:
+# - deterministic and side-effect free
+# - purely a read model builder — no engine, workflow, or service
+# - consumes only viewport command dict fields — no domain imports
+# - never duplicates SceneRenderer derivation logic
+# - never computes feasibility, costs, or factory readiness
+# ──────────────────────────────────────────────────────────────────────
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass(frozen=True)
+class ManufacturingReviewSummary:
+    """Lightweight summary of manufacturing review rendering metadata.
+
+    Counts are derived only by reading pre-computed fields from
+    viewport command dicts — no derivation, no recomputation.
+
+    Attributes:
+        total_review_items: Number of viewport commands with review metadata.
+        high_priority_count: Commands with review_priority == "high".
+        medium_priority_count: Commands with review_priority == "medium".
+        low_priority_count: Commands with review_priority == "low".
+        drilling_count: Commands with review_category == "drilling".
+        hardware_count: Commands with review_category == "hardware".
+        edge_banding_count: Commands with review_category == "edge_banding".
+        groove_count: Commands with review_category == "groove".
+        top_priority_items: Subset of items with the highest priority,
+            as ``(panel_identity or source_reference or label, priority)``
+            tuples.  Sorted by priority descending.
+    """
+
+    total_review_items: int = 0
+    high_priority_count: int = 0
+    medium_priority_count: int = 0
+    low_priority_count: int = 0
+    drilling_count: int = 0
+    hardware_count: int = 0
+    edge_banding_count: int = 0
+    groove_count: int = 0
+    top_priority_items: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+
+
+# ── Helpers ──────────────────────────────────────────────────────────
+
+
+def _item_label(cmd: dict[str, Any]) -> str:
+    """Best-effort display label for a viewport command."""
+    label = cmd.get("label", "")
+    if not label:
+        label = cmd.get("panel_identity", "")
+    if not label:
+        label = cmd.get("source_reference", "")
+    if not label:
+        label = cmd.get("overlay_type", "unknown")
+    return str(label)
+
+
+# ── Public builder ───────────────────────────────────────────────────
+
+
+def build_manufacturing_review_summary(
+    commands: Any = None,
+) -> ManufacturingReviewSummary:
+    """Build a ManufacturingReviewSummary from viewport command dicts.
+
+    Accepts an iterable of viewport command dicts (SceneRenderer output)
+    or a single command dict.  Reads the pre-computed fields
+    ``review_priority`` and ``review_category`` directly — never
+    re-derives them from ``overlay_type``, ``face``, ``depth``, or
+    ``is_through``.
+
+    When *commands* is None or empty, returns a safe zero-summary.
+    """
+    if commands is None:
+        return ManufacturingReviewSummary()
+
+    if isinstance(commands, dict):
+        commands = [commands]
+
+    # ── Scan each command ───────────────────────────────────────────
+    total = 0
+    high = 0
+    medium = 0
+    low = 0
+    drilling = 0
+    hardware = 0
+    edge_banding = 0
+    groove = 0
+    high_priority_items: list[tuple[str, str]] = []
+    medium_priority_items: list[tuple[str, str]] = []
+    low_priority_items: list[tuple[str, str]] = []
+
+    for cmd in commands or ():
+        if not isinstance(cmd, dict):
+            continue
+
+        priority = cmd.get("review_priority", "")
+        category = cmd.get("review_category", "")
+
+        # Skip commands without any review metadata
+        if not priority and not category:
+            continue
+
+        total += 1
+
+        # Priority counts (read directly from review_priority field)
+        if priority == "high":
+            high += 1
+            label = _item_label(cmd)
+            high_priority_items.append((label, "high"))
+        elif priority == "medium":
+            medium += 1
+            label = _item_label(cmd)
+            medium_priority_items.append((label, "medium"))
+        elif priority == "low":
+            low += 1
+            label = _item_label(cmd)
+            low_priority_items.append((label, "low"))
+
+        # Category counts (read directly from review_category field)
+        if category == "drilling":
+            drilling += 1
+        elif category == "hardware":
+            hardware += 1
+        elif category == "edge_banding":
+            edge_banding += 1
+        elif category == "groove":
+            groove += 1
+        # unknown / absent review_category → no category count incremented
+
+    # ── Build top_priority_items (sorted by priority descending) ──────
+    top_items: list[tuple[str, str]] = []
+    top_items.extend(sorted(high_priority_items, key=lambda x: x[0]))
+    top_items.extend(sorted(medium_priority_items, key=lambda x: x[0]))
+    top_items.extend(sorted(low_priority_items, key=lambda x: x[0]))
+
+    return ManufacturingReviewSummary(
+        total_review_items=total,
+        high_priority_count=high,
+        medium_priority_count=medium,
+        low_priority_count=low,
+        drilling_count=drilling,
+        hardware_count=hardware,
+        edge_banding_count=edge_banding,
+        groove_count=groove,
+        top_priority_items=tuple(top_items),
+    )
+
+
+__all__ = [
+    "ManufacturingReviewSummary",
+    "build_manufacturing_review_summary",
+]

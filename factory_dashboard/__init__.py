@@ -25,10 +25,16 @@ from .dashboard_read_model import (
     build_factory_dashboard_read_model,
     build_manufacturing_render_dashboard_section,
 )
+from .review_summary import (
+    ManufacturingReviewSummary,
+    build_manufacturing_review_summary,
+)
 
 __all__ = [
     "FactoryDashboardSection",
     "FactoryDashboardReadModel",
+    "ManufacturingReviewSummary",
     "build_factory_dashboard_read_model",
     "build_manufacturing_render_dashboard_section",
+    "build_manufacturing_review_summary",
 ]
