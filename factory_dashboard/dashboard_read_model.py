@@ -251,6 +251,45 @@ def build_factory_dashboard_read_model(
     )
 
 
+# ── Nesting Savings section ──────────────────────────────────────────
+
+
+def build_nesting_savings_dashboard_section(
+    savings_report: Any = None,
+) -> FactoryDashboardSection | None:
+    """Build a dashboard section from NestingSavingsReport.
+
+    Accepts a NestingSavingsReport (or None) and reads the five
+    pre-computed delta fields directly.  No recomputation, no
+    comparison of ManufacturingCostReport instances, no cost
+    calculation.
+
+    Returns a ``FactoryDashboardSection`` with one row per delta field,
+    or ``None`` when the input is None.
+    """
+    if savings_report is None:
+        return None
+
+    _FIELDS: tuple[tuple[str, str], ...] = (
+        ("Material Savings", "material_savings"),
+        ("Waste Reduction", "waste_reduction"),
+        ("Recovered Value Improvement", "recovered_value_delta"),
+        ("Total Manufacturing Cost Delta", "total_manufacturing_cost_delta"),
+        ("Profitability Impact", "profitability_delta"),
+    )
+
+    rows: list[tuple[str, str]] = []
+    for label, field in _FIELDS:
+        raw = getattr(savings_report, field, 0.0) or 0.0
+        value = f"{raw:.2f}"
+        rows.append((label, value))
+
+    return FactoryDashboardSection(
+        section_name="Nesting Savings Comparison",
+        rows=tuple(rows),
+    )
+
+
 # ── Manufacturing Render Review section ──────────────────────────────
 
 
@@ -332,4 +371,5 @@ __all__ = [
     "FactoryDashboardReadModel",
     "build_factory_dashboard_read_model",
     "build_manufacturing_render_dashboard_section",
+    "build_nesting_savings_dashboard_section",
 ]

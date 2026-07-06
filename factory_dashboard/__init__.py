@@ -24,6 +24,7 @@ from .dashboard_read_model import (
     FactoryDashboardSection,
     build_factory_dashboard_read_model,
     build_manufacturing_render_dashboard_section,
+    build_nesting_savings_dashboard_section,
 )
 from .review_summary import (
     ManufacturingReviewSummary,
@@ -37,4 +38,5 @@ __all__ = [
     "build_factory_dashboard_read_model",
     "build_manufacturing_render_dashboard_section",
     "build_manufacturing_review_summary",
+    "build_nesting_savings_dashboard_section",
 ]
