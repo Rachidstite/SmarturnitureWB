@@ -122,10 +122,14 @@ MANUFACTURING_OVERLAY_METHODS = (
     "_confirmat_overlays",
     "_shelf_pin_hole_overlays",
     "_drawer_slide_hole_overlays",
+    "_hinge_cup_hole_overlays",
+    "_hinge_plate_position_overlays",
     "_minifix_viewport_command",
     "_confirmat_viewport_command",
     "_shelf_pin_viewport_command",
     "_drawer_slide_viewport_command",
+    "_hinge_cup_viewport_command",
+    "_hinge_plate_viewport_command",
 )
 
 
@@ -1111,6 +1115,338 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
         ds_ext = [o for o in overlays_ext if o["overlay_type"] == "drawer_slide_hole"]
         self.assertEqual(len(sp_ext), 1)
         self.assertEqual(len(ds_ext), 1)
+
+    # ═══════════════════════════════════════════════════════════════
+    # HFG-3C — Hinge Cup and Hinge Plate Position Overlays
+    # ═══════════════════════════════════════════════════════════════
+
+    # ── 1. hinge_cup_holes produce overlay commands ────────────────
+
+    def test_hinge_cup_holes_produce_overlay_commands(self):
+        """hinge_cup_holes in VisualMetadata produce overlay dicts and viewport commands."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            hinge_cup_holes=(
+                DrillHoleVisual(
+                    panel_identity="panel-E",
+                    face="LEFT",
+                    x=20.0, y=100.0, z=0.0,
+                    diameter=35.0, depth=12.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-hinge-cup-001",
+                    hardware_intent="INTENT_HINGE",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(len(overlays), 1)
+        self.assertEqual(overlays[0]["overlay_type"], "hinge_cup_hole")
+        self.assertEqual(overlays[0]["visual_type"], "HINGE_CUP_SYMBOL")
+        self.assertEqual(overlays[0]["panel_identity"], "panel-E")
+        self.assertEqual(overlays[0]["face"], "LEFT")
+        self.assertEqual(overlays[0]["x"], 20.0)
+        self.assertEqual(overlays[0]["y"], 100.0)
+        self.assertEqual(overlays[0]["diameter"], 35.0)
+        self.assertEqual(overlays[0]["depth"], 12.0)
+
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "hinge_cup_hole")
+        self.assertEqual(commands[0]["panel_identity"], "panel-E")
+        self.assertEqual(commands[0]["diameter"], 35.0)
+
+    # ── 2. hinge_plate_positions produce overlay commands ──────────
+
+    def test_hinge_plate_positions_produce_overlay_commands(self):
+        """hinge_plate_positions in VisualMetadata produce overlay dicts and viewport commands."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            hinge_plate_positions=(
+                DrillHoleVisual(
+                    panel_identity="panel-F",
+                    face="LEFT",
+                    x=30.0, y=50.0, z=0.0,
+                    diameter=5.0, depth=12.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-hinge-plate-001",
+                    hardware_intent="INTENT_HINGE",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(len(overlays), 1)
+        self.assertEqual(overlays[0]["overlay_type"], "hinge_plate_position")
+        self.assertEqual(overlays[0]["visual_type"], "HINGE_PLATE_SYMBOL")
+        self.assertEqual(overlays[0]["panel_identity"], "panel-F")
+        self.assertEqual(overlays[0]["face"], "LEFT")
+        self.assertEqual(overlays[0]["x"], 30.0)
+        self.assertEqual(overlays[0]["y"], 50.0)
+        self.assertEqual(overlays[0]["diameter"], 5.0)
+        self.assertEqual(overlays[0]["depth"], 12.0)
+
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "hinge_plate_position")
+        self.assertEqual(commands[0]["panel_identity"], "panel-F")
+        self.assertEqual(commands[0]["diameter"], 5.0)
+
+    # ── 3. empty fields produce no overlays ────────────────────────
+
+    def test_empty_hinge_cup_produces_no_overlays(self):
+        """Empty hinge_cup_holes produce no overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(hinge_cup_holes=())
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+        self.assertEqual(overlays, [])
+        self.assertEqual(commands, [])
+
+    def test_empty_hinge_plate_produces_no_overlays(self):
+        """Empty hinge_plate_positions produce no overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(hinge_plate_positions=())
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+        self.assertEqual(overlays, [])
+        self.assertEqual(commands, [])
+
+    def test_default_metadata_produces_no_hinge_overlays(self):
+        """Default VisualMetadata produces no hinge_cup or hinge_plate overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata()
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        hc = sum(1 for o in overlays if o.get("overlay_type") == "hinge_cup_hole")
+        hp = sum(1 for o in overlays if o.get("overlay_type") == "hinge_plate_position")
+        self.assertEqual(hc, 0)
+        self.assertEqual(hp, 0)
+
+    # ── 4. existing overlays still work (with hinge fields) ────────
+
+    def test_existing_overlays_still_work_with_hinge_fields(self):
+        """Existing overlays unchanged when hinge_cup/plate are present."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            EdgeBandVisual,
+            GrooveVisual,
+            HardwareMarkerVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            edge_banding=(EdgeBandVisual(side="TOP", banding="ABS"),),
+            drill_holes=(DrillHoleVisual(panel_identity="P1", x=10.0, y=20.0),),
+            grooves=(GrooveVisual(panel_identity="BACK-1", face="BACK", depth=8.0),),
+            hardware_markers=(HardwareMarkerVisual(
+                panel_identity="door-01", sku="HINGE_BLUM", quantity=2,
+            ),),
+            hinge_cup_holes=(DrillHoleVisual(hardware_intent="INTENT_HINGE"),),
+            hinge_plate_positions=(DrillHoleVisual(hardware_intent="INTENT_HINGE"),),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        for ot in ("edge_banding", "drill_hole", "groove", "hardware_marker",
+                   "hinge_cup_hole", "hinge_plate_position"):
+            self.assertEqual(
+                len([o for o in overlays if o["overlay_type"] == ot]), 1,
+                msg=f"Expected exactly 1 overlay of type '{ot}'")
+
+    # ── 5. renderer does not mutate VisualMetadata ─────────────────
+
+    def test_hinge_cup_overlay_does_not_mutate_metadata(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=20.0, y=100.0, diameter=35.0,
+            hardware_intent="INTENT_HINGE",
+        )
+        vm = VisualMetadata(hinge_cup_holes=(hole,))
+        orig = repr(vm)
+        SceneRenderer.build_visual_overlays(vm)
+        self.assertEqual(repr(vm), orig)
+
+    def test_hinge_plate_overlay_does_not_mutate_metadata(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=30.0, y=50.0, diameter=5.0,
+            hardware_intent="INTENT_HINGE",
+        )
+        vm = VisualMetadata(hinge_plate_positions=(hole,))
+        orig = repr(vm)
+        SceneRenderer.build_visual_overlays(vm)
+        self.assertEqual(repr(vm), orig)
+
+    # ── 6, 7, 9 covered by MANUFACTURING_OVERLAY_METHODS ───────────
+
+    # ── 10. overlay command labels/types are stable ────────────────
+
+    def test_hinge_cup_overlay_label_type_stable(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            hinge_cup_holes=(DrillHoleVisual(
+                panel_identity="P1", x=20.0, y=100.0,
+                diameter=35.0, depth=12.0,
+            ),),
+        )
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays[0]["overlay_type"], "hinge_cup_hole")
+        self.assertEqual(overlays[0]["visual_type"], "HINGE_CUP_SYMBOL")
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "hinge_cup_hole")
+        self.assertEqual(commands[0]["label"], "Hinge cup hole")
+
+        overlays_2 = SceneRenderer.build_visual_overlays(vm)
+        commands_2 = SceneRenderer.build_viewport_overlay_commands(overlays_2)
+        self.assertEqual(overlays, overlays_2)
+        self.assertEqual(commands, commands_2)
+
+    def test_hinge_plate_overlay_label_type_stable(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            hinge_plate_positions=(DrillHoleVisual(
+                panel_identity="P1", x=30.0, y=50.0,
+                diameter=5.0, depth=12.0,
+            ),),
+        )
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays[0]["overlay_type"], "hinge_plate_position")
+        self.assertEqual(overlays[0]["visual_type"], "HINGE_PLATE_SYMBOL")
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "hinge_plate_position")
+        self.assertEqual(commands[0]["label"], "Hinge plate position")
+
+        overlays_2 = SceneRenderer.build_visual_overlays(vm)
+        commands_2 = SceneRenderer.build_viewport_overlay_commands(overlays_2)
+        self.assertEqual(overlays, overlays_2)
+        self.assertEqual(commands, commands_2)
+
+    def test_hinge_cup_overlay_fields_match_drill_hole_schema(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            hinge_cup_holes=(DrillHoleVisual(
+                panel_identity="P1", face="LEFT",
+                x=20.0, y=100.0, z=5.0,
+                diameter=35.0, depth=12.0,
+                axis="Z", is_through=True,
+                source_operation_reference="op-hc",
+            ),),
+        )
+        o = SceneRenderer.build_visual_overlays(vm)[0]
+        self.assertEqual(o["panel_identity"], "P1")
+        self.assertEqual(o["face"], "LEFT")
+        self.assertEqual(o["x"], 20.0)
+        self.assertEqual(o["y"], 100.0)
+        self.assertEqual(o["z"], 5.0)
+        self.assertEqual(o["diameter"], 35.0)
+        self.assertEqual(o["depth"], 12.0)
+        self.assertEqual(o["axis"], "Z")
+        self.assertEqual(o["is_through"], True)
+        self.assertEqual(o["source_operation_reference"], "op-hc")
+
+    def test_hinge_plate_overlay_fields_match_drill_hole_schema(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            hinge_plate_positions=(DrillHoleVisual(
+                panel_identity="P2", face="RIGHT",
+                x=30.0, y=50.0, z=0.0,
+                diameter=5.0, depth=12.0,
+                axis="Z", is_through=False,
+                source_operation_reference="op-hp",
+            ),),
+        )
+        o = SceneRenderer.build_visual_overlays(vm)[0]
+        self.assertEqual(o["panel_identity"], "P2")
+        self.assertEqual(o["face"], "RIGHT")
+        self.assertEqual(o["x"], 30.0)
+        self.assertEqual(o["y"], 50.0)
+        self.assertEqual(o["z"], 0.0)
+        self.assertEqual(o["diameter"], 5.0)
+        self.assertEqual(o["depth"], 12.0)
+        self.assertEqual(o["axis"], "Z")
+        self.assertEqual(o["is_through"], False)
+        self.assertEqual(o["source_operation_reference"], "op-hp")
+
+    # ── 11. all prior overlay types remain unchanged ───────────────
+
+    def test_all_prior_overlays_unchanged_when_hinge_fields_present(self):
+        """All prior manufacturing overlays identical with or without hinge fields."""
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        mf = DrillHoleVisual(panel_identity="P1", x=37.0, y=100.0,
+                              hardware_intent="INTENT_MINIFIX_15")
+        cf = DrillHoleVisual(panel_identity="P1", x=37.0, y=50.0,
+                              hardware_intent="INTENT_CONFIRMAT_50")
+        sp = DrillHoleVisual(panel_identity="P1", x=2.0, y=64.0,
+                              hardware_intent="INTENT_SHELF_PIN")
+        ds = DrillHoleVisual(panel_identity="P1", x=10.0, y=50.0,
+                              hardware_intent="INTENT_DRAWER_SLIDE")
+
+        vm_base = VisualMetadata(
+            minifix_holes=(mf,), confirmat_holes=(cf,),
+            shelf_pin_holes=(sp,), drawer_slide_holes=(ds,),
+        )
+        vm_ext = VisualMetadata(
+            minifix_holes=(mf,), confirmat_holes=(cf,),
+            shelf_pin_holes=(sp,), drawer_slide_holes=(ds,),
+            hinge_cup_holes = (DrillHoleVisual(hardware_intent="INTENT_HINGE"),),
+            hinge_plate_positions = (DrillHoleVisual(hardware_intent="INTENT_HINGE"),),
+        )
+
+        b = SceneRenderer.build_visual_overlays(vm_base)
+        e = SceneRenderer.build_visual_overlays(vm_ext)
+
+        for ot in ("minifix_hole", "confirmat_hole", "shelf_pin_hole", "drawer_slide_hole"):
+            self.assertEqual(
+                [o for o in b if o["overlay_type"] == ot],
+                [o for o in e if o["overlay_type"] == ot],
+                msg=f"Overlay type '{ot}' changed when hinge fields added",
+            )
+
+        # Hinge overlays present
+        self.assertEqual(len([o for o in e if o["overlay_type"] == "hinge_cup_hole"]), 1)
+        self.assertEqual(len([o for o in e if o["overlay_type"] == "hinge_plate_position"]), 1)
 
 
 if __name__ == "__main__":

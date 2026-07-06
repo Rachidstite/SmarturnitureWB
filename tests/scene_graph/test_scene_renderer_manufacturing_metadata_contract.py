@@ -251,7 +251,7 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         self.assertEqual(overlays[0]["overlay_type"], "confirmat_hole")
 
     def test_renderer_ignores_remaining_manufacturing_fields(self):
-        """The remaining 3 manufacturing fields are still ignored by renderer."""
+        """The remaining 1 manufacturing field is still ignored by renderer."""
         from scene_graph.metadata import (
             DrillHoleVisual,
             VisualMetadata,
@@ -260,8 +260,6 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
 
         hole = DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15")
         field_names = [
-            "hinge_cup_holes",
-            "hinge_plate_positions",
             "screw_holes",
         ]
         for name in field_names:
@@ -546,10 +544,19 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
             screw_holes=self._one_hole("INTENT_SCREW"),
         )
 
-        self.assertEqual(
-            SceneRenderer.build_visual_overlays(vm_without),
-            SceneRenderer.build_visual_overlays(vm_with),
-        )
+        overlays_without = SceneRenderer.build_visual_overlays(vm_without)
+        overlays_with = SceneRenderer.build_visual_overlays(vm_with)
+
+        # Hardware marker overlay content must be identical; vm_with also has hinge overlays
+        hw_without = [o for o in overlays_without if o["overlay_type"] == "hardware_marker"]
+        hw_with = [o for o in overlays_with if o["overlay_type"] == "hardware_marker"]
+        self.assertEqual(hw_without, hw_with)
+
+        # Hinge cup and hinge plate overlays are present in vm_with
+        hc = [o for o in overlays_with if o["overlay_type"] == "hinge_cup_hole"]
+        hp = [o for o in overlays_with if o["overlay_type"] == "hinge_plate_position"]
+        self.assertEqual(len(hc), 1)
+        self.assertEqual(len(hp), 1)
 
     def test_viewport_commands_unchanged_with_new_fields(self):
         """Viewport commands pipeline unchanged when metadata has new fields.
