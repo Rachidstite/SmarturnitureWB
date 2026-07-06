@@ -56,6 +56,18 @@ class SceneRenderer:
                 getattr(visual_metadata, "confirmat_holes", ()) or ()
             )
         )
+        # ── Shelf pin hole overlays (HFG-3B) ─────────────────
+        overlays.extend(
+            SceneRenderer._shelf_pin_hole_overlays(
+                getattr(visual_metadata, "shelf_pin_holes", ()) or ()
+            )
+        )
+        # ── Drawer slide hole overlays (HFG-3B) ──────────────
+        overlays.extend(
+            SceneRenderer._drawer_slide_hole_overlays(
+                getattr(visual_metadata, "drawer_slide_holes", ()) or ()
+            )
+        )
         return overlays
 
     @staticmethod
@@ -75,6 +87,10 @@ class SceneRenderer:
                 command = SceneRenderer._minifix_viewport_command(overlay)
             elif overlay_type == "confirmat_hole":
                 command = SceneRenderer._confirmat_viewport_command(overlay)
+            elif overlay_type == "shelf_pin_hole":
+                command = SceneRenderer._shelf_pin_viewport_command(overlay)
+            elif overlay_type == "drawer_slide_hole":
+                command = SceneRenderer._drawer_slide_viewport_command(overlay)
             else:
                 continue
             if command is not None:
@@ -229,6 +245,62 @@ class SceneRenderer:
         ]
 
     @staticmethod
+    def _shelf_pin_hole_overlays(shelf_pin_holes):
+        """Build overlays for shelf pin drilling positions.
+
+        Each shelf pin hole is a DrillHoleVisual — the overlay reuses
+        the same positional fields as drill_hole overlays but with
+        a distinct overlay_type so the viewport can style it differently.
+        """
+        return [
+            {
+                "overlay_type": "shelf_pin_hole",
+                "visual_type": "SHELF_PIN_SYMBOL",
+                "panel_identity": str(getattr(item, "panel_identity", "") or ""),
+                "face": str(getattr(item, "face", "") or ""),
+                "x": float(getattr(item, "x", 0.0) or 0.0),
+                "y": float(getattr(item, "y", 0.0) or 0.0),
+                "z": float(getattr(item, "z", 0.0) or 0.0),
+                "diameter": float(getattr(item, "diameter", 0.0) or 0.0),
+                "depth": float(getattr(item, "depth", 0.0) or 0.0),
+                "axis": str(getattr(item, "axis", "Z") or "Z"),
+                "is_through": bool(getattr(item, "is_through", False)),
+                "source_operation_reference": str(
+                    getattr(item, "source_operation_reference", "") or ""
+                ),
+            }
+            for item in shelf_pin_holes
+        ]
+
+    @staticmethod
+    def _drawer_slide_hole_overlays(drawer_slide_holes):
+        """Build overlays for drawer slide hole drilling positions.
+
+        Each drawer slide hole is a DrillHoleVisual — the overlay reuses
+        the same positional fields as drill_hole overlays but with
+        a distinct overlay_type so the viewport can style it differently.
+        """
+        return [
+            {
+                "overlay_type": "drawer_slide_hole",
+                "visual_type": "DRAWER_SLIDE_SYMBOL",
+                "panel_identity": str(getattr(item, "panel_identity", "") or ""),
+                "face": str(getattr(item, "face", "") or ""),
+                "x": float(getattr(item, "x", 0.0) or 0.0),
+                "y": float(getattr(item, "y", 0.0) or 0.0),
+                "z": float(getattr(item, "z", 0.0) or 0.0),
+                "diameter": float(getattr(item, "diameter", 0.0) or 0.0),
+                "depth": float(getattr(item, "depth", 0.0) or 0.0),
+                "axis": str(getattr(item, "axis", "Z") or "Z"),
+                "is_through": bool(getattr(item, "is_through", False)),
+                "source_operation_reference": str(
+                    getattr(item, "source_operation_reference", "") or ""
+                ),
+            }
+            for item in drawer_slide_holes
+        ]
+
+    @staticmethod
     def _hardware_visual_type(item):
         category = str(getattr(item, "hardware_category", "") or "").upper()
         sku = str(getattr(item, "sku", "") or "").upper()
@@ -352,6 +424,57 @@ class SceneRenderer:
             "command_type": "circle_marker",
             "overlay_type": "confirmat_hole",
             "label": str(overlay.get("label", "") or "Confirmat hole"),
+            "position": (
+                float(overlay.get("x", 0.0) or 0.0),
+                float(overlay.get("y", 0.0) or 0.0),
+                float(overlay.get("z", 0.0) or 0.0),
+            ),
+            "face": str(overlay.get("face", "") or ""),
+            "diameter": float(overlay.get("diameter", 0.0) or 0.0),
+            "size": float(overlay.get("diameter", 0.0) or 0.0),
+            "source_reference": str(
+                overlay.get("source_operation_reference", "") or ""
+            ),
+            "panel_identity": str(overlay.get("panel_identity", "") or ""),
+        }
+
+    @staticmethod
+    def _shelf_pin_viewport_command(overlay):
+        """Build a viewport command for a shelf pin hole overlay.
+
+        Reuses circle_marker command_type with overlay_type=shelf_pin_hole
+        so the viewport can render it with a distinct visual style
+        (e.g. small diameter marker, different colour).
+        """
+        return {
+            "command_type": "circle_marker",
+            "overlay_type": "shelf_pin_hole",
+            "label": str(overlay.get("label", "") or "Shelf pin hole"),
+            "position": (
+                float(overlay.get("x", 0.0) or 0.0),
+                float(overlay.get("y", 0.0) or 0.0),
+                float(overlay.get("z", 0.0) or 0.0),
+            ),
+            "face": str(overlay.get("face", "") or ""),
+            "diameter": float(overlay.get("diameter", 0.0) or 0.0),
+            "size": float(overlay.get("diameter", 0.0) or 0.0),
+            "source_reference": str(
+                overlay.get("source_operation_reference", "") or ""
+            ),
+            "panel_identity": str(overlay.get("panel_identity", "") or ""),
+        }
+
+    @staticmethod
+    def _drawer_slide_viewport_command(overlay):
+        """Build a viewport command for a drawer slide hole overlay.
+
+        Reuses circle_marker command_type with overlay_type=drawer_slide_hole
+        so the viewport can render it with a distinct visual style.
+        """
+        return {
+            "command_type": "circle_marker",
+            "overlay_type": "drawer_slide_hole",
+            "label": str(overlay.get("label", "") or "Drawer slide hole"),
             "position": (
                 float(overlay.get("x", 0.0) or 0.0),
                 float(overlay.get("y", 0.0) or 0.0),

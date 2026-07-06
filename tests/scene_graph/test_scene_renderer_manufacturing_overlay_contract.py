@@ -115,13 +115,17 @@ def _function_has_arithmetic(func_name: str) -> list[tuple[str, int]]:
     return found
 
 
-# ── Overlay methods relevant to minifix/confirmat ─────────────────
+# ── Overlay methods relevant to manufacturing hole types ──────────
 
-MINIFIX_CONFIRMAT_METHODS = (
+MANUFACTURING_OVERLAY_METHODS = (
     "_minifix_overlays",
     "_confirmat_overlays",
+    "_shelf_pin_hole_overlays",
+    "_drawer_slide_hole_overlays",
     "_minifix_viewport_command",
     "_confirmat_viewport_command",
+    "_shelf_pin_viewport_command",
+    "_drawer_slide_viewport_command",
 )
 
 
@@ -457,7 +461,7 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
         """Minifix/confirmat overlay methods must not import manufacturing modules."""
         forbidden_prefixes = ["manufacturing", "factory_operational_intelligence"]
 
-        for method_name in MINIFIX_CONFIRMAT_METHODS:
+        for method_name in MANUFACTURING_OVERLAY_METHODS:
             imports = _function_imported_modules(method_name)
             for forbidden in forbidden_prefixes:
                 offenders = sorted(
@@ -476,7 +480,7 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
 
     def test_minifix_confirmat_methods_do_not_inspect_hardware_intent(self):
         """Minifix/confirmat overlay methods must not reference hardware_intent."""
-        for method_name in MINIFIX_CONFIRMAT_METHODS:
+        for method_name in MANUFACTURING_OVERLAY_METHODS:
             source, _ = _renderer_ast()
             body = _function_body_source(source, method_name)
             self.assertNotIn(
@@ -489,6 +493,9 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
             )
 
     # ── 8. GeometryRenderer remains untouched ─────────────────────
+    # Note: shelf_pin_hole is a pre-existing manufacturing feature kind
+    # string in gui/renderer.py (3D geometry pipeline), unrelated to
+    # the overlay type. Only new overlay-only strings are checked.
 
     def test_scene_renderer_does_not_import_geometry_renderer(self):
         """SceneRenderer must not import GeometryRenderer."""
@@ -522,7 +529,7 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
 
     def test_minifix_confirmat_methods_have_no_arithmetic(self):
         """Minifix/confirmat overlay methods must not perform arithmetic."""
-        for method_name in MINIFIX_CONFIRMAT_METHODS:
+        for method_name in MANUFACTURING_OVERLAY_METHODS:
             arithmetic_found = _function_has_arithmetic(method_name)
             self.assertEqual(
                 arithmetic_found, [],
@@ -678,6 +685,432 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
         self.assertEqual(o["axis"], "Z")
         self.assertEqual(o["is_through"], False)
         self.assertEqual(o["source_operation_reference"], "op-ref-conf")
+
+    # ═══════════════════════════════════════════════════════════════
+    # HFG-3B — Shelf Pin and Drawer Slide Overlays
+    # ═══════════════════════════════════════════════════════════════
+
+    # ── 1. shelf_pin_holes produce overlay commands ────────────────
+
+    def test_shelf_pin_holes_produce_overlay_commands(self):
+        """shelf_pin_holes in VisualMetadata produce overlay dicts and viewport commands."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            shelf_pin_holes=(
+                DrillHoleVisual(
+                    panel_identity="panel-C",
+                    face="LEFT",
+                    x=2.0, y=64.0, z=0.0,
+                    diameter=5.0, depth=10.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-shelf-pin-001",
+                    hardware_intent="INTENT_SHELF_PIN",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        # Overlay produced with correct type
+        self.assertEqual(len(overlays), 1)
+        self.assertEqual(overlays[0]["overlay_type"], "shelf_pin_hole")
+        self.assertEqual(overlays[0]["visual_type"], "SHELF_PIN_SYMBOL")
+        self.assertEqual(overlays[0]["panel_identity"], "panel-C")
+        self.assertEqual(overlays[0]["face"], "LEFT")
+        self.assertEqual(overlays[0]["x"], 2.0)
+        self.assertEqual(overlays[0]["y"], 64.0)
+        self.assertEqual(overlays[0]["diameter"], 5.0)
+        self.assertEqual(overlays[0]["depth"], 10.0)
+
+        # Viewport command produced
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "shelf_pin_hole")
+        self.assertEqual(commands[0]["panel_identity"], "panel-C")
+        self.assertEqual(commands[0]["diameter"], 5.0)
+
+    # ── 2. drawer_slide_holes produce overlay commands ─────────────
+
+    def test_drawer_slide_holes_produce_overlay_commands(self):
+        """drawer_slide_holes in VisualMetadata produce overlay dicts and viewport commands."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            drawer_slide_holes=(
+                DrillHoleVisual(
+                    panel_identity="panel-D",
+                    face="LEFT",
+                    x=10.0, y=50.0, z=0.0,
+                    diameter=4.0, depth=12.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-drawer-slide-001",
+                    hardware_intent="INTENT_DRAWER_SLIDE",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        # Overlay produced with correct type
+        self.assertEqual(len(overlays), 1)
+        self.assertEqual(overlays[0]["overlay_type"], "drawer_slide_hole")
+        self.assertEqual(overlays[0]["visual_type"], "DRAWER_SLIDE_SYMBOL")
+        self.assertEqual(overlays[0]["panel_identity"], "panel-D")
+        self.assertEqual(overlays[0]["face"], "LEFT")
+        self.assertEqual(overlays[0]["x"], 10.0)
+        self.assertEqual(overlays[0]["y"], 50.0)
+        self.assertEqual(overlays[0]["diameter"], 4.0)
+        self.assertEqual(overlays[0]["depth"], 12.0)
+
+        # Viewport command produced
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "drawer_slide_hole")
+        self.assertEqual(commands[0]["panel_identity"], "panel-D")
+        self.assertEqual(commands[0]["diameter"], 4.0)
+
+    # ── 3. empty fields produce no overlays ────────────────────────
+
+    def test_empty_shelf_pin_produces_no_overlays(self):
+        """Empty shelf_pin_holes produce no overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(shelf_pin_holes=())
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays, [])
+        self.assertEqual(commands, [])
+
+    def test_empty_drawer_slide_produces_no_overlays(self):
+        """Empty drawer_slide_holes produce no overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(drawer_slide_holes=())
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays, [])
+        self.assertEqual(commands, [])
+
+    def test_default_metadata_produces_no_shelf_pin_drawer_slide(self):
+        """Default VisualMetadata produces no shelf_pin or drawer_slide overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata()
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        sp_count = sum(
+            1 for o in overlays if o.get("overlay_type") == "shelf_pin_hole"
+        )
+        ds_count = sum(
+            1 for o in overlays if o.get("overlay_type") == "drawer_slide_hole"
+        )
+
+        self.assertEqual(sp_count, 0)
+        self.assertEqual(ds_count, 0)
+
+    # ── 4. existing overlays still work (with shelf_pin/drawer_slide) ──
+
+    def test_existing_overlays_still_work_with_shelf_pin_and_drawer_slide(self):
+        """Existing overlays unchanged when shelf_pin/drawer_slide are present."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            EdgeBandVisual,
+            GrooveVisual,
+            HardwareMarkerVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            edge_banding=(EdgeBandVisual(side="TOP", banding="ABS"),),
+            drill_holes=(DrillHoleVisual(panel_identity="P1", x=10.0, y=20.0),),
+            grooves=(GrooveVisual(panel_identity="BACK-1", face="BACK", depth=8.0),),
+            hardware_markers=(HardwareMarkerVisual(
+                panel_identity="door-01", sku="HINGE_BLUM", quantity=2,
+            ),),
+            shelf_pin_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_SHELF_PIN"),
+            ),
+            drawer_slide_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_DRAWER_SLIDE"),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        self.assertEqual(
+            len([o for o in overlays if o["overlay_type"] == "edge_banding"]), 1)
+        self.assertEqual(
+            len([o for o in overlays if o["overlay_type"] == "drill_hole"]), 1)
+        self.assertEqual(
+            len([o for o in overlays if o["overlay_type"] == "groove"]), 1)
+        self.assertEqual(
+            len([o for o in overlays if o["overlay_type"] == "hardware_marker"]), 1)
+        self.assertEqual(
+            len([o for o in overlays if o["overlay_type"] == "shelf_pin_hole"]), 1)
+        self.assertEqual(
+            len([o for o in overlays if o["overlay_type"] == "drawer_slide_hole"]), 1)
+
+    # ── 5. renderer does not mutate VisualMetadata ─────────────────
+
+    def test_shelf_pin_overlay_does_not_mutate_metadata(self):
+        """shelf_pin_hole overlay pipeline does not modify input metadata."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=2.0, y=64.0, diameter=5.0,
+            hardware_intent="INTENT_SHELF_PIN",
+        )
+        vm = VisualMetadata(shelf_pin_holes=(hole,))
+        original_repr = repr(vm)
+
+        SceneRenderer.build_visual_overlays(vm)
+
+        self.assertEqual(repr(vm), original_repr,
+                         msg="build_visual_overlays must not mutate VisualMetadata")
+
+    def test_drawer_slide_overlay_does_not_mutate_metadata(self):
+        """drawer_slide_hole overlay pipeline does not modify input metadata."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=10.0, y=50.0, diameter=4.0,
+            hardware_intent="INTENT_DRAWER_SLIDE",
+        )
+        vm = VisualMetadata(drawer_slide_holes=(hole,))
+        original_repr = repr(vm)
+
+        SceneRenderer.build_visual_overlays(vm)
+
+        self.assertEqual(repr(vm), original_repr,
+                         msg="build_visual_overlays must not mutate VisualMetadata")
+
+    # ── 6. (covered by test_minifix_confirmat_methods_do_not_import_manufacturing) ──
+    # Uses MANUFACTURING_OVERLAY_METHODS which now includes the 4 new methods
+
+    # ── 7. (covered by test_minifix_confirmat_methods_do_not_inspect_hardware_intent) ──
+    # Uses MANUFACTURING_OVERLAY_METHODS which now includes the 4 new methods
+
+    # ── 8. GeometryRenderer remains untouched ─────────────────────
+
+    # ── 9. (covered by test_minifix_confirmat_methods_have_no_arithmetic) ──
+    # Uses MANUFACTURING_OVERLAY_METHODS which now includes the 4 new methods
+
+    # ── 10. overlay command labels/types are stable ────────────────
+
+    def test_shelf_pin_overlay_label_type_stable(self):
+        """Shelf pin overlay labels and types are deterministic and stable."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            shelf_pin_holes=(
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    x=2.0, y=64.0,
+                    diameter=5.0, depth=10.0,
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays[0]["overlay_type"], "shelf_pin_hole")
+        self.assertEqual(overlays[0]["visual_type"], "SHELF_PIN_SYMBOL")
+
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "shelf_pin_hole")
+        self.assertEqual(commands[0]["label"], "Shelf pin hole")
+
+        overlays_2 = SceneRenderer.build_visual_overlays(vm)
+        commands_2 = SceneRenderer.build_viewport_overlay_commands(overlays_2)
+        self.assertEqual(overlays, overlays_2)
+        self.assertEqual(commands, commands_2)
+
+    def test_drawer_slide_overlay_label_type_stable(self):
+        """Drawer slide overlay labels and types are deterministic and stable."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            drawer_slide_holes=(
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    x=10.0, y=50.0,
+                    diameter=4.0, depth=12.0,
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays[0]["overlay_type"], "drawer_slide_hole")
+        self.assertEqual(overlays[0]["visual_type"], "DRAWER_SLIDE_SYMBOL")
+
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "drawer_slide_hole")
+        self.assertEqual(commands[0]["label"], "Drawer slide hole")
+
+        overlays_2 = SceneRenderer.build_visual_overlays(vm)
+        commands_2 = SceneRenderer.build_viewport_overlay_commands(overlays_2)
+        self.assertEqual(overlays, overlays_2)
+        self.assertEqual(commands, commands_2)
+
+    def test_shelf_pin_overlay_fields_match_drill_hole_schema(self):
+        """Shelf pin overlays carry all positional fields from DrillHoleVisual."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            shelf_pin_holes=(
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    face="LEFT",
+                    x=2.0, y=64.0, z=0.0,
+                    diameter=5.0, depth=10.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-sp",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        o = overlays[0]
+
+        self.assertEqual(o["panel_identity"], "P1")
+        self.assertEqual(o["face"], "LEFT")
+        self.assertEqual(o["x"], 2.0)
+        self.assertEqual(o["y"], 64.0)
+        self.assertEqual(o["z"], 0.0)
+        self.assertEqual(o["diameter"], 5.0)
+        self.assertEqual(o["depth"], 10.0)
+        self.assertEqual(o["axis"], "Z")
+        self.assertEqual(o["is_through"], False)
+        self.assertEqual(o["source_operation_reference"], "op-sp")
+
+    def test_drawer_slide_overlay_fields_match_drill_hole_schema(self):
+        """Drawer slide overlays carry all positional fields from DrillHoleVisual."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            drawer_slide_holes=(
+                DrillHoleVisual(
+                    panel_identity="P2",
+                    face="RIGHT",
+                    x=10.0, y=50.0, z=5.0,
+                    diameter=4.0, depth=12.0,
+                    axis="Z",
+                    is_through=True,
+                    source_operation_reference="op-ds",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        o = overlays[0]
+
+        self.assertEqual(o["panel_identity"], "P2")
+        self.assertEqual(o["face"], "RIGHT")
+        self.assertEqual(o["x"], 10.0)
+        self.assertEqual(o["y"], 50.0)
+        self.assertEqual(o["z"], 5.0)
+        self.assertEqual(o["diameter"], 4.0)
+        self.assertEqual(o["depth"], 12.0)
+        self.assertEqual(o["axis"], "Z")
+        self.assertEqual(o["is_through"], True)
+        self.assertEqual(o["source_operation_reference"], "op-ds")
+
+    # ── 11. minifix/confirmat behavior remains unchanged ───────────
+
+    def test_minifix_confirmat_unchanged_when_shelf_pin_drawer_slide_present(self):
+        """Minifix/confirmat overlays identical with or without shelf_pin/drawer_slide."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        mf_hole = DrillHoleVisual(
+            panel_identity="P1", x=37.0, y=100.0, diameter=15.0,
+            hardware_intent="INTENT_MINIFIX_15",
+        )
+        cf_hole = DrillHoleVisual(
+            panel_identity="P1", x=37.0, y=50.0, diameter=8.0,
+            hardware_intent="INTENT_CONFIRMAT_50",
+        )
+
+        vm_base = VisualMetadata(minifix_holes=(mf_hole,), confirmat_holes=(cf_hole,))
+        vm_ext = VisualMetadata(
+            minifix_holes=(mf_hole,),
+            confirmat_holes=(cf_hole,),
+            shelf_pin_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_SHELF_PIN"),
+            ),
+            drawer_slide_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_DRAWER_SLIDE"),
+            ),
+        )
+
+        overlays_base = SceneRenderer.build_visual_overlays(vm_base)
+        overlays_ext = SceneRenderer.build_visual_overlays(vm_ext)
+
+        # Minifix overlays identical
+        mf_base = [o for o in overlays_base if o["overlay_type"] == "minifix_hole"]
+        mf_ext = [o for o in overlays_ext if o["overlay_type"] == "minifix_hole"]
+        self.assertEqual(mf_base, mf_ext)
+
+        # Confirmat overlays identical
+        cf_base = [o for o in overlays_base if o["overlay_type"] == "confirmat_hole"]
+        cf_ext = [o for o in overlays_ext if o["overlay_type"] == "confirmat_hole"]
+        self.assertEqual(cf_base, cf_ext)
+
+        # Shelf pin and drawer slide added
+        sp_ext = [o for o in overlays_ext if o["overlay_type"] == "shelf_pin_hole"]
+        ds_ext = [o for o in overlays_ext if o["overlay_type"] == "drawer_slide_hole"]
+        self.assertEqual(len(sp_ext), 1)
+        self.assertEqual(len(ds_ext), 1)
 
 
 if __name__ == "__main__":

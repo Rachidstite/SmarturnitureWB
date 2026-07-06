@@ -251,7 +251,7 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         self.assertEqual(overlays[0]["overlay_type"], "confirmat_hole")
 
     def test_renderer_ignores_remaining_manufacturing_fields(self):
-        """The remaining 5 manufacturing fields are still ignored by renderer."""
+        """The remaining 3 manufacturing fields are still ignored by renderer."""
         from scene_graph.metadata import (
             DrillHoleVisual,
             VisualMetadata,
@@ -260,8 +260,6 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
 
         hole = DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15")
         field_names = [
-            "shelf_pin_holes",
-            "drawer_slide_holes",
             "hinge_cup_holes",
             "hinge_plate_positions",
             "screw_holes",
@@ -513,10 +511,19 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
             drawer_slide_holes=self._one_hole("INTENT_DRAWER_SLIDE"),
         )
 
-        self.assertEqual(
-            SceneRenderer.build_visual_overlays(vm_without),
-            SceneRenderer.build_visual_overlays(vm_with),
-        )
+        overlays_without = SceneRenderer.build_visual_overlays(vm_without)
+        overlays_with = SceneRenderer.build_visual_overlays(vm_with)
+
+        # Groove overlay content must be identical; vm_with also has shelf_pin + drawer_slide
+        groove_without = [o for o in overlays_without if o["overlay_type"] == "groove"]
+        groove_with = [o for o in overlays_with if o["overlay_type"] == "groove"]
+        self.assertEqual(groove_without, groove_with)
+
+        # Shelf pin and drawer slide overlays are present in vm_with
+        sp_overlays = [o for o in overlays_with if o["overlay_type"] == "shelf_pin_hole"]
+        ds_overlays = [o for o in overlays_with if o["overlay_type"] == "drawer_slide_hole"]
+        self.assertEqual(len(sp_overlays), 1)
+        self.assertEqual(len(ds_overlays), 1)
 
     def test_existing_hardware_marker_overlays_unchanged_with_new_fields(self):
         """Hardware marker overlays identical with or without new fields."""
