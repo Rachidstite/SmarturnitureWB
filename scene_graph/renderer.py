@@ -80,6 +80,12 @@ class SceneRenderer:
                 getattr(visual_metadata, "hinge_plate_positions", ()) or ()
             )
         )
+        # ── Screw hole overlays (HFG-3D) ──────────────────────
+        overlays.extend(
+            SceneRenderer._screw_hole_overlays(
+                getattr(visual_metadata, "screw_holes", ()) or ()
+            )
+        )
         return overlays
 
     @staticmethod
@@ -107,6 +113,8 @@ class SceneRenderer:
                 command = SceneRenderer._hinge_cup_viewport_command(overlay)
             elif overlay_type == "hinge_plate_position":
                 command = SceneRenderer._hinge_plate_viewport_command(overlay)
+            elif overlay_type == "screw_hole":
+                command = SceneRenderer._screw_viewport_command(overlay)
             else:
                 continue
             if command is not None:
@@ -373,6 +381,34 @@ class SceneRenderer:
         ]
 
     @staticmethod
+    def _screw_hole_overlays(screw_holes):
+        """Build overlays for screw drilling positions.
+
+        Each screw hole is a DrillHoleVisual — the overlay reuses
+        the same positional fields as drill_hole overlays but with
+        a distinct overlay_type so the viewport can style it differently.
+        """
+        return [
+            {
+                "overlay_type": "screw_hole",
+                "visual_type": "SCREW_SYMBOL",
+                "panel_identity": str(getattr(item, "panel_identity", "") or ""),
+                "face": str(getattr(item, "face", "") or ""),
+                "x": float(getattr(item, "x", 0.0) or 0.0),
+                "y": float(getattr(item, "y", 0.0) or 0.0),
+                "z": float(getattr(item, "z", 0.0) or 0.0),
+                "diameter": float(getattr(item, "diameter", 0.0) or 0.0),
+                "depth": float(getattr(item, "depth", 0.0) or 0.0),
+                "axis": str(getattr(item, "axis", "Z") or "Z"),
+                "is_through": bool(getattr(item, "is_through", False)),
+                "source_operation_reference": str(
+                    getattr(item, "source_operation_reference", "") or ""
+                ),
+            }
+            for item in screw_holes
+        ]
+
+    @staticmethod
     def _hardware_visual_type(item):
         category = str(getattr(item, "hardware_category", "") or "").upper()
         sku = str(getattr(item, "sku", "") or "").upper()
@@ -598,6 +634,31 @@ class SceneRenderer:
             "command_type": "circle_marker",
             "overlay_type": "hinge_plate_position",
             "label": str(overlay.get("label", "") or "Hinge plate position"),
+            "position": (
+                float(overlay.get("x", 0.0) or 0.0),
+                float(overlay.get("y", 0.0) or 0.0),
+                float(overlay.get("z", 0.0) or 0.0),
+            ),
+            "face": str(overlay.get("face", "") or ""),
+            "diameter": float(overlay.get("diameter", 0.0) or 0.0),
+            "size": float(overlay.get("diameter", 0.0) or 0.0),
+            "source_reference": str(
+                overlay.get("source_operation_reference", "") or ""
+            ),
+            "panel_identity": str(overlay.get("panel_identity", "") or ""),
+        }
+
+    @staticmethod
+    def _screw_viewport_command(overlay):
+        """Build a viewport command for a screw hole overlay.
+
+        Reuses circle_marker command_type with overlay_type=screw_hole
+        so the viewport can render it with a distinct visual style.
+        """
+        return {
+            "command_type": "circle_marker",
+            "overlay_type": "screw_hole",
+            "label": str(overlay.get("label", "") or "Screw hole"),
             "position": (
                 float(overlay.get("x", 0.0) or 0.0),
                 float(overlay.get("y", 0.0) or 0.0),

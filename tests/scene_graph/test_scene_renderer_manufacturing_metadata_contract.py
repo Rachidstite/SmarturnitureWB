@@ -250,23 +250,58 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
                          msg="confirmat_holes should produce 1 overlay")
         self.assertEqual(overlays[0]["overlay_type"], "confirmat_hole")
 
-    def test_renderer_ignores_remaining_manufacturing_fields(self):
-        """The remaining 1 manufacturing field is still ignored by renderer."""
+    def test_all_manufacturing_fields_now_produce_overlays(self):
+        """All VisualMetadata manufacturing drilling fields produce overlays.
+
+        HFG-3 completion: every manufacturing drilling field in
+        VisualMetadata is now consumed by SceneRenderer.build_visual_overlays.
+        """
         from scene_graph.metadata import (
             DrillHoleVisual,
             VisualMetadata,
         )
         from scene_graph.renderer import SceneRenderer
 
-        hole = DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15")
-        field_names = [
-            "screw_holes",
-        ]
-        for name in field_names:
-            vm = VisualMetadata(**{name: (hole,)})
-            overlays = SceneRenderer.build_visual_overlays(vm)
-            self.assertEqual(overlays, [],
-                             msg=f"Field {name} should be ignored by renderer")
+        hole = DrillHoleVisual(
+            panel_identity="P1",
+            x=37.0, y=100.0, diameter=15.0,
+            hardware_intent="INTENT_MINIFIX_15",
+        )
+
+        # Every manufacturing drilling field populated
+        vm = VisualMetadata(
+            minifix_holes=(hole,),
+            confirmat_holes=(hole,),
+            shelf_pin_holes=(hole,),
+            drawer_slide_holes=(hole,),
+            hinge_cup_holes=(hole,),
+            hinge_plate_positions=(hole,),
+            screw_holes=(hole,),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        # All 7 manufacturing drilling fields produce overlays
+        field_map = {
+            "minifix_hole": "minifix_holes",
+            "confirmat_hole": "confirmat_holes",
+            "shelf_pin_hole": "shelf_pin_holes",
+            "drawer_slide_hole": "drawer_slide_holes",
+            "hinge_cup_hole": "hinge_cup_holes",
+            "hinge_plate_position": "hinge_plate_positions",
+            "screw_hole": "screw_holes",
+        }
+        for overlay_type, field_name in field_map.items():
+            found = [o for o in overlays if o["overlay_type"] == overlay_type]
+            self.assertEqual(
+                len(found), 1,
+                msg=f"Field '{field_name}' should produce 1 overlay of type '{overlay_type}', "
+                    f"got {len(found)}",
+            )
+
+        # No remaining unknown fields — 7 manufacturing overlays + 4 original = 11 total
+        # (Original: edge_banding=0, drill_holes=0, grooves=0, hardware_markers=0)
+        self.assertEqual(len(overlays), 7)
 
     # ── 2. Empty fields do not break rendering ───────────────────
 

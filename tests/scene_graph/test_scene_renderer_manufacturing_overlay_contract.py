@@ -124,12 +124,14 @@ MANUFACTURING_OVERLAY_METHODS = (
     "_drawer_slide_hole_overlays",
     "_hinge_cup_hole_overlays",
     "_hinge_plate_position_overlays",
+    "_screw_hole_overlays",
     "_minifix_viewport_command",
     "_confirmat_viewport_command",
     "_shelf_pin_viewport_command",
     "_drawer_slide_viewport_command",
     "_hinge_cup_viewport_command",
     "_hinge_plate_viewport_command",
+    "_screw_viewport_command",
 )
 
 
@@ -1447,6 +1449,271 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
         # Hinge overlays present
         self.assertEqual(len([o for o in e if o["overlay_type"] == "hinge_cup_hole"]), 1)
         self.assertEqual(len([o for o in e if o["overlay_type"] == "hinge_plate_position"]), 1)
+
+    # ═══════════════════════════════════════════════════════════════
+    # HFG-3D — Screw Holes and Manufacturing Overlay Completion
+    # ═══════════════════════════════════════════════════════════════
+
+    # ── 1. screw_holes produce overlay commands ────────────────────
+
+    def test_screw_holes_produce_overlay_commands(self):
+        """screw_holes in VisualMetadata produce overlay dicts and viewport commands."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            screw_holes=(
+                DrillHoleVisual(
+                    panel_identity="panel-G",
+                    face="LEFT",
+                    x=15.0, y=80.0, z=0.0,
+                    diameter=3.5, depth=10.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-screw-001",
+                    hardware_intent="INTENT_SCREW",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(len(overlays), 1)
+        self.assertEqual(overlays[0]["overlay_type"], "screw_hole")
+        self.assertEqual(overlays[0]["visual_type"], "SCREW_SYMBOL")
+        self.assertEqual(overlays[0]["panel_identity"], "panel-G")
+        self.assertEqual(overlays[0]["face"], "LEFT")
+        self.assertEqual(overlays[0]["x"], 15.0)
+        self.assertEqual(overlays[0]["y"], 80.0)
+        self.assertEqual(overlays[0]["diameter"], 3.5)
+        self.assertEqual(overlays[0]["depth"], 10.0)
+
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "screw_hole")
+        self.assertEqual(commands[0]["panel_identity"], "panel-G")
+        self.assertEqual(commands[0]["diameter"], 3.5)
+
+    # ── 2. empty fields produce no overlays ────────────────────────
+
+    def test_empty_screw_holes_produce_no_overlays(self):
+        """Empty screw_holes produce no overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(screw_holes=())
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+        self.assertEqual(overlays, [])
+        self.assertEqual(commands, [])
+
+    def test_default_metadata_produces_no_screw_overlays(self):
+        """Default VisualMetadata produces no screw_hole overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata()
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        sc = sum(1 for o in overlays if o.get("overlay_type") == "screw_hole")
+        self.assertEqual(sc, 0)
+
+    # ── 3. existing overlays still work ────────────────────────────
+
+    def test_existing_overlays_still_work_with_screw_holes(self):
+        """Existing overlays unchanged when screw_holes are present."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            EdgeBandVisual,
+            GrooveVisual,
+            HardwareMarkerVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            edge_banding=(EdgeBandVisual(side="TOP", banding="ABS"),),
+            drill_holes=(DrillHoleVisual(panel_identity="P1", x=10.0, y=20.0),),
+            grooves=(GrooveVisual(panel_identity="BACK-1", face="BACK", depth=8.0),),
+            hardware_markers=(HardwareMarkerVisual(
+                panel_identity="door-01", sku="HINGE_BLUM", quantity=2,
+            ),),
+            screw_holes=(DrillHoleVisual(hardware_intent="INTENT_SCREW"),),
+        )
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        for ot in ("edge_banding", "drill_hole", "groove", "hardware_marker", "screw_hole"):
+            self.assertEqual(len([o for o in overlays if o["overlay_type"] == ot]), 1)
+
+    # ── 4. renderer does not mutate VisualMetadata ─────────────────
+
+    def test_screw_overlay_does_not_mutate_metadata(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=15.0, y=80.0, diameter=3.5,
+            hardware_intent="INTENT_SCREW",
+        )
+        vm = VisualMetadata(screw_holes=(hole,))
+        orig = repr(vm)
+        SceneRenderer.build_visual_overlays(vm)
+        self.assertEqual(repr(vm), orig)
+
+    # ── 5, 6, 7, 8 covered by MANUFACTURING_OVERLAY_METHODS ────────
+
+    # ── 9. overlay command label/type is stable ────────────────────
+
+    def test_screw_overlay_label_type_stable(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            screw_holes=(DrillHoleVisual(
+                panel_identity="P1", x=15.0, y=80.0,
+                diameter=3.5, depth=10.0,
+            ),),
+        )
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays[0]["overlay_type"], "screw_hole")
+        self.assertEqual(overlays[0]["visual_type"], "SCREW_SYMBOL")
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "screw_hole")
+        self.assertEqual(commands[0]["label"], "Screw hole")
+
+        overlays_2 = SceneRenderer.build_visual_overlays(vm)
+        commands_2 = SceneRenderer.build_viewport_overlay_commands(overlays_2)
+        self.assertEqual(overlays, overlays_2)
+        self.assertEqual(commands, commands_2)
+
+    def test_screw_overlay_fields_match_drill_hole_schema(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            screw_holes=(DrillHoleVisual(
+                panel_identity="P3", face="RIGHT",
+                x=15.0, y=80.0, z=2.0,
+                diameter=3.5, depth=10.0,
+                axis="Z", is_through=True,
+                source_operation_reference="op-sc",
+            ),),
+        )
+        o = SceneRenderer.build_visual_overlays(vm)[0]
+        self.assertEqual(o["panel_identity"], "P3")
+        self.assertEqual(o["face"], "RIGHT")
+        self.assertEqual(o["x"], 15.0)
+        self.assertEqual(o["y"], 80.0)
+        self.assertEqual(o["z"], 2.0)
+        self.assertEqual(o["diameter"], 3.5)
+        self.assertEqual(o["depth"], 10.0)
+        self.assertEqual(o["axis"], "Z")
+        self.assertEqual(o["is_through"], True)
+        self.assertEqual(o["source_operation_reference"], "op-sc")
+
+    # ── 10. all prior overlays unchanged when screw_holes present ──
+
+    def test_all_prior_overlays_unchanged_when_screw_holes_present(self):
+        """All prior manufacturing overlays identical with or without screw_holes."""
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        mf = DrillHoleVisual(panel_identity="P1", x=37.0, y=100.0,
+                              hardware_intent="INTENT_MINIFIX_15")
+        cf = DrillHoleVisual(panel_identity="P1", x=37.0, y=50.0,
+                              hardware_intent="INTENT_CONFIRMAT_50")
+        sp = DrillHoleVisual(panel_identity="P1", x=2.0, y=64.0,
+                              hardware_intent="INTENT_SHELF_PIN")
+        ds = DrillHoleVisual(panel_identity="P1", x=10.0, y=50.0,
+                              hardware_intent="INTENT_DRAWER_SLIDE")
+        hc = DrillHoleVisual(panel_identity="P1", x=20.0, y=100.0,
+                              hardware_intent="INTENT_HINGE")
+        hp = DrillHoleVisual(panel_identity="P1", x=30.0, y=50.0,
+                              hardware_intent="INTENT_HINGE")
+
+        vm_base = VisualMetadata(
+            minifix_holes=(mf,), confirmat_holes=(cf,),
+            shelf_pin_holes=(sp,), drawer_slide_holes=(ds,),
+            hinge_cup_holes=(hc,), hinge_plate_positions=(hp,),
+        )
+        vm_ext = VisualMetadata(
+            minifix_holes=(mf,), confirmat_holes=(cf,),
+            shelf_pin_holes=(sp,), drawer_slide_holes=(ds,),
+            hinge_cup_holes=(hc,), hinge_plate_positions=(hp,),
+            screw_holes=(DrillHoleVisual(hardware_intent="INTENT_SCREW"),),
+        )
+
+        b = SceneRenderer.build_visual_overlays(vm_base)
+        e = SceneRenderer.build_visual_overlays(vm_ext)
+
+        for ot in ("minifix_hole", "confirmat_hole", "shelf_pin_hole",
+                   "drawer_slide_hole", "hinge_cup_hole", "hinge_plate_position"):
+            self.assertEqual(
+                [o for o in b if o["overlay_type"] == ot],
+                [o for o in e if o["overlay_type"] == ot],
+                msg=f"Overlay type '{ot}' changed when screw_holes added",
+            )
+
+        self.assertEqual(len([o for o in e if o["overlay_type"] == "screw_hole"]), 1)
+
+    # ── 11. All manufacturing drilling fields are covered ──────────
+
+    def test_all_manufacturing_drill_fields_covered_by_overlays(self):
+        """Every VisualMetadata manufacturing drilling field has an overlay type.
+
+        This is the HFG-3 completion gate: all 7 manufacturing drill
+        fields in VisualMetadata must produce distinct overlays.
+        """
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=10.0, y=10.0,
+            hardware_intent="INTENT_MINIFIX_15",
+        )
+
+        vm = VisualMetadata(
+            minifix_holes=(hole,),
+            confirmat_holes=(hole,),
+            shelf_pin_holes=(hole,),
+            drawer_slide_holes=(hole,),
+            hinge_cup_holes=(hole,),
+            hinge_plate_positions=(hole,),
+            screw_holes=(hole,),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        expected_overlay_types = {
+            "minifix_hole",
+            "confirmat_hole",
+            "shelf_pin_hole",
+            "drawer_slide_hole",
+            "hinge_cup_hole",
+            "hinge_plate_position",
+            "screw_hole",
+        }
+
+        produced = {o["overlay_type"] for o in overlays}
+
+        missing = expected_overlay_types - produced
+        extra = produced - expected_overlay_types
+        self.assertSetEqual(
+            expected_overlay_types, produced,
+            msg=(
+                f"Missing overlay types: {missing}. "
+                f"Extra overlay types: {extra}. "
+                f"All 7 manufacturing drill fields should produce overlays."
+            ),
+        )
 
 
 if __name__ == "__main__":
