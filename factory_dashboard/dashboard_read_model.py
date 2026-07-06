@@ -251,8 +251,85 @@ def build_factory_dashboard_read_model(
     )
 
 
+# ── Manufacturing Render Review section ──────────────────────────────
+
+
+def build_manufacturing_render_dashboard_section(
+    commands: Any = None,
+) -> FactoryDashboardSection | None:
+    """Build a dashboard section from SceneRenderer viewport commands.
+
+    Accepts an iterable of viewport command dicts (or a single dict)
+    and scans for the rendering-only metadata fields that SceneRenderer
+    derives from overlay data:
+
+      review_priority, review_category, hole_style,
+      drill_direction, hole_depth, hole_depth_mode
+
+    Returns a ``FactoryDashboardSection`` with one row per distinct
+    metadata field found, or ``None`` when no commands or no known
+    fields are present.
+
+    This is a pure consumption of existing renderer output:
+    - No values are recomputed from overlay_type, face, depth, or
+      is_through.
+    - No manufacturing logic, no cost logic, no feasibility logic.
+    - No duplicate extraction logic — only getattr/read from the
+      command dicts that SceneRenderer already populated.
+    """
+    if commands is None:
+        return None
+
+    if isinstance(commands, dict):
+        commands = [commands]
+
+    _KNOWN_FIELDS = frozenset({
+        "review_priority",
+        "review_category",
+        "hole_style",
+        "drill_direction",
+        "hole_depth",
+        "hole_depth_mode",
+    })
+
+    collected: dict[str, set[str]] = {k: set() for k in _KNOWN_FIELDS}
+
+    for cmd in commands or ():
+        if not isinstance(cmd, dict):
+            continue
+        for field in _KNOWN_FIELDS:
+            raw = cmd.get(field)
+            if raw is not None:
+                collected[field].add(str(raw))
+
+    rows: list[tuple[str, str]] = []
+    for field in (
+        "review_priority",
+        "review_category",
+        "hole_style",
+        "drill_direction",
+        "hole_depth",
+        "hole_depth_mode",
+    ):
+        values = collected.get(field, set())
+        if not values:
+            continue
+        label = field.replace("_", " ").title()
+        value = ", ".join(sorted(values, key=str))
+        rows.append((label, value))
+
+    if not rows:
+        return None
+
+    return FactoryDashboardSection(
+        section_name="Manufacturing Review Details",
+        rows=tuple(rows),
+    )
+
+
 __all__ = [
     "FactoryDashboardSection",
     "FactoryDashboardReadModel",
     "build_factory_dashboard_read_model",
+    "build_manufacturing_render_dashboard_section",
 ]

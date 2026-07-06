@@ -23,10 +23,12 @@ from .dashboard_read_model import (
     FactoryDashboardReadModel,
     FactoryDashboardSection,
     build_factory_dashboard_read_model,
+    build_manufacturing_render_dashboard_section,
 )
 
 __all__ = [
     "FactoryDashboardSection",
     "FactoryDashboardReadModel",
     "build_factory_dashboard_read_model",
+    "build_manufacturing_render_dashboard_section",
 ]
