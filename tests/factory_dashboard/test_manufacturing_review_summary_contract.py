@@ -405,3 +405,118 @@ class TestManufacturingReviewSummaryContract(unittest.TestCase):
         cat_sum = (s.drilling_count + s.hardware_count
                    + s.edge_banding_count + s.groove_count)
         self.assertEqual(s.total_review_items, cat_sum)
+
+    # ── Rule 14: attention signal — empty input ────────────────────
+
+    def test_empty_input_attention_none(self):
+        """Empty input => attention_level 'none'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary(None)
+        self.assertEqual(s.attention_level, "none")
+
+    def test_empty_input_attention_message(self):
+        """Empty input => attention_message 'No manufacturing review items.'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary(None)
+        self.assertEqual(s.attention_message, "No manufacturing review items.")
+
+    def test_empty_list_attention_none(self):
+        """Empty list => attention_level 'none'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([])
+        self.assertEqual(s.attention_level, "none")
+
+    # ── Rule 15: attention signal — high priority ──────────────────
+
+    def test_high_priority_attention_urgent(self):
+        """High priority => attention_level 'urgent'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "high", "review_category": "drilling"},
+        ])
+        self.assertEqual(s.attention_level, "urgent")
+
+    def test_high_priority_message_contains_count(self):
+        """High priority message contains the high count."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "high", "review_category": "drilling"},
+            {"review_priority": "high", "review_category": "hardware"},
+        ])
+        self.assertIn("2", s.attention_message)
+        self.assertIn("high-priority", s.attention_message)
+        self.assertIn("attention", s.attention_message)
+
+    # ── Rule 16: attention signal — medium priority ────────────────
+
+    def test_medium_priority_only_attention_review(self):
+        """Medium priority only => attention_level 'review'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "medium", "review_category": "drilling"},
+        ])
+        self.assertEqual(s.attention_level, "review")
+
+    def test_medium_priority_message_contains_count(self):
+        """Medium priority message mentions the count."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "medium", "review_category": "drilling"},
+        ])
+        self.assertIn("1", s.attention_message)
+        self.assertIn("medium-priority", s.attention_message)
+
+    # ── Rule 17: attention signal — low priority only ──────────────
+
+    def test_low_priority_only_attention_review(self):
+        """Low priority only => attention_level 'review'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "low", "review_category": "groove"},
+        ])
+        self.assertEqual(s.attention_level, "review")
+
+    def test_low_priority_only_message(self):
+        """Low priority only message says items available."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "low", "review_category": "groove"},
+        ])
+        self.assertIn("available", s.attention_message)
+
+    # ── Rule 18: attention signal depends only on counts ───────────
+
+    def test_attention_signal_uses_counts_not_raw_fields(self):
+        """Attention signal determined by summary counts, not raw command fields."""
+        rs = self._import_once()
+        # Same counts, different raw fields — must produce same attention
+        cmds_a = [
+            {"review_priority": "high", "review_category": "drilling",
+             "hole_style": "blind"},
+            {"review_priority": "high", "review_category": "hardware",
+             "hole_style": "through"},
+        ]
+        cmds_b = [
+            {"review_priority": "high", "review_category": "edge_banding",
+             "hole_style": "cup"},
+            {"review_priority": "high", "review_category": "groove",
+             "hole_style": "pilot"},
+        ]
+        sa = rs.build_manufacturing_review_summary(cmds_a)
+        sb = rs.build_manufacturing_review_summary(cmds_b)
+        self.assertEqual(sa.attention_level, sb.attention_level)
+        self.assertEqual(sa.attention_message, sb.attention_message)
+
+    # ── Rule 19: no engine/readiness/decision naming ───────────────
+
+    def test_no_readiness_decision_naming_in_attention(self):
+        """attention_level must not contain readiness/decision vocabulary."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "high", "review_category": "drilling"},
+        ])
+        forbidden = ["readiness", "decision", "feasibility", "cost",
+                      "factory_ready", "production_ready"]
+        for token in forbidden:
+            self.assertNotIn(token, s.attention_level.lower())
+            self.assertNotIn(token, s.attention_message.lower())

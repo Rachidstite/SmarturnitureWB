@@ -49,9 +49,52 @@ class ManufacturingReviewSummary:
     edge_banding_count: int = 0
     groove_count: int = 0
     top_priority_items: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    attention_level: str = "none"
+    attention_message: str = ""
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
+
+
+def _resolve_attention_signal(
+    total_review_items: int,
+    high_priority_count: int,
+    medium_priority_count: int,
+) -> tuple[str, str]:
+    """Determine attention level and message from summary counts.
+
+    Returns a ``(attention_level, attention_message)`` pair where
+    ``attention_level`` is one of:
+
+        * ``\"none\"```   — no review items present
+        * ``\"urgent\"```  — at least one high-priority item
+        * ``\"review\"```  — medium-priority or low-priority items only
+
+    This is a pure function of counts already computed by the caller.
+    No derivation from raw command fields, no manufacturing logic,
+    no production decision computation.
+    """
+    if total_review_items <= 0:
+        return ("none", "No manufacturing review items.")
+
+    if high_priority_count > 0:
+        msg = (
+            f"{high_priority_count} high-priority manufacturing review "
+            f"item(s) need attention."
+        )
+        return ("urgent", msg)
+
+    if medium_priority_count > 0:
+        msg = (
+            f"{medium_priority_count} medium-priority manufacturing review "
+            f"item(s) should be reviewed."
+        )
+        return ("review", msg)
+
+    msg = (
+        f"{total_review_items} manufacturing review item(s) available."
+    )
+    return ("review", msg)
 
 
 def _item_label(cmd: dict[str, Any]) -> str:
@@ -83,7 +126,10 @@ def build_manufacturing_review_summary(
     When *commands* is None or empty, returns a safe zero-summary.
     """
     if commands is None:
-        return ManufacturingReviewSummary()
+        return ManufacturingReviewSummary(
+            attention_level="none",
+            attention_message="No manufacturing review items.",
+        )
 
     if isinstance(commands, dict):
         commands = [commands]
@@ -145,6 +191,10 @@ def build_manufacturing_review_summary(
     top_items.extend(sorted(medium_priority_items, key=lambda x: x[0]))
     top_items.extend(sorted(low_priority_items, key=lambda x: x[0]))
 
+    attention_level, attention_message = _resolve_attention_signal(
+        total, high, medium,
+    )
+
     return ManufacturingReviewSummary(
         total_review_items=total,
         high_priority_count=high,
@@ -155,6 +205,8 @@ def build_manufacturing_review_summary(
         edge_banding_count=edge_banding,
         groove_count=groove,
         top_priority_items=tuple(top_items),
+        attention_level=attention_level,
+        attention_message=attention_message,
     )
 
 
