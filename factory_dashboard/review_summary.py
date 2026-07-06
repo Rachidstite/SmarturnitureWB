@@ -51,6 +51,10 @@ class ManufacturingReviewSummary:
     top_priority_items: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     attention_level: str = "none"
     attention_message: str = ""
+    dominant_review_category: str = "none"
+    dominant_priority_level: str = "none"
+    has_high_priority_items: bool = False
+    has_drilling_focus: bool = False
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -95,6 +99,64 @@ def _resolve_attention_signal(
         f"{total_review_items} manufacturing review item(s) available."
     )
     return ("review", msg)
+
+
+def _resolve_dominant_review_category(
+    drilling_count: int,
+    hardware_count: int,
+    edge_banding_count: int,
+    groove_count: int,
+) -> str:
+    """Determine the review category with the highest item count.
+
+    Returns one of: drilling, hardware, edge_banding, groove, none.
+
+    Tie-break order (highest priority first):
+      drilling > hardware > edge_banding > groove
+
+    This is a pure function of counts already computed — no raw
+    overlay_type derivation, no manufacturing logic.
+    """
+    counts: list[tuple[str, int]] = [
+        ("drilling", drilling_count),
+        ("hardware", hardware_count),
+        ("edge_banding", edge_banding_count),
+        ("groove", groove_count),
+    ]
+    # Filter out zeros; tie-break is by declaration order (already correct)
+    active = [(cat, cnt) for cat, cnt in counts if cnt > 0]
+    if not active:
+        return "none"
+    # Sort descending by count, then by declaration order (stable sort)
+    active.sort(key=lambda x: x[1], reverse=True)
+    return active[0][0]
+
+
+def _resolve_dominant_priority_level(
+    high_priority_count: int,
+    medium_priority_count: int,
+    low_priority_count: int,
+) -> str:
+    """Determine the priority level with the highest item count.
+
+    Returns one of: high, medium, low, none.
+
+    Tie-break order (highest priority first):
+      high > medium > low
+
+    This is a pure function of counts already computed — no
+    review_priority field re-read, no derivation logic.
+    """
+    counts: list[tuple[str, int]] = [
+        ("high", high_priority_count),
+        ("medium", medium_priority_count),
+        ("low", low_priority_count),
+    ]
+    active = [(level, cnt) for level, cnt in counts if cnt > 0]
+    if not active:
+        return "none"
+    active.sort(key=lambda x: x[1], reverse=True)
+    return active[0][0]
 
 
 def _item_label(cmd: dict[str, Any]) -> str:
@@ -195,6 +257,13 @@ def build_manufacturing_review_summary(
         total, high, medium,
     )
 
+    dominant_category = _resolve_dominant_review_category(
+        drilling, hardware, edge_banding, groove,
+    )
+    dominant_priority = _resolve_dominant_priority_level(
+        high, medium, low,
+    )
+
     return ManufacturingReviewSummary(
         total_review_items=total,
         high_priority_count=high,
@@ -207,6 +276,10 @@ def build_manufacturing_review_summary(
         top_priority_items=tuple(top_items),
         attention_level=attention_level,
         attention_message=attention_message,
+        dominant_review_category=dominant_category,
+        dominant_priority_level=dominant_priority,
+        has_high_priority_items=high > 0,
+        has_drilling_focus=dominant_category == "drilling",
     )
 
 

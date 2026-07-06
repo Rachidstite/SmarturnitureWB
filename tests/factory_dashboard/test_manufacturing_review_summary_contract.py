@@ -520,3 +520,238 @@ class TestManufacturingReviewSummaryContract(unittest.TestCase):
         for token in forbidden:
             self.assertNotIn(token, s.attention_level.lower())
             self.assertNotIn(token, s.attention_message.lower())
+
+    # ── Rule 20: insight classification — empty summary ────────────
+
+    def test_empty_summary_dominant_category_none(self):
+        """Empty summary => dominant_review_category 'none'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary(None)
+        self.assertEqual(s.dominant_review_category, "none")
+
+    def test_empty_summary_dominant_priority_none(self):
+        """Empty summary => dominant_priority_level 'none'."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary(None)
+        self.assertEqual(s.dominant_priority_level, "none")
+
+    def test_empty_summary_no_high_priority(self):
+        """Empty summary => has_high_priority_items False."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary(None)
+        self.assertFalse(s.has_high_priority_items)
+
+    def test_empty_summary_no_drilling_focus(self):
+        """Empty summary => has_drilling_focus False."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary(None)
+        self.assertFalse(s.has_drilling_focus)
+
+    # ── Rule 21: dominant category chooses largest count ───────────
+
+    def test_dominant_category_drilling_when_largest(self):
+        """Drilling is dominant when drilling count is highest."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "drilling"},
+            {"review_category": "drilling"},
+            {"review_category": "drilling"},
+            {"review_category": "hardware"},
+        ])
+        self.assertEqual(s.dominant_review_category, "drilling")
+
+    def test_dominant_category_hardware_when_largest(self):
+        """Hardware is dominant when hardware count is highest."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "hardware"},
+            {"review_category": "hardware"},
+            {"review_category": "drilling"},
+        ])
+        self.assertEqual(s.dominant_review_category, "hardware")
+
+    def test_dominant_category_edge_banding_when_largest(self):
+        """Edge banding is dominant when edge_banding count is highest."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "edge_banding"},
+            {"review_category": "edge_banding"},
+            {"review_category": "drilling"},
+        ])
+        self.assertEqual(s.dominant_review_category, "edge_banding")
+
+    def test_dominant_category_groove_when_largest(self):
+        """Groove is dominant when groove count is highest."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "groove"},
+            {"review_category": "groove"},
+            {"review_category": "drilling"},
+        ])
+        self.assertEqual(s.dominant_review_category, "groove")
+
+    # ── Rule 22: dominant category tie-break order ─────────────────
+
+    def test_dominant_category_tie_break_drilling_over_hardware(self):
+        """Tie-break: drilling > hardware."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "drilling"},
+            {"review_category": "hardware"},
+        ])
+        self.assertEqual(s.dominant_review_category, "drilling")
+
+    def test_dominant_category_tie_break_hardware_over_edge_banding(self):
+        """Tie-break: hardware > edge_banding."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "hardware"},
+            {"review_category": "edge_banding"},
+        ])
+        self.assertEqual(s.dominant_review_category, "hardware")
+
+    def test_dominant_category_tie_break_edge_banding_over_groove(self):
+        """Tie-break: edge_banding > groove."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "edge_banding"},
+            {"review_category": "groove"},
+        ])
+        self.assertEqual(s.dominant_review_category, "edge_banding")
+
+    # ── Rule 23: dominant priority chooses largest count ───────────
+
+    def test_dominant_priority_high_when_largest(self):
+        """High is dominant when high count is largest."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "high", "review_category": "drilling"},
+            {"review_priority": "high", "review_category": "drilling"},
+            {"review_priority": "medium", "review_category": "drilling"},
+        ])
+        self.assertEqual(s.dominant_priority_level, "high")
+
+    def test_dominant_priority_medium_when_largest(self):
+        """Medium is dominant when medium count is largest."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "medium", "review_category": "drilling"},
+            {"review_priority": "medium", "review_category": "drilling"},
+            {"review_priority": "high", "review_category": "drilling"},
+        ])
+        self.assertEqual(s.dominant_priority_level, "medium")
+
+    def test_dominant_priority_low_when_largest(self):
+        """Low is dominant when low count is largest."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "low", "review_category": "groove"},
+            {"review_priority": "low", "review_category": "groove"},
+            {"review_priority": "high", "review_category": "drilling"},
+        ])
+        self.assertEqual(s.dominant_priority_level, "low")
+
+    # ── Rule 24: dominant priority tie-break order ─────────────────
+
+    def test_dominant_priority_tie_break_high_over_medium(self):
+        """Tie-break: high > medium."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "high", "review_category": "drilling"},
+            {"review_priority": "medium", "review_category": "hardware"},
+        ])
+        self.assertEqual(s.dominant_priority_level, "high")
+
+    def test_dominant_priority_tie_break_medium_over_low(self):
+        """Tie-break: medium > low."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "medium", "review_category": "hardware"},
+            {"review_priority": "low", "review_category": "groove"},
+        ])
+        self.assertEqual(s.dominant_priority_level, "medium")
+
+    # ── Rule 25: has_high_priority_items ───────────────────────────
+
+    def test_has_high_priority_items_true_when_high_count_positive(self):
+        """has_high_priority_items True when high count > 0."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "high", "review_category": "drilling"},
+        ])
+        self.assertTrue(s.has_high_priority_items)
+
+    def test_has_high_priority_items_false_when_no_high(self):
+        """has_high_priority_items False when high count is 0."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "medium", "review_category": "hardware"},
+        ])
+        self.assertFalse(s.has_high_priority_items)
+
+    # ── Rule 26: has_drilling_focus ────────────────────────────────
+
+    def test_has_drilling_focus_true_when_dominant_drilling(self):
+        """has_drilling_focus True when dominant category is drilling."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "drilling"},
+            {"review_category": "drilling"},
+            {"review_category": "hardware"},
+        ])
+        self.assertTrue(s.has_drilling_focus)
+
+    def test_has_drilling_focus_false_when_dominant_not_drilling(self):
+        """has_drilling_focus False when dominant category is not drilling."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_category": "hardware"},
+            {"review_category": "hardware"},
+            {"review_category": "drilling"},
+        ])
+        self.assertFalse(s.has_drilling_focus)
+
+    # ── Rule 27: insights depend only on counts, not raw fields ────
+
+    def test_insights_use_counts_not_raw_fields(self):
+        """Insights are identical for same counts even with different raw fields."""
+        rs = self._import_once()
+        cmds_a = [
+            {"review_priority": "high", "review_category": "drilling",
+             "hole_style": "blind", "face": "FRONT"},
+            {"review_priority": "high", "review_category": "drilling",
+             "hole_style": "through", "face": "BACK"},
+            {"review_priority": "medium", "review_category": "hardware",
+             "hole_style": "cup", "face": "LEFT"},
+        ]
+        cmds_b = [
+            {"review_priority": "high", "review_category": "drilling",
+             "hole_style": "pilot", "face": "TOP"},
+            {"review_priority": "high", "review_category": "drilling",
+             "hole_style": "blind", "face": "BOTTOM"},
+            {"review_priority": "medium", "review_category": "hardware",
+             "hole_style": "through", "face": "RIGHT"},
+        ]
+        sa = rs.build_manufacturing_review_summary(cmds_a)
+        sb = rs.build_manufacturing_review_summary(cmds_b)
+        self.assertEqual(sa.dominant_review_category, sb.dominant_review_category)
+        self.assertEqual(sa.dominant_priority_level, sb.dominant_priority_level)
+        self.assertEqual(sa.has_high_priority_items, sb.has_high_priority_items)
+        self.assertEqual(sa.has_drilling_focus, sb.has_drilling_focus)
+
+    # ── Rule 28: no readiness/decision naming in insight fields ────
+
+    def test_no_readiness_decision_naming_in_insights(self):
+        """Insight fields must not contain readiness/decision vocabulary."""
+        rs = self._import_once()
+        s = rs.build_manufacturing_review_summary([
+            {"review_priority": "high", "review_category": "drilling"},
+        ])
+        forbidden = ["readiness", "decision", "feasibility", "cost",
+                      "factory_ready", "production_ready"]
+        for field_value in (
+            s.dominant_review_category,
+            s.dominant_priority_level,
+        ):
+            for token in forbidden:
+                self.assertNotIn(token, field_value.lower())
