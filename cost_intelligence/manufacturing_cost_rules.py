@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict
 
 
 @dataclass
@@ -8,6 +9,7 @@ class ManufacturingCostRules:
     drilling_rate: float = 1.5
     complexity_material_type_rate: float = 25.0
     panel_handling_rate: float = 0.0
+    operation_rates: Dict[str, float] = field(default_factory=dict)
     currency: str = "MAD"
 
     @classmethod

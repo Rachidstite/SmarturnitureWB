@@ -24,6 +24,7 @@ class TestManufacturingCostRulesContract(unittest.TestCase):
                 "drilling_rate",
                 "complexity_material_type_rate",
                 "panel_handling_rate",
+                "operation_rates",
                 "currency",
             ],
         )
@@ -40,6 +41,7 @@ class TestManufacturingCostRulesContract(unittest.TestCase):
         self.assertEqual(rules.drilling_rate, 1.5)
         self.assertEqual(rules.complexity_material_type_rate, 25.0)
         self.assertEqual(rules.panel_handling_rate, 0.0)
+        self.assertEqual(rules.operation_rates, {})
         self.assertEqual(rules.currency, "MAD")
 
 

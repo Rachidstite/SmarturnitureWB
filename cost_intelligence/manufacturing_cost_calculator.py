@@ -101,7 +101,9 @@ class ManufacturingCostCalculator:
             price_data = pricing_catalog.get(catalog_key) or {}
             price_per_operation = price_data.get(
                 "price_per_operation",
-                self.rules.drilling_rate,
+                self.rules.operation_rates.get(
+                    operation_type, self.rules.drilling_rate
+                ),
             )
             total += operation_count * price_per_operation
 
