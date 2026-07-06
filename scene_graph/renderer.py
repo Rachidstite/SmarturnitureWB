@@ -699,15 +699,36 @@ class SceneRenderer:
         return "through" if is_through else "blind"
 
     @staticmethod
+    def _resolve_drill_direction(face: str) -> str:
+        """Normalize a panel-face string into a stable drill-direction value.
+
+        Returns one of: front, back, left, right, top, bottom, unknown.
+        """
+        normalized = str(face).strip().upper() if face else ""
+        mapping = {
+            "FRONT": "front",
+            "BACK": "back",
+            "LEFT": "left",
+            "RIGHT": "right",
+            "TOP": "top",
+            "BOTTOM": "bottom",
+        }
+        return mapping.get(normalized, "unknown")
+
+    @staticmethod
     def _decorate_hole_command(command: dict, overlay: dict | None = None) -> dict:
-        """Add a hole_style decoration to a hole viewport command in-place.
+        """Add hole_style and drill_direction decoration to a hole viewport
+        command in-place.
 
         Reads command["overlay_type"], resolves the hole style via
         _resolve_hole_style, and sets command["hole_style"].
+        Resolves drill_direction from the face field and sets
+        command["drill_direction"].
+
         When *overlay* is provided (the source overlay dict), it is used
-        as the source for _resolve_hole_style so that fields like
-        is_through are available. Falls back to command when overlay is
-        None for backward compatibility.
+        as the source for fields like is_through and face. Falls back to
+        command when overlay is None for backward compatibility.
+
         Returns the same dict for convenience (fluent / return-value wrapping).
         """
         overlay_type = str(command.get("overlay_type", "") or "")
@@ -715,6 +736,8 @@ class SceneRenderer:
         command["hole_style"] = SceneRenderer._resolve_hole_style(
             overlay_type, source
         )
+        face = str((overlay if overlay is not None else command).get("face", "") or "")
+        command["drill_direction"] = SceneRenderer._resolve_drill_direction(face)
         return command
 
     def render(self, node: SceneNode):

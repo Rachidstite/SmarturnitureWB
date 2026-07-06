@@ -1861,6 +1861,125 @@ class TestHfg4A1UnifiedHoleStyleDecoration(unittest.TestCase):
             self.assertEqual(cmd["overlay_type"], ot,
                              msg=f"overlay_type should remain {ot}")
 
+    # ── 5. All hole commands have drill_direction ──────────────────
+
+    def test_drill_hole_has_drill_direction(self):
+        cmd = self._command_for("drill_hole", face="LEFT")
+        self.assertIn("drill_direction", cmd)
+
+    def test_minifix_hole_has_drill_direction(self):
+        cmd = self._command_for("minifix_hole", face="LEFT")
+        self.assertIn("drill_direction", cmd)
+
+    def test_confirmat_hole_has_drill_direction(self):
+        cmd = self._command_for("confirmat_hole", face="LEFT")
+        self.assertIn("drill_direction", cmd)
+
+    def test_shelf_pin_hole_has_drill_direction(self):
+        cmd = self._command_for("shelf_pin_hole", face="LEFT")
+        self.assertIn("drill_direction", cmd)
+
+    def test_drawer_slide_hole_has_drill_direction(self):
+        cmd = self._command_for("drawer_slide_hole", face="LEFT")
+        self.assertIn("drill_direction", cmd)
+
+    def test_hinge_cup_hole_has_drill_direction(self):
+        cmd = self._command_for("hinge_cup_hole", face="LEFT")
+        self.assertIn("drill_direction", cmd)
+
+    def test_screw_hole_has_drill_direction(self):
+        cmd = self._command_for("screw_hole", face="LEFT")
+        self.assertIn("drill_direction", cmd)
+
+    # ── 6. Non-hole commands do NOT have drill_direction ───────────
+
+    def test_edge_banding_no_drill_direction(self):
+        from scene_graph.metadata import EdgeBandVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(edge_banding=(EdgeBandVisual(side="TOP", banding="ABS"),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("drill_direction", cmds[0])
+
+    def test_groove_no_drill_direction(self):
+        from scene_graph.metadata import GrooveVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(grooves=(GrooveVisual(face="BACK", depth=8.0),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("drill_direction", cmds[0])
+
+    def test_hardware_marker_no_drill_direction(self):
+        from scene_graph.metadata import HardwareMarkerVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(hardware_markers=(
+            HardwareMarkerVisual(panel_identity="P1", sku="HINGE", quantity=1),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("drill_direction", cmds[0])
+
+    def test_hinge_plate_position_no_drill_direction(self):
+        cmd = self._command_for("hinge_plate_position")
+        self.assertNotIn("drill_direction", cmd)
+
+    # ── 7. Face normalization ─────────────────────────────────────
+
+    def test_drill_direction_front_upper(self):
+        cmd = self._command_for("drill_hole", face="FRONT")
+        self.assertEqual(cmd["drill_direction"], "front")
+
+    def test_drill_direction_front_lower(self):
+        cmd = self._command_for("drill_hole", face="front")
+        self.assertEqual(cmd["drill_direction"], "front")
+
+    def test_drill_direction_back_title(self):
+        cmd = self._command_for("drill_hole", face="Back")
+        self.assertEqual(cmd["drill_direction"], "back")
+
+    def test_drill_direction_left(self):
+        cmd = self._command_for("drill_hole", face="LEFT")
+        self.assertEqual(cmd["drill_direction"], "left")
+
+    def test_drill_direction_right(self):
+        cmd = self._command_for("drill_hole", face="RIGHT")
+        self.assertEqual(cmd["drill_direction"], "right")
+
+    def test_drill_direction_top(self):
+        cmd = self._command_for("drill_hole", face="TOP")
+        self.assertEqual(cmd["drill_direction"], "top")
+
+    def test_drill_direction_bottom(self):
+        cmd = self._command_for("drill_hole", face="BOTTOM")
+        self.assertEqual(cmd["drill_direction"], "bottom")
+
+    def test_drill_direction_empty(self):
+        cmd = self._command_for("drill_hole", face="")
+        self.assertEqual(cmd["drill_direction"], "unknown")
+
+    def test_drill_direction_invalid(self):
+        cmd = self._command_for("drill_hole", face="INVALID_FACE")
+        self.assertEqual(cmd["drill_direction"], "unknown")
+
+    # ── 8. Existing face value preserved ──────────────────────────
+
+    def test_drill_direction_face_field_preserved(self):
+        cmd = self._command_for("drill_hole", face="LEFT")
+        self.assertEqual(cmd["face"], "LEFT",
+                         msg="command['face'] must retain original casing")
+
+    # ── 9. hole_style from HFG-4A unchanged -----------------------
+
+    def test_hole_style_still_present_with_drill_direction(self):
+        cmd = self._command_for("minifix_hole", is_through=True)
+        self.assertIn("hole_style", cmd)
+        self.assertEqual(cmd["hole_style"], "through")
+
+    # ── 10. overlay_type preserved ---------------------------------
+
+    def test_overlay_type_preserved_with_drill_direction(self):
+        cmd = self._command_for("screw_hole")
+        self.assertEqual(cmd["overlay_type"], "screw_hole")
+
 
 if __name__ == "__main__":
     unittest.main()
