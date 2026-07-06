@@ -15,6 +15,7 @@ from .projection_adapters import (
     build_commercial_review_projection,
     build_cost_review_projection,
     build_inspector_read_model,
+    build_manufacturing_render_review_section,
     build_manufacturing_review_projection,
     build_message_center_read_model,
     build_preview_read_model,
@@ -326,6 +327,59 @@ class ConfiguratorV2ServiceIntegration:
             else ReviewPanelReadModel(panel_name=name)
             for i, name in enumerate(names)
         )
+        self.workspace.set_review_panel_read_models(merged)
+        return merged
+
+    def enrich_manufacturing_review_with_rendering(
+        self,
+        commands: Any = None,
+    ):
+        """Add rendering metadata section to the existing Manufacturing panel.
+
+        Accepts an iterable of viewport command dicts (SceneRenderer
+        output).  Calls ``build_manufacturing_render_review_section``
+        to extract a ``\"Rendering Details\"`` section, then appends it
+        to the existing Manufacturing review panel.
+
+        When *commands* is None or empty, the existing Manufacturing
+        panel is returned unchanged.  When no Manufacturing panel
+        exists yet, a best-effort single-panel tuple is returned.
+
+        This is a pure consumption of existing renderer output — no
+        values are recomputed, no manufacturing logic is duplicated.
+        """
+        if commands is None:
+            return tuple(self.workspace.review_panel_read_models or ())
+
+        render_section = build_manufacturing_render_review_section(commands)
+        if not render_section.rows:
+            return tuple(self.workspace.review_panel_read_models or ())
+
+        existing = tuple(self.workspace.review_panel_read_models or ())
+        names = self.workspace.review_panel_names
+
+        def _merge(panel):
+            if panel.panel_name != "Manufacturing":
+                return panel
+            sections = panel.sections + (render_section,)
+            return ReviewPanelReadModel(
+                panel_name=panel.panel_name,
+                sections=sections,
+                stale=panel.stale,
+                available=panel.available,
+            )
+
+        merged = tuple(
+            _merge(panel) if panel.panel_name == "Manufacturing"
+            else panel
+            for panel in existing
+        )
+        if not merged and "Manufacturing" in names:
+            merged = (ReviewPanelReadModel(
+                panel_name="Manufacturing",
+                sections=(render_section,),
+            ),)
+
         self.workspace.set_review_panel_read_models(merged)
         return merged
 

@@ -2318,6 +2318,80 @@ def build_release_review_projection(
     )
 
 
+def build_manufacturing_render_review_section(
+    commands: Any = None,
+) -> ReviewSectionReadModel:
+    """Extract manufacturing rendering metadata from viewport commands.
+
+    Accepts an iterable of viewport command dicts (SceneRenderer output)
+    or a single command dict.  Scans for the rendering-only metadata
+    fields that SceneRenderer derives from overlay data:
+
+      review_priority, review_category, hole_style,
+      drill_direction, hole_depth, hole_depth_mode
+
+    Returns a ReviewSectionReadModel with one row per distinct metadata
+    field found.  When no commands or no known fields are present,
+    returns an empty section with no rows (section_name is always
+    ``\"Rendering Details\"``).
+
+    This is a pure side-effect-free consumption of renderer output.
+    No manufacturing logic, no cost logic, no re-computation of values.
+    """
+    section_name = "Rendering Details"
+    if commands is None:
+        return ReviewSectionReadModel(section_name=section_name)
+
+    if isinstance(commands, Mapping) and not isinstance(commands, (list, tuple)):
+        commands = [commands]
+
+    known_fields = frozenset({
+        "review_priority",
+        "review_category",
+        "hole_style",
+        "drill_direction",
+        "hole_depth",
+        "hole_depth_mode",
+        "review_mode",
+    })
+    collected: dict[str, set[str]] = {
+        k: set()
+        for k in known_fields
+    }
+
+    for cmd in commands or ():
+        if not isinstance(cmd, Mapping):
+            continue
+        for field in known_fields:
+            raw = cmd.get(field)
+            if raw is not None:
+                collected[field].add(_as_str(raw))
+
+    rows: list[tuple[str, str]] = []
+    for field in (
+        "review_priority",
+        "review_category",
+        "hole_style",
+        "drill_direction",
+        "hole_depth",
+        "hole_depth_mode",
+    ):
+        values = collected.get(field, set())
+        if not values:
+            continue
+        label = field.replace("_", " ").title()
+        value = ", ".join(sorted(values, key=str))
+        rows.append((label, value))
+
+    if not rows and not any(collected[field] for field in known_fields):
+        return ReviewSectionReadModel(section_name=section_name)
+
+    return ReviewSectionReadModel(
+        section_name=section_name,
+        rows=tuple(rows),
+    )
+
+
 __all__ = [
     "build_project_tree_read_model",
     "build_inspector_read_model",
@@ -2325,6 +2399,7 @@ __all__ = [
     "build_message_center_read_model",
     "build_review_panel_read_models",
     "build_manufacturing_review_projection",
+    "build_manufacturing_render_review_section",
     "build_validation_review_projection",
     "build_cost_review_projection",
     "build_commercial_review_projection",
