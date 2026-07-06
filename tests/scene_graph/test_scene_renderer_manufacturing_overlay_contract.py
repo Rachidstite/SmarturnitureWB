@@ -1,0 +1,684 @@
+# ──────────────────────────────────────────────────────────────────────
+# SmartFurnitureWB — Scene Graph
+# SceneRenderer → Minifix & Confirmat Manufacturing Overlay Contract Tests
+#
+# HFG-3A: SceneRenderer consumes minifix_holes and confirmat_holes
+# from VisualMetadata and produces overlay commands.
+#
+# Verifies:
+#  1. minifix_holes produce overlay commands
+#  2. confirmat_holes produce overlay commands
+#  3. empty fields produce no overlays
+#  4. existing overlays still work
+#  5. renderer does not mutate VisualMetadata
+#  6. renderer does not import manufacturing modules
+#  7. renderer does not inspect hardware_intent
+#  8. GeometryRenderer remains untouched
+#  9. no arithmetic / no machining calculation
+# 10. overlay command labels/types are stable
+# ──────────────────────────────────────────────────────────────────────
+
+from __future__ import annotations
+
+import ast
+import textwrap
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RENDERER_PATH = REPO_ROOT / "scene_graph" / "renderer.py"
+
+
+# ── AST helpers ───────────────────────────────────────────────────
+
+
+def _renderer_ast():
+    """Parse renderer.py and return (source, tree)."""
+    source = RENDERER_PATH.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(RENDERER_PATH))
+    return source, tree
+
+
+def _function_body_source(module_source: str, func_name: str) -> str:
+    """Extract the source text of a function/method by name from the module."""
+    _, tree = _renderer_ast()
+
+    target_node = None
+
+    def _find(node):
+        nonlocal target_node
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name == func_name:
+                target_node = node
+                return node
+        for child in ast.iter_child_nodes(node):
+            result = _find(child)
+            if result:
+                return result
+        return None
+
+    _find(tree)
+
+    if target_node is None:
+        return ""
+
+    lines = module_source.splitlines(keepends=True)
+    start = target_node.lineno - 1
+    end = target_node.end_lineno
+    return "".join(lines[start:end])
+
+
+def _function_imported_modules(func_name: str) -> set[str]:
+    """Return imported module names inside a specific function/method."""
+    source, _ = _renderer_ast()
+    body = _function_body_source(source, func_name)
+    if not body:
+        return set()
+    dedented = textwrap.dedent(body)
+    try:
+        tree = ast.parse(dedented, filename="<ast>")
+    except SyntaxError:
+        return set()
+
+    imported: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imported.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                imported.add(node.module)
+    return imported
+
+
+def _function_has_arithmetic(func_name: str) -> list[tuple[str, int]]:
+    """Check if a given function contains arithmetic operators."""
+    source, _ = _renderer_ast()
+    body = _function_body_source(source, func_name)
+    if not body:
+        return []
+    dedented = textwrap.dedent(body)
+    try:
+        tree = ast.parse(dedented, filename="<ast>")
+    except SyntaxError:
+        return []
+
+    arithmetic_ops = (
+        ast.Add, ast.Sub, ast.Mult, ast.Div,
+        ast.FloorDiv, ast.Mod, ast.Pow,
+    )
+    found: list[tuple[str, int]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.BinOp) and isinstance(node.op, arithmetic_ops):
+            found.append((type(node.op).__name__, node.lineno))
+    return found
+
+
+# ── Overlay methods relevant to minifix/confirmat ─────────────────
+
+MINIFIX_CONFIRMAT_METHODS = (
+    "_minifix_overlays",
+    "_confirmat_overlays",
+    "_minifix_viewport_command",
+    "_confirmat_viewport_command",
+)
+
+
+class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
+    """Verify SceneRenderer correctly visualizes minifix_holes and confirmat_holes."""
+
+    # ── 1. minifix_holes produce overlay commands ─────────────────
+
+    def test_minifix_holes_produce_overlay_commands(self):
+        """minifix_holes in VisualMetadata produce overlay dicts and viewport commands."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            minifix_holes=(
+                DrillHoleVisual(
+                    panel_identity="panel-A",
+                    face="LEFT",
+                    x=37.0, y=100.0, z=0.0,
+                    diameter=15.0, depth=12.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-minifix-001",
+                    hardware_intent="INTENT_MINIFIX_15",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        # Overlay produced with correct type
+        self.assertEqual(len(overlays), 1)
+        self.assertEqual(overlays[0]["overlay_type"], "minifix_hole")
+        self.assertEqual(overlays[0]["visual_type"], "MINIFIX_SYMBOL")
+        self.assertEqual(overlays[0]["panel_identity"], "panel-A")
+        self.assertEqual(overlays[0]["face"], "LEFT")
+        self.assertEqual(overlays[0]["x"], 37.0)
+        self.assertEqual(overlays[0]["y"], 100.0)
+        self.assertEqual(overlays[0]["diameter"], 15.0)
+        self.assertEqual(overlays[0]["depth"], 12.0)
+
+        # Viewport command produced
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "minifix_hole")
+        self.assertEqual(commands[0]["panel_identity"], "panel-A")
+        self.assertEqual(commands[0]["diameter"], 15.0)
+
+    # ── 2. confirmat_holes produce overlay commands ────────────────
+
+    def test_confirmat_holes_produce_overlay_commands(self):
+        """confirmat_holes in VisualMetadata produce overlay dicts and viewport commands."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            confirmat_holes=(
+                DrillHoleVisual(
+                    panel_identity="panel-B",
+                    face="RIGHT",
+                    x=37.0, y=50.0, z=0.0,
+                    diameter=8.0, depth=50.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-confirmat-001",
+                    hardware_intent="INTENT_CONFIRMAT_50",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        # Overlay produced with correct type
+        self.assertEqual(len(overlays), 1)
+        self.assertEqual(overlays[0]["overlay_type"], "confirmat_hole")
+        self.assertEqual(overlays[0]["visual_type"], "CONFIRMAT_SYMBOL")
+        self.assertEqual(overlays[0]["panel_identity"], "panel-B")
+        self.assertEqual(overlays[0]["face"], "RIGHT")
+        self.assertEqual(overlays[0]["x"], 37.0)
+        self.assertEqual(overlays[0]["y"], 50.0)
+        self.assertEqual(overlays[0]["diameter"], 8.0)
+        self.assertEqual(overlays[0]["depth"], 50.0)
+
+        # Viewport command produced
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "confirmat_hole")
+        self.assertEqual(commands[0]["panel_identity"], "panel-B")
+        self.assertEqual(commands[0]["diameter"], 8.0)
+
+    # ── 3. empty fields produce no overlays ────────────────────────
+
+    def test_empty_minifix_produces_no_overlays(self):
+        """Empty minifix_holes produce no overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(minifix_holes=())
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays, [])
+        self.assertEqual(commands, [])
+
+    def test_empty_confirmat_produces_no_overlays(self):
+        """Empty confirmat_holes produce no overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(confirmat_holes=())
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        self.assertEqual(overlays, [])
+        self.assertEqual(commands, [])
+
+    def test_default_visual_metadata_produces_no_minifix_confirmat(self):
+        """Default VisualMetadata produces no minifix or confirmat overlays."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata()
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        minifix_count = sum(
+            1 for o in overlays if o.get("overlay_type") == "minifix_hole"
+        )
+        confirmat_count = sum(
+            1 for o in overlays if o.get("overlay_type") == "confirmat_hole"
+        )
+
+        self.assertEqual(minifix_count, 0)
+        self.assertEqual(confirmat_count, 0)
+
+    # ── 4. existing overlays still work ────────────────────────────
+
+    def test_existing_edge_overlays_still_work_with_minifix_confirmat(self):
+        """Edge banding overlays unchanged when minifix/confirmat are present."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            EdgeBandVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        edge = EdgeBandVisual(side="TOP", banding="ABS", label="TOP: ABS")
+
+        vm = VisualMetadata(
+            edge_banding=(edge,),
+            minifix_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15"),
+            ),
+            confirmat_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_CONFIRMAT_50"),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        # edge_banding overlay is first (unchanged)
+        edge_overlays = [o for o in overlays if o["overlay_type"] == "edge_banding"]
+        self.assertEqual(len(edge_overlays), 1)
+        self.assertEqual(edge_overlays[0]["side"], "TOP")
+        self.assertEqual(edge_overlays[0]["banding"], "ABS")
+
+    def test_existing_drill_hole_overlays_still_work_with_minifix_confirmat(self):
+        """Drill hole overlays unchanged when minifix/confirmat are present."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        drill = DrillHoleVisual(
+            panel_identity="P1",
+            x=10.0, y=20.0, diameter=5.0, depth=12.0,
+        )
+
+        vm = VisualMetadata(
+            drill_holes=(drill,),
+            minifix_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15"),
+            ),
+            confirmat_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_CONFIRMAT_50"),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        drill_overlays = [o for o in overlays if o["overlay_type"] == "drill_hole"]
+        self.assertEqual(len(drill_overlays), 1)
+        self.assertEqual(drill_overlays[0]["x"], 10.0)
+        self.assertEqual(drill_overlays[0]["y"], 20.0)
+        self.assertEqual(drill_overlays[0]["diameter"], 5.0)
+
+    def test_existing_groove_overlays_still_work_with_minifix_confirmat(self):
+        """Groove overlays unchanged when minifix/confirmat are present."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            GrooveVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        groove = GrooveVisual(
+            panel_identity="BACK-1", face="BACK",
+            depth=8.0, label="Back panel groove",
+        )
+
+        vm = VisualMetadata(
+            grooves=(groove,),
+            minifix_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15"),
+            ),
+            confirmat_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_CONFIRMAT_50"),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        groove_overlays = [o for o in overlays if o["overlay_type"] == "groove"]
+        self.assertEqual(len(groove_overlays), 1)
+        self.assertEqual(groove_overlays[0]["face"], "BACK")
+
+    def test_existing_hardware_marker_overlays_still_work_with_minifix_confirmat(self):
+        """Hardware marker overlays unchanged when minifix/confirmat are present."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            HardwareMarkerVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        marker = HardwareMarkerVisual(
+            panel_identity="door-01", sku="HINGE_BLUM_110_V1",
+            quantity=2, hardware_category="HINGE",
+        )
+
+        vm = VisualMetadata(
+            hardware_markers=(marker,),
+            minifix_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15"),
+            ),
+            confirmat_holes=(
+                DrillHoleVisual(hardware_intent="INTENT_CONFIRMAT_50"),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+
+        hw_overlays = [o for o in overlays if o["overlay_type"] == "hardware_marker"]
+        self.assertEqual(len(hw_overlays), 1)
+        self.assertEqual(hw_overlays[0]["sku"], "HINGE_BLUM_110_V1")
+
+    # ── 5. renderer does not mutate VisualMetadata ─────────────────
+
+    def test_minifix_overlay_pipeline_does_not_mutate_metadata(self):
+        """_minifix_overlays does not modify the input metadata."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=37.0, y=100.0, diameter=15.0,
+            hardware_intent="INTENT_MINIFIX_15",
+        )
+        vm = VisualMetadata(minifix_holes=(hole,))
+        original_repr = repr(vm)
+
+        SceneRenderer.build_visual_overlays(vm)
+
+        self.assertEqual(repr(vm), original_repr,
+                         msg="build_visual_overlays must not mutate VisualMetadata")
+
+    def test_confirmat_overlay_pipeline_does_not_mutate_metadata(self):
+        """_confirmat_overlays does not modify the input metadata."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=37.0, y=100.0, diameter=8.0,
+            hardware_intent="INTENT_CONFIRMAT_50",
+        )
+        vm = VisualMetadata(confirmat_holes=(hole,))
+        original_repr = repr(vm)
+
+        SceneRenderer.build_visual_overlays(vm)
+
+        self.assertEqual(repr(vm), original_repr,
+                         msg="build_visual_overlays must not mutate VisualMetadata")
+
+    def test_drill_hole_visual_remains_unchanged_after_overlay(self):
+        """Individual DrillHoleVisual must stay unchanged after overlay build."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=37.0, y=100.0, diameter=15.0,
+            hardware_intent="INTENT_MINIFIX_15",
+        )
+        orig_x = hole.x
+        orig_y = hole.y
+        orig_diameter = hole.diameter
+
+        vm = VisualMetadata(minifix_holes=(hole,))
+        SceneRenderer.build_visual_overlays(vm)
+
+        self.assertEqual(hole.x, orig_x)
+        self.assertEqual(hole.y, orig_y)
+        self.assertEqual(hole.diameter, orig_diameter)
+
+    # ── 6. renderer does not import manufacturing modules ──────────
+
+    def test_minifix_confirmat_methods_do_not_import_manufacturing(self):
+        """Minifix/confirmat overlay methods must not import manufacturing modules."""
+        forbidden_prefixes = ["manufacturing", "factory_operational_intelligence"]
+
+        for method_name in MINIFIX_CONFIRMAT_METHODS:
+            imports = _function_imported_modules(method_name)
+            for forbidden in forbidden_prefixes:
+                offenders = sorted(
+                    m for m in imports
+                    if m == forbidden or m.startswith(forbidden + ".")
+                )
+                self.assertFalse(
+                    offenders,
+                    msg=(
+                        f"SceneRenderer.{method_name} imports forbidden "
+                        f"manufacturing module {forbidden}: {offenders}"
+                    ),
+                )
+
+    # ── 7. renderer does not inspect hardware_intent ────────────────
+
+    def test_minifix_confirmat_methods_do_not_inspect_hardware_intent(self):
+        """Minifix/confirmat overlay methods must not reference hardware_intent."""
+        for method_name in MINIFIX_CONFIRMAT_METHODS:
+            source, _ = _renderer_ast()
+            body = _function_body_source(source, method_name)
+            self.assertNotIn(
+                "hardware_intent",
+                body,
+                msg=(
+                    f"SceneRenderer.{method_name} must not inspect "
+                    f"hardware_intent — that is manufacturing classification"
+                ),
+            )
+
+    # ── 8. GeometryRenderer remains untouched ─────────────────────
+
+    def test_scene_renderer_does_not_import_geometry_renderer(self):
+        """SceneRenderer must not import GeometryRenderer."""
+        source = RENDERER_PATH.read_text(encoding="utf-8")
+        self.assertNotIn(
+            "GeometryRenderer",
+            source,
+            msg="scene_graph/renderer.py must not import GeometryRenderer",
+        )
+
+    def test_geometry_renderer_not_dependent_on_minifix_confirmat(self):
+        """GeometryRenderer must not reference minifix/confirmat overlay types."""
+        src_path = REPO_ROOT / "gui" / "renderer.py"
+        if not src_path.exists():
+            self.skipTest("gui/renderer.py not found — GeometryRenderer not in this environment")
+
+        source = src_path.read_text(encoding="utf-8")
+        forbidden = [
+            "minifix_hole",
+            "confirmat_hole",
+            "minifix_overlay",
+            "confirmat_overlay",
+        ]
+        for token in forbidden:
+            self.assertNotIn(
+                token, source,
+                msg=f"gui/renderer.py (GeometryRenderer) must not reference {token}",
+            )
+
+    # ── 9. no arithmetic / no machining calculation ───────────────
+
+    def test_minifix_confirmat_methods_have_no_arithmetic(self):
+        """Minifix/confirmat overlay methods must not perform arithmetic."""
+        for method_name in MINIFIX_CONFIRMAT_METHODS:
+            arithmetic_found = _function_has_arithmetic(method_name)
+            self.assertEqual(
+                arithmetic_found, [],
+                msg=(
+                    f"SceneRenderer.{method_name} contains arithmetic "
+                    f"operations: {arithmetic_found}. "
+                    f"Renderer must not calculate machining positions."
+                ),
+            )
+
+    # ── 10. overlay command labels/types are stable ────────────────
+
+    def test_minifix_overlay_label_type_stable(self):
+        """Minifix overlay labels and types are deterministic and stable."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            minifix_holes=(
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    x=37.0, y=100.0,
+                    diameter=15.0, depth=12.0,
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        # Overlay contract
+        self.assertEqual(overlays[0]["overlay_type"], "minifix_hole")
+        self.assertEqual(overlays[0]["visual_type"], "MINIFIX_SYMBOL")
+
+        # Viewport command contract
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "minifix_hole")
+        self.assertEqual(commands[0]["label"], "Minifix hole")
+
+        # Same metadata produces identical output (idempotent)
+        overlays_2 = SceneRenderer.build_visual_overlays(vm)
+        commands_2 = SceneRenderer.build_viewport_overlay_commands(overlays_2)
+        self.assertEqual(overlays, overlays_2)
+        self.assertEqual(commands, commands_2)
+
+    def test_confirmat_overlay_label_type_stable(self):
+        """Confirmat overlay labels and types are deterministic and stable."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            confirmat_holes=(
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    x=37.0, y=50.0,
+                    diameter=8.0, depth=50.0,
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        commands = SceneRenderer.build_viewport_overlay_commands(overlays)
+
+        # Overlay contract
+        self.assertEqual(overlays[0]["overlay_type"], "confirmat_hole")
+        self.assertEqual(overlays[0]["visual_type"], "CONFIRMAT_SYMBOL")
+
+        # Viewport command contract
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "confirmat_hole")
+        self.assertEqual(commands[0]["label"], "Confirmat hole")
+
+        # Same metadata produces identical output (idempotent)
+        overlays_2 = SceneRenderer.build_visual_overlays(vm)
+        commands_2 = SceneRenderer.build_viewport_overlay_commands(overlays_2)
+        self.assertEqual(overlays, overlays_2)
+        self.assertEqual(commands, commands_2)
+
+    def test_minifix_overlay_fields_match_drill_hole_schema(self):
+        """Minifix overlays carry all positional fields from DrillHoleVisual."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            minifix_holes=(
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    face="LEFT",
+                    x=37.0, y=100.0, z=5.0,
+                    diameter=15.0, depth=12.0,
+                    axis="Z",
+                    is_through=True,
+                    source_operation_reference="op-ref",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        o = overlays[0]
+
+        self.assertEqual(o["panel_identity"], "P1")
+        self.assertEqual(o["face"], "LEFT")
+        self.assertEqual(o["x"], 37.0)
+        self.assertEqual(o["y"], 100.0)
+        self.assertEqual(o["z"], 5.0)
+        self.assertEqual(o["diameter"], 15.0)
+        self.assertEqual(o["depth"], 12.0)
+        self.assertEqual(o["axis"], "Z")
+        self.assertEqual(o["is_through"], True)
+        self.assertEqual(o["source_operation_reference"], "op-ref")
+
+    def test_confirmat_overlay_fields_match_drill_hole_schema(self):
+        """Confirmat overlays carry all positional fields from DrillHoleVisual."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        vm = VisualMetadata(
+            confirmat_holes=(
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    face="RIGHT",
+                    x=37.0, y=50.0, z=0.0,
+                    diameter=8.0, depth=50.0,
+                    axis="Z",
+                    is_through=False,
+                    source_operation_reference="op-ref-conf",
+                ),
+            ),
+        )
+
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        o = overlays[0]
+
+        self.assertEqual(o["panel_identity"], "P1")
+        self.assertEqual(o["face"], "RIGHT")
+        self.assertEqual(o["x"], 37.0)
+        self.assertEqual(o["y"], 50.0)
+        self.assertEqual(o["z"], 0.0)
+        self.assertEqual(o["diameter"], 8.0)
+        self.assertEqual(o["depth"], 50.0)
+        self.assertEqual(o["axis"], "Z")
+        self.assertEqual(o["is_through"], False)
+        self.assertEqual(o["source_operation_reference"], "op-ref-conf")
+
+
+if __name__ == "__main__":
+    unittest.main()

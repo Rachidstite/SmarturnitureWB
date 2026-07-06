@@ -44,6 +44,18 @@ class SceneRenderer:
                 getattr(visual_metadata, "hardware_markers", ()) or ()
             )
         )
+        # ── Minifix hole overlays (HFG-3A) ────────────────────
+        overlays.extend(
+            SceneRenderer._minifix_overlays(
+                getattr(visual_metadata, "minifix_holes", ()) or ()
+            )
+        )
+        # ── Confirmat hole overlays (HFG-3A) ──────────────────
+        overlays.extend(
+            SceneRenderer._confirmat_overlays(
+                getattr(visual_metadata, "confirmat_holes", ()) or ()
+            )
+        )
         return overlays
 
     @staticmethod
@@ -59,6 +71,10 @@ class SceneRenderer:
                 command = SceneRenderer._groove_viewport_command(overlay)
             elif overlay_type == "hardware_marker":
                 command = SceneRenderer._hardware_viewport_command(overlay)
+            elif overlay_type == "minifix_hole":
+                command = SceneRenderer._minifix_viewport_command(overlay)
+            elif overlay_type == "confirmat_hole":
+                command = SceneRenderer._confirmat_viewport_command(overlay)
             else:
                 continue
             if command is not None:
@@ -157,6 +173,62 @@ class SceneRenderer:
         ]
 
     @staticmethod
+    def _minifix_overlays(minifix_holes):
+        """Build overlays for minifix drilling positions.
+
+        Each minifix hole is a DrillHoleVisual — the overlay reuses
+        the same positional fields as drill_hole overlays but with
+        a distinct overlay_type so the viewport can style it differently.
+        """
+        return [
+            {
+                "overlay_type": "minifix_hole",
+                "visual_type": "MINIFIX_SYMBOL",
+                "panel_identity": str(getattr(item, "panel_identity", "") or ""),
+                "face": str(getattr(item, "face", "") or ""),
+                "x": float(getattr(item, "x", 0.0) or 0.0),
+                "y": float(getattr(item, "y", 0.0) or 0.0),
+                "z": float(getattr(item, "z", 0.0) or 0.0),
+                "diameter": float(getattr(item, "diameter", 0.0) or 0.0),
+                "depth": float(getattr(item, "depth", 0.0) or 0.0),
+                "axis": str(getattr(item, "axis", "Z") or "Z"),
+                "is_through": bool(getattr(item, "is_through", False)),
+                "source_operation_reference": str(
+                    getattr(item, "source_operation_reference", "") or ""
+                ),
+            }
+            for item in minifix_holes
+        ]
+
+    @staticmethod
+    def _confirmat_overlays(confirmat_holes):
+        """Build overlays for confirmat drilling positions.
+
+        Each confirmat hole is a DrillHoleVisual — the overlay reuses
+        the same positional fields as drill_hole overlays but with
+        a distinct overlay_type so the viewport can style it differently.
+        """
+        return [
+            {
+                "overlay_type": "confirmat_hole",
+                "visual_type": "CONFIRMAT_SYMBOL",
+                "panel_identity": str(getattr(item, "panel_identity", "") or ""),
+                "face": str(getattr(item, "face", "") or ""),
+                "x": float(getattr(item, "x", 0.0) or 0.0),
+                "y": float(getattr(item, "y", 0.0) or 0.0),
+                "z": float(getattr(item, "z", 0.0) or 0.0),
+                "diameter": float(getattr(item, "diameter", 0.0) or 0.0),
+                "depth": float(getattr(item, "depth", 0.0) or 0.0),
+                "axis": str(getattr(item, "axis", "Z") or "Z"),
+                "is_through": bool(getattr(item, "is_through", False)),
+                "source_operation_reference": str(
+                    getattr(item, "source_operation_reference", "") or ""
+                ),
+            }
+            for item in confirmat_holes
+        ]
+
+    @staticmethod
     def _hardware_visual_type(item):
         category = str(getattr(item, "hardware_category", "") or "").upper()
         sku = str(getattr(item, "sku", "") or "").upper()
@@ -239,6 +311,59 @@ class SceneRenderer:
             ),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
             "sku": str(overlay.get("sku", "") or ""),
+        }
+
+    @staticmethod
+    def _minifix_viewport_command(overlay):
+        """Build a viewport command for a minifix hole overlay.
+
+        Reuses circle_marker command_type (same as drill_hole) but
+        with overlay_type=minifix_hole so the viewport can render
+        it with a distinct visual style (e.g. larger diameter marker,
+        different colour).
+        """
+        return {
+            "command_type": "circle_marker",
+            "overlay_type": "minifix_hole",
+            "label": str(overlay.get("label", "") or "Minifix hole"),
+            "position": (
+                float(overlay.get("x", 0.0) or 0.0),
+                float(overlay.get("y", 0.0) or 0.0),
+                float(overlay.get("z", 0.0) or 0.0),
+            ),
+            "face": str(overlay.get("face", "") or ""),
+            "diameter": float(overlay.get("diameter", 0.0) or 0.0),
+            "size": float(overlay.get("diameter", 0.0) or 0.0),
+            "source_reference": str(
+                overlay.get("source_operation_reference", "") or ""
+            ),
+            "panel_identity": str(overlay.get("panel_identity", "") or ""),
+        }
+
+    @staticmethod
+    def _confirmat_viewport_command(overlay):
+        """Build a viewport command for a confirmat hole overlay.
+
+        Reuses circle_marker command_type (same as drill_hole) but
+        with overlay_type=confirmat_hole so the viewport can render
+        it with a distinct visual style.
+        """
+        return {
+            "command_type": "circle_marker",
+            "overlay_type": "confirmat_hole",
+            "label": str(overlay.get("label", "") or "Confirmat hole"),
+            "position": (
+                float(overlay.get("x", 0.0) or 0.0),
+                float(overlay.get("y", 0.0) or 0.0),
+                float(overlay.get("z", 0.0) or 0.0),
+            ),
+            "face": str(overlay.get("face", "") or ""),
+            "diameter": float(overlay.get("diameter", 0.0) or 0.0),
+            "size": float(overlay.get("diameter", 0.0) or 0.0),
+            "source_reference": str(
+                overlay.get("source_operation_reference", "") or ""
+            ),
+            "panel_identity": str(overlay.get("panel_identity", "") or ""),
         }
 
     def render(self, node: SceneNode):

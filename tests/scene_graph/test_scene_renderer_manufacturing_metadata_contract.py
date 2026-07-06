@@ -132,11 +132,15 @@ OVERLAY_METHODS = (
     "_drill_hole_overlays",
     "_groove_overlays",
     "_hardware_marker_overlays",
+    "_minifix_overlays",
+    "_confirmat_overlays",
     "_hardware_visual_type",
     "_edge_viewport_command",
     "_drill_viewport_command",
     "_groove_viewport_command",
     "_hardware_viewport_command",
+    "_minifix_viewport_command",
+    "_confirmat_viewport_command",
 )
 
 
@@ -224,8 +228,30 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         overlays = SceneRenderer.build_visual_overlays(vm)
         self.assertIsInstance(overlays, list)
 
-    def test_renderer_accepts_metadata_with_single_new_field_populated(self):
-        """Each new field individually does not crash the renderer."""
+    def test_renderer_accepts_minifix_and_confirmat_individual_fields(self):
+        """minifix_holes and confirmat_holes now produce overlays individually."""
+        from scene_graph.metadata import (
+            DrillHoleVisual,
+            VisualMetadata,
+        )
+        from scene_graph.renderer import SceneRenderer
+
+        hole = DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15")
+
+        vm_minifix = VisualMetadata(minifix_holes=(hole,))
+        overlays = SceneRenderer.build_visual_overlays(vm_minifix)
+        self.assertEqual(len(overlays), 1,
+                         msg="minifix_holes should produce 1 overlay")
+        self.assertEqual(overlays[0]["overlay_type"], "minifix_hole")
+
+        vm_confirmat = VisualMetadata(confirmat_holes=(hole,))
+        overlays = SceneRenderer.build_visual_overlays(vm_confirmat)
+        self.assertEqual(len(overlays), 1,
+                         msg="confirmat_holes should produce 1 overlay")
+        self.assertEqual(overlays[0]["overlay_type"], "confirmat_hole")
+
+    def test_renderer_ignores_remaining_manufacturing_fields(self):
+        """The remaining 5 manufacturing fields are still ignored by renderer."""
         from scene_graph.metadata import (
             DrillHoleVisual,
             VisualMetadata,
@@ -234,8 +260,6 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
 
         hole = DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15")
         field_names = [
-            "minifix_holes",
-            "confirmat_holes",
             "shelf_pin_holes",
             "drawer_slide_holes",
             "hinge_cup_holes",
@@ -245,7 +269,6 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         for name in field_names:
             vm = VisualMetadata(**{name: (hole,)})
             overlays = SceneRenderer.build_visual_overlays(vm)
-            # Renderer ignores new fields — overlays should be empty
             self.assertEqual(overlays, [],
                              msg=f"Field {name} should be ignored by renderer")
 
@@ -276,8 +299,8 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         overlays = SceneRenderer.build_visual_overlays(VisualMetadata())
         self.assertEqual(overlays, [])
 
-    def test_viewport_commands_with_new_field_metadata_still_safe(self):
-        """Full pipeline: build_visual_overlays + build_viewport_overlay_commands."""
+    def test_viewport_commands_with_minifix_field_produce_commands(self):
+        """Full pipeline: minifix_holes produce viewport commands."""
         from scene_graph.metadata import (
             DrillHoleVisual,
             VisualMetadata,
@@ -290,12 +313,21 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
             grooves=(),
             hardware_markers=(),
             minifix_holes=(
-                DrillHoleVisual(hardware_intent="INTENT_MINIFIX_15"),
+                DrillHoleVisual(
+                    panel_identity="P1",
+                    x=37.0, y=100.0,
+                    diameter=15.0, depth=12.0,
+                    hardware_intent="INTENT_MINIFIX_15",
+                ),
             ),
         )
         overlays = SceneRenderer.build_visual_overlays(vm)
         commands = SceneRenderer.build_viewport_overlay_commands(overlays)
-        self.assertEqual(commands, [])
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0]["command_type"], "circle_marker")
+        self.assertEqual(commands[0]["overlay_type"], "minifix_hole")
+        self.assertEqual(commands[0]["panel_identity"], "P1")
+        self.assertEqual(commands[0]["diameter"], 15.0)
 
     # ── 3. Renderer does not mutate VisualMetadata ───────────────
 
@@ -419,7 +451,15 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         overlays_without = SceneRenderer.build_visual_overlays(vm_without)
         overlays_with = SceneRenderer.build_visual_overlays(vm_with)
 
-        self.assertEqual(overlays_without, overlays_with)
+        # Edge overlay content must be identical; vm_with also has minifix
+        edge_without = [o for o in overlays_without if o["overlay_type"] == "edge_banding"]
+        edge_with = [o for o in overlays_with if o["overlay_type"] == "edge_banding"]
+        self.assertEqual(edge_without, edge_with)
+
+        # Minifix overlay is present in vm_with
+        minifix_overlays = [o for o in overlays_with if o["overlay_type"] == "minifix_hole"]
+        self.assertEqual(len(minifix_overlays), 1)
+        self.assertEqual(minifix_overlays[0]["visual_type"], "MINIFIX_SYMBOL")
 
     def test_existing_drill_overlays_unchanged_with_new_fields(self):
         """Drill hole overlays identical with or without new fields."""
@@ -440,10 +480,18 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
             confirmat_holes=self._one_hole("INTENT_CONFIRMAT_50"),
         )
 
-        self.assertEqual(
-            SceneRenderer.build_visual_overlays(vm_without),
-            SceneRenderer.build_visual_overlays(vm_with),
-        )
+        overlays_without = SceneRenderer.build_visual_overlays(vm_without)
+        overlays_with = SceneRenderer.build_visual_overlays(vm_with)
+
+        # Drill overlay content must be identical; vm_with also has confirmat
+        drill_without = [o for o in overlays_without if o["overlay_type"] == "drill_hole"]
+        drill_with = [o for o in overlays_with if o["overlay_type"] == "drill_hole"]
+        self.assertEqual(drill_without, drill_with)
+
+        # Confirmat overlay is present in vm_with
+        confirmat_overlays = [o for o in overlays_with if o["overlay_type"] == "confirmat_hole"]
+        self.assertEqual(len(confirmat_overlays), 1)
+        self.assertEqual(confirmat_overlays[0]["visual_type"], "CONFIRMAT_SYMBOL")
 
     def test_existing_groove_overlays_unchanged_with_new_fields(self):
         """Groove overlays identical with or without new fields."""
@@ -497,7 +545,11 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         )
 
     def test_viewport_commands_unchanged_with_new_fields(self):
-        """Viewport commands pipeline unchanged when metadata has new fields."""
+        """Viewport commands pipeline unchanged when metadata has new fields.
+
+        Existing drill_hole overlay must still produce a valid command.
+        New minifix/confirmat overlays produce additional commands.
+        """
         from scene_graph.metadata import (
             DrillHoleVisual,
             VisualMetadata,
@@ -519,10 +571,15 @@ class TestSceneRendererManufacturingMetadataContract(unittest.TestCase):
         overlays = SceneRenderer.build_visual_overlays(vm)
         commands = SceneRenderer.build_viewport_overlay_commands(overlays)
 
-        self.assertEqual(len(commands), 1)
+        self.assertEqual(len(commands), 3)
+        # drill_hole is first (unchanged behaviour)
         self.assertEqual(commands[0]["command_type"], "circle_marker")
         self.assertEqual(commands[0]["overlay_type"], "drill_hole")
         self.assertEqual(commands[0]["panel_identity"], "P1")
+        # minifix_hole is second
+        self.assertEqual(commands[1]["overlay_type"], "minifix_hole")
+        # confirmat_hole is third
+        self.assertEqual(commands[2]["overlay_type"], "confirmat_hole")
 
     # ── 9. Renderer has a clear extension point for manufacturing overlays ──
 

@@ -115,7 +115,7 @@ class TestVisualMetadataManufacturingExtension(unittest.TestCase):
                     diameter=5.0, depth=15.0,
                 ),
             ),
-            # New fields populated — renderer should not choke on them
+            # New fields populated — renderer processes minifix_holes
             minifix_holes=(
                 DrillHoleVisual(
                     panel_identity="P1",
@@ -128,13 +128,17 @@ class TestVisualMetadataManufacturingExtension(unittest.TestCase):
             ),
         )
         overlays = SceneRenderer.build_visual_overlays(vm)
-        # Should produce 2 overlays: one from drill_holes, one from minifix_holes
-        # Note: renderer currently only processes drill_holes, not minifix_holes
-        # That's expected — new fields are additive, renderer ignores unknown
-        self.assertEqual(len(overlays), 1)
-        overlay = overlays[0]
-        self.assertEqual(overlay["overlay_type"], "drill_hole")
-        self.assertEqual(overlay["panel_identity"], "P1")
+        # Produces 2 overlays: one from drill_holes, one from minifix_holes
+        self.assertEqual(len(overlays), 2)
+        # First overlay is existing drill_hole (unchanged)
+        self.assertEqual(overlays[0]["overlay_type"], "drill_hole")
+        self.assertEqual(overlays[0]["panel_identity"], "P1")
+        self.assertEqual(overlays[0]["diameter"], 5.0)
+        # Second overlay is new minifix_hole (HFG-3A)
+        self.assertEqual(overlays[1]["overlay_type"], "minifix_hole")
+        self.assertEqual(overlays[1]["panel_identity"], "P1")
+        self.assertEqual(overlays[1]["diameter"], 15.0)
+        self.assertEqual(overlays[1]["visual_type"], "MINIFIX_SYMBOL")
 
     def test_empty_metadata_renderer_safe(self):
         from scene_graph.metadata import VisualMetadata
