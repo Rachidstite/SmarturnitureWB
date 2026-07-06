@@ -35,6 +35,9 @@ class TestViewportOverlayRendering(unittest.TestCase):
                     "position": None,
                     "face": "",
                     "source_reference": "",
+                    "review_mode": "manufacturing",
+                    "review_category": "edge_banding",
+                    "review_priority": "low",
                 }
             ],
         )

@@ -2104,6 +2104,191 @@ class TestHfg4A1UnifiedHoleStyleDecoration(unittest.TestCase):
         cmd = self._command_for("drill_hole", face="TOP", depth=10.0)
         self.assertEqual(cmd["drill_direction"], "top")
 
+    # ═══════════════════════════════════════════════════════════════
+    # HFG-5A — Manufacturing Review Metadata
+    # ═══════════════════════════════════════════════════════════════
+
+    # ── Helper: build a non-hole viewport command ────────────────
+
+    @staticmethod
+    def _non_hole_command_for(overlay_type, **kw):
+        """Build a viewport command for a non-hole overlay type."""
+        from scene_graph.metadata import VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+
+        if overlay_type == "edge_banding":
+            from scene_graph.metadata import EdgeBandVisual
+            vm = VisualMetadata(edge_banding=(
+                EdgeBandVisual(side=kw.get("side", "TOP"), banding=kw.get("banding", "ABS")),))
+        elif overlay_type == "groove":
+            from scene_graph.metadata import GrooveVisual
+            vm = VisualMetadata(grooves=(
+                GrooveVisual(face=kw.get("face", "BACK"), depth=kw.get("depth", 8.0)),))
+        elif overlay_type == "hardware_marker":
+            from scene_graph.metadata import HardwareMarkerVisual
+            vm = VisualMetadata(hardware_markers=(
+                HardwareMarkerVisual(
+                    panel_identity=kw.get("panel_identity", "P1"),
+                    sku=kw.get("sku", "HINGE"),
+                    quantity=kw.get("quantity", 1)),))
+        else:
+            raise ValueError(f"Unknown non-hole overlay_type: {overlay_type}")
+
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        return cmds[0] if cmds else None
+
+    # ── 19. All manufacturing commands have review metadata ──────
+
+    def test_edge_banding_has_review_metadata(self):
+        cmd = self._non_hole_command_for("edge_banding")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_groove_has_review_metadata(self):
+        cmd = self._non_hole_command_for("groove")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_hardware_marker_has_review_metadata(self):
+        cmd = self._non_hole_command_for("hardware_marker")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_drill_hole_has_review_metadata(self):
+        cmd = self._command_for("drill_hole")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_minifix_hole_has_review_metadata(self):
+        cmd = self._command_for("minifix_hole")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_confirmat_hole_has_review_metadata(self):
+        cmd = self._command_for("confirmat_hole")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_shelf_pin_hole_has_review_metadata(self):
+        cmd = self._command_for("shelf_pin_hole")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_drawer_slide_hole_has_review_metadata(self):
+        cmd = self._command_for("drawer_slide_hole")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_hinge_cup_hole_has_review_metadata(self):
+        cmd = self._command_for("hinge_cup_hole")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_hinge_plate_position_has_review_metadata(self):
+        cmd = self._command_for("hinge_plate_position")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    def test_screw_hole_has_review_metadata(self):
+        cmd = self._command_for("screw_hole")
+        self.assertIn("review_mode", cmd)
+        self.assertIn("review_category", cmd)
+        self.assertIn("review_priority", cmd)
+
+    # ── 20. review_mode is always "manufacturing" ─────────────────
+
+    def test_review_mode_is_manufacturing(self):
+        types = ["edge_banding", "groove", "hardware_marker",
+                 "drill_hole", "minifix_hole", "confirmat_hole",
+                 "shelf_pin_hole", "drawer_slide_hole",
+                 "hinge_cup_hole", "hinge_plate_position", "screw_hole"]
+        for ot in types:
+            if ot in ("edge_banding", "groove", "hardware_marker"):
+                cmd = self._non_hole_command_for(ot)
+            else:
+                cmd = self._command_for(ot)
+            self.assertEqual(cmd["review_mode"], "manufacturing",
+                             msg=f"{ot} review_mode")
+
+    # ── 21. Review categories ────────────────────────────────────
+
+    def test_review_category_drilling(self):
+        for ot in ("drill_hole", "minifix_hole", "confirmat_hole",
+                    "shelf_pin_hole", "drawer_slide_hole",
+                    "hinge_cup_hole", "screw_hole"):
+            cmd = self._command_for(ot)
+            self.assertEqual(cmd["review_category"], "drilling",
+                             msg=f"{ot} review_category")
+
+    def test_review_category_hardware(self):
+        cmd = self._command_for("hinge_plate_position")
+        self.assertEqual(cmd["review_category"], "hardware")
+        cmd = self._non_hole_command_for("hardware_marker")
+        self.assertEqual(cmd["review_category"], "hardware")
+
+    def test_review_category_edge_banding(self):
+        cmd = self._non_hole_command_for("edge_banding")
+        self.assertEqual(cmd["review_category"], "edge_banding")
+
+    def test_review_category_groove(self):
+        cmd = self._non_hole_command_for("groove")
+        self.assertEqual(cmd["review_category"], "groove")
+
+    # ── 22. Review priorities ────────────────────────────────────
+
+    def test_review_priority_high(self):
+        for ot in ("hinge_cup_hole", "minifix_hole",
+                    "confirmat_hole", "drawer_slide_hole"):
+            cmd = self._command_for(ot)
+            self.assertEqual(cmd["review_priority"], "high",
+                             msg=f"{ot} review_priority")
+
+    def test_review_priority_medium(self):
+        for ot in ("screw_hole", "shelf_pin_hole", "drill_hole",
+                    "hinge_plate_position"):
+            cmd = self._command_for(ot)
+            self.assertEqual(cmd["review_priority"], "medium",
+                             msg=f"{ot} review_priority")
+        cmd = self._non_hole_command_for("hardware_marker")
+        self.assertEqual(cmd["review_priority"], "medium",
+                         msg="hardware_marker review_priority")
+
+    def test_review_priority_low(self):
+        cmd = self._non_hole_command_for("edge_banding")
+        self.assertEqual(cmd["review_priority"], "low")
+        cmd = self._non_hole_command_for("groove")
+        self.assertEqual(cmd["review_priority"], "low")
+
+    # ── 23. Existing fields remain unchanged ─────────────────────
+
+    def test_overlay_type_unchanged_with_review_metadata(self):
+        cmd = self._command_for("confirmat_hole")
+        self.assertEqual(cmd["overlay_type"], "confirmat_hole")
+
+    def test_hole_style_unchanged_with_review_metadata(self):
+        cmd = self._command_for("minifix_hole", is_through=True)
+        self.assertEqual(cmd["hole_style"], "through")
+
+    def test_drill_direction_unchanged_with_review_metadata(self):
+        cmd = self._command_for("drill_hole", face="RIGHT")
+        self.assertEqual(cmd["drill_direction"], "right")
+
+    def test_hole_depth_unchanged_with_review_metadata(self):
+        cmd = self._command_for("drill_hole", depth=8.0)
+        self.assertEqual(cmd["hole_depth"], 8.0)
+        self.assertEqual(cmd["hole_depth_mode"], "blind")
+
 
 if __name__ == "__main__":
     unittest.main()

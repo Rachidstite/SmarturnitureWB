@@ -118,6 +118,7 @@ class SceneRenderer:
             else:
                 continue
             if command is not None:
+                command = SceneRenderer._decorate_manufacturing_review_command(command)
                 commands.append(command)
         return commands
 
@@ -768,6 +769,61 @@ class SceneRenderer:
         hole_depth, hole_depth_mode = SceneRenderer._resolve_hole_depth(source)
         command["hole_depth"] = hole_depth
         command["hole_depth_mode"] = hole_depth_mode
+        return command
+
+    @staticmethod
+    def _decorate_manufacturing_review_command(command: dict) -> dict:
+        """Add manufacturing review metadata to a viewport command in-place.
+
+        Adds:
+          review_mode      — always "manufacturing"
+          review_category  — drilling / hardware / edge_banding / groove / unknown
+          review_priority  — high / medium / low
+
+        Returns the same dict for convenience (fluent / return-value wrapping).
+        """
+        overlay_type = str(command.get("overlay_type", "") or "")
+
+        # ── Category mapping ──────────────────────────────────────
+        HOLE_TYPES = frozenset({
+            "drill_hole", "minifix_hole", "confirmat_hole",
+            "shelf_pin_hole", "drawer_slide_hole", "hinge_cup_hole",
+            "screw_hole",
+        })
+        HARDWARE_TYPES = frozenset({"hinge_plate_position", "hardware_marker"})
+
+        if overlay_type in HOLE_TYPES:
+            category = "drilling"
+        elif overlay_type in HARDWARE_TYPES:
+            category = "hardware"
+        elif overlay_type == "edge_banding":
+            category = "edge_banding"
+        elif overlay_type == "groove":
+            category = "groove"
+        else:
+            category = "unknown"
+
+        # ── Priority mapping ──────────────────────────────────────
+        HIGH = frozenset({
+            "hinge_cup_hole", "minifix_hole", "confirmat_hole",
+            "drawer_slide_hole",
+        })
+        MEDIUM = frozenset({
+            "screw_hole", "shelf_pin_hole", "drill_hole",
+            "hinge_plate_position", "hardware_marker",
+        })
+        # Everything else is LOW (edge_banding, groove, unknown)
+
+        if overlay_type in HIGH:
+            priority = "high"
+        elif overlay_type in MEDIUM:
+            priority = "medium"
+        else:
+            priority = "low"
+
+        command["review_mode"] = "manufacturing"
+        command["review_category"] = category
+        command["review_priority"] = priority
         return command
 
     def render(self, node: SceneNode):
