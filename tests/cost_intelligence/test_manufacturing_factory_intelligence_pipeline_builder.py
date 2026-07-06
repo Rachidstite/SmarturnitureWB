@@ -142,8 +142,8 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
         self.assertEqual(
             calls,
             [
-                "cost",
                 "optimization",
+                "cost",
                 "commercial",
                 "readiness",
                 "kpi",
@@ -165,7 +165,10 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
         self.assertIs(result.manufacturing_executive_report, executive_report)
 
         cost_builder_class.return_value.build.assert_called_once_with(
-            production_package
+            production_package,
+            sheet_cost=0.0,
+            waste_cost=0.0,
+            recovered_value=0.0,
         )
         optimization_builder_class.return_value.build.assert_called_once()
         optimization_args, optimization_kwargs = (
@@ -179,6 +182,7 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
             production_package,
             0.25,
             "EUR",
+            manufacturing_cost_summary=cost_summary,
         )
         readiness_builder_class.return_value.build.assert_called_once_with(
             production_package,
@@ -312,6 +316,7 @@ class TestManufacturingFactoryIntelligencePipelineBuilder(unittest.TestCase):
             production_package,
             0.0,
             "MAD",
+            manufacturing_cost_summary=cost_builder_class.return_value.build.return_value,
         )
         optimization_builder_class.return_value.build.assert_called_once()
         optimization_args, optimization_kwargs = (

@@ -15,6 +15,10 @@ class ManufacturingCostReport:
     assembly_labor_cost: float = 0.0
     total_labor_cost: float = 0.0
     overhead_cost: float = 0.0
+    sheet_cost: float = 0.0
+    waste_cost: float = 0.0
+    recovered_value: float = 0.0
+    net_material_cost: float = 0.0
     total_manufacturing_cost: float = 0.0
     currency: str = "MAD"
     warnings: list = field(default_factory=list)

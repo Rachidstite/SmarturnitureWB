@@ -49,9 +49,7 @@ class ManufacturingFactoryIntelligencePipelineBuilder:
         sheet_results = sheet_results or []
         consumption_report = consumption_report or ConsumptionReport()
         cost_estimate = cost_estimate or CostEstimate()
-        manufacturing_cost_summary = ManufacturingCostPipelineBuilder().build(
-            manufacturing_production_package
-        )
+        # Build optimization FIRST to obtain sheet/waste/recovery data
         manufacturing_optimization_result = (
             ManufacturingOptimizationPipelineBuilder().build(
                 sheet_results,
@@ -59,11 +57,34 @@ class ManufacturingFactoryIntelligencePipelineBuilder:
                 cost_estimate,
             )
         )
+        # Extract sheet/waste/recovery data from optimization outputs
+        opt = manufacturing_optimization_result
+        sheet_cost = float(getattr(cost_estimate, "sheet_cost", 0.0) or 0.0)
+        waste_from_opt = float(
+            getattr(getattr(opt, "waste_intelligence_report", None), "waste_cost", 0.0)
+            or 0.0
+        )
+        recovered = float(
+            getattr(
+                getattr(opt, "offcut_intelligence_report", None),
+                "estimated_recovered_value",
+                0.0,
+            )
+            or 0.0
+        )
+        # Build cost pipeline WITH optimization data
+        manufacturing_cost_summary = ManufacturingCostPipelineBuilder().build(
+            manufacturing_production_package,
+            sheet_cost=sheet_cost,
+            waste_cost=waste_from_opt if not sheet_cost else None,
+            recovered_value=recovered,
+        )
         manufacturing_commercial_result = (
             ManufacturingCommercialPipelineBuilder().build(
                 manufacturing_production_package,
                 markup_rate,
                 currency,
+                manufacturing_cost_summary=manufacturing_cost_summary,
             )
         )
         production_readiness_report = ProductionReadinessBuilder().build(

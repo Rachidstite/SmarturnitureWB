@@ -111,6 +111,9 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
             context,
             hardware_cost=48.0,
             labor_cost_report=labor_cost_report,
+            sheet_cost=None,
+            waste_cost=None,
+            recovered_value=None,
         )
         summary_builder_class.return_value.build.assert_called_once_with(
             cost_report,
@@ -215,6 +218,9 @@ class TestHardwareCostPipelineContract(unittest.TestCase):
             context,
             hardware_cost=0.0,
             labor_cost_report=labor_cost_report,
+            sheet_cost=None,
+            waste_cost=None,
+            recovered_value=None,
         )
         summary_builder_class.return_value.build.assert_called_once_with(
             cost_report,

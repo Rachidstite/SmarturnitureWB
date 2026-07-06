@@ -17,7 +17,8 @@ class ManufacturingCostCalculator:
         self.rules = rules or ManufacturingCostRulesBuilder().default()
 
     def calculate(self, context, *, pricing_catalog=None, hardware_cost=0.0,
-                  labor_cost_report=None):
+                  labor_cost_report=None, sheet_cost=None, waste_cost=None,
+                  recovered_value=None):
         hardware_cost = hardware_cost or 0.0
         material_cost = context.total_panel_area_m2 * self.rules.material_area_rate
         edge_banding_cost = self._calculate_edge_banding_cost(
@@ -47,8 +48,22 @@ class ManufacturingCostCalculator:
         )
         combined_warnings = context.warnings + labor_warnings
 
+        # Sheet/waste/recovery from optimization (backward compatible)
+        sheet_cost = float(sheet_cost or 0.0)
+        waste_cost = float(waste_cost or 0.0)
+        recovered_value = float(recovered_value or 0.0)
+
+        if sheet_cost:
+            effective_material = sheet_cost
+            computed_waste = sheet_cost - material_cost
+            net_material = sheet_cost - recovered_value
+        else:
+            effective_material = material_cost
+            computed_waste = 0.0
+            net_material = material_cost
+
         base_cost_before_overhead = (
-            material_cost
+            net_material
             + edge_banding_cost
             + drilling_cost
             + hardware_cost
@@ -60,6 +75,13 @@ class ManufacturingCostCalculator:
         overhead_cost = (
             self.rules.overhead_flat_cost
             + (base_cost_before_overhead * self.rules.overhead_percentage)
+        )
+
+        # When sheet_cost is provided, report waste_cost = sheet - material
+        # otherwise it uses the explicit waste_cost param
+        report_waste_cost = (
+            computed_waste if sheet_cost
+            else (waste_cost if waste_cost else 0.0)
         )
 
         return ManufacturingCostReport(
@@ -75,6 +97,10 @@ class ManufacturingCostCalculator:
             assembly_labor_cost=assembly_labor_cost,
             total_labor_cost=total_labor_cost,
             overhead_cost=overhead_cost,
+            sheet_cost=sheet_cost,
+            waste_cost=report_waste_cost,
+            recovered_value=recovered_value,
+            net_material_cost=net_material,
             total_manufacturing_cost=(
                 base_cost_before_overhead + overhead_cost
             ),

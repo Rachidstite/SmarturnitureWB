@@ -31,6 +31,10 @@ class TestManufacturingCostReportContract(unittest.TestCase):
                 "assembly_labor_cost",
                 "total_labor_cost",
                 "overhead_cost",
+                "sheet_cost",
+                "waste_cost",
+                "recovered_value",
+                "net_material_cost",
                 "total_manufacturing_cost",
                 "currency",
                 "warnings",
@@ -56,6 +60,10 @@ class TestManufacturingCostReportContract(unittest.TestCase):
         self.assertEqual(report.assembly_labor_cost, 0.0)
         self.assertEqual(report.total_labor_cost, 0.0)
         self.assertEqual(report.overhead_cost, 0.0)
+        self.assertEqual(report.sheet_cost, 0.0)
+        self.assertEqual(report.waste_cost, 0.0)
+        self.assertEqual(report.recovered_value, 0.0)
+        self.assertEqual(report.net_material_cost, 0.0)
         self.assertEqual(report.total_manufacturing_cost, 0.0)
         self.assertEqual(report.currency, "MAD")
         self.assertEqual(report.warnings, [])

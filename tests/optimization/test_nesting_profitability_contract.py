@@ -25,25 +25,18 @@ class TestNestingProfitabilityContract(unittest.TestCase):
         self.assertIn("ManufacturingOptimizationResult", source)
 
     def test_optimization_result_must_influence_profitability_calculations(self):
-        combined_source = "\n".join(
-            [
-                inspect.getsource(
-                    importlib.import_module(
-                        "cost_intelligence.manufacturing_commercial_pipeline_builder"
-                    )
-                ),
-                inspect.getsource(
-                    importlib.import_module(
-                        "cost_intelligence.manufacturing_profitability_report_builder"
-                    )
-                ),
-            ]
+        """Waste/sheet/recovery data flows through ManufacturingCostSummary
+        to profitability, not directly into commercial builders."""
+        source = inspect.getsource(
+            importlib.import_module(
+                "cost_intelligence.manufacturing_factory_intelligence_pipeline_builder"
+            )
         )
 
-        self.assertRegex(
-            combined_source,
-            r"manufacturing_optimization_result|nesting_intelligence|waste_intelligence|sheet_utilization",
-        )
+        self.assertIn("waste_intelligence_report", source)
+        self.assertIn("offcut_intelligence_report", source)
+        self.assertIn("sheet_cost", source)
+        self.assertIn("recovered_value", source)
 
     def test_nesting_risk_influences_production_readiness(self):
         from cost_intelligence.production_readiness_builder import (
