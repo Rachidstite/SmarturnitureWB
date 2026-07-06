@@ -716,18 +716,45 @@ class SceneRenderer:
         return mapping.get(normalized, "unknown")
 
     @staticmethod
+    def _resolve_hole_depth(overlay: dict) -> tuple[float, str]:
+        """Resolve hole depth metadata from an overlay dict.
+
+        Returns (hole_depth, hole_depth_mode) where:
+          - (0.0, "through")     — is_through is truthy
+          - (depth, "blind")     — positive numeric depth
+          - (0.0, "unspecified") — no depth, invalid depth, or negative depth
+
+        This is a rendering-only inference.  No estimation from diameter,
+        no use of panel thickness.
+        """
+        if bool(overlay.get("is_through", False)):
+            return (0.0, "through")
+        try:
+            raw = overlay.get("depth", None)
+            if raw is None:
+                return (0.0, "unspecified")
+            depth = float(raw)
+            if depth > 0:
+                return (depth, "blind")
+            return (0.0, "unspecified")
+        except (ValueError, TypeError):
+            return (0.0, "unspecified")
+
+    @staticmethod
     def _decorate_hole_command(command: dict, overlay: dict | None = None) -> dict:
-        """Add hole_style and drill_direction decoration to a hole viewport
-        command in-place.
+        """Add hole_style, drill_direction, hole_depth, and hole_depth_mode
+        decoration to a hole viewport command in-place.
 
         Reads command["overlay_type"], resolves the hole style via
         _resolve_hole_style, and sets command["hole_style"].
         Resolves drill_direction from the face field and sets
         command["drill_direction"].
+        Resolves depth metadata via _resolve_hole_depth and sets
+        command["hole_depth"] and command["hole_depth_mode"].
 
         When *overlay* is provided (the source overlay dict), it is used
-        as the source for fields like is_through and face. Falls back to
-        command when overlay is None for backward compatibility.
+        as the source for fields like is_through, face, and depth. Falls
+        back to command when overlay is None for backward compatibility.
 
         Returns the same dict for convenience (fluent / return-value wrapping).
         """
@@ -738,6 +765,9 @@ class SceneRenderer:
         )
         face = str((overlay if overlay is not None else command).get("face", "") or "")
         command["drill_direction"] = SceneRenderer._resolve_drill_direction(face)
+        hole_depth, hole_depth_mode = SceneRenderer._resolve_hole_depth(source)
+        command["hole_depth"] = hole_depth
+        command["hole_depth_mode"] = hole_depth_mode
         return command
 
     def render(self, node: SceneNode):

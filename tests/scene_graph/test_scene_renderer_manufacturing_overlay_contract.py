@@ -1980,6 +1980,130 @@ class TestHfg4A1UnifiedHoleStyleDecoration(unittest.TestCase):
         cmd = self._command_for("screw_hole")
         self.assertEqual(cmd["overlay_type"], "screw_hole")
 
+    # ── 11. All hole commands have hole_depth + hole_depth_mode ────
+
+    def test_drill_hole_has_hole_depth(self):
+        cmd = self._command_for("drill_hole", depth=10.0)
+        self.assertIn("hole_depth", cmd)
+        self.assertIn("hole_depth_mode", cmd)
+
+    def test_minifix_hole_has_hole_depth(self):
+        cmd = self._command_for("minifix_hole", depth=12.0)
+        self.assertIn("hole_depth", cmd)
+        self.assertIn("hole_depth_mode", cmd)
+
+    def test_confirmat_hole_has_hole_depth(self):
+        cmd = self._command_for("confirmat_hole", depth=50.0)
+        self.assertIn("hole_depth", cmd)
+        self.assertIn("hole_depth_mode", cmd)
+
+    def test_shelf_pin_hole_has_hole_depth(self):
+        cmd = self._command_for("shelf_pin_hole", depth=10.0)
+        self.assertIn("hole_depth", cmd)
+        self.assertIn("hole_depth_mode", cmd)
+
+    def test_drawer_slide_hole_has_hole_depth(self):
+        cmd = self._command_for("drawer_slide_hole", depth=12.0)
+        self.assertIn("hole_depth", cmd)
+        self.assertIn("hole_depth_mode", cmd)
+
+    def test_hinge_cup_hole_has_hole_depth(self):
+        cmd = self._command_for("hinge_cup_hole", depth=12.0)
+        self.assertIn("hole_depth", cmd)
+        self.assertIn("hole_depth_mode", cmd)
+
+    def test_screw_hole_has_hole_depth(self):
+        cmd = self._command_for("screw_hole", depth=10.0)
+        self.assertIn("hole_depth", cmd)
+        self.assertIn("hole_depth_mode", cmd)
+
+    # ── 12. Non-hole commands do NOT have hole_depth/hole_depth_mode
+
+    def test_edge_banding_no_hole_depth(self):
+        from scene_graph.metadata import EdgeBandVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(edge_banding=(EdgeBandVisual(side="TOP", banding="ABS"),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("hole_depth", cmds[0])
+        self.assertNotIn("hole_depth_mode", cmds[0])
+
+    def test_groove_no_hole_depth(self):
+        from scene_graph.metadata import GrooveVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(grooves=(GrooveVisual(face="BACK", depth=8.0),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("hole_depth", cmds[0])
+        self.assertNotIn("hole_depth_mode", cmds[0])
+
+    def test_hardware_marker_no_hole_depth(self):
+        from scene_graph.metadata import HardwareMarkerVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(hardware_markers=(
+            HardwareMarkerVisual(panel_identity="P1", sku="HINGE", quantity=1),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("hole_depth", cmds[0])
+        self.assertNotIn("hole_depth_mode", cmds[0])
+
+    def test_hinge_plate_position_no_hole_depth(self):
+        cmd = self._command_for("hinge_plate_position")
+        self.assertNotIn("hole_depth", cmd)
+        self.assertNotIn("hole_depth_mode", cmd)
+
+    # ── 13. Through hole depth resolution ─────────────────────────
+
+    def test_through_hole_depth_zero(self):
+        cmd = self._command_for("drill_hole", is_through=True, depth=99.0)
+        self.assertEqual(cmd["hole_depth"], 0.0)
+
+    def test_through_hole_depth_mode(self):
+        cmd = self._command_for("drill_hole", is_through=True, depth=99.0)
+        self.assertEqual(cmd["hole_depth_mode"], "through")
+
+    # ── 14. Blind hole depth resolution ───────────────────────────
+
+    def test_blind_hole_depth_positive(self):
+        cmd = self._command_for("drill_hole", is_through=False, depth=12.5)
+        self.assertEqual(cmd["hole_depth"], 12.5)
+
+    def test_blind_hole_depth_mode(self):
+        cmd = self._command_for("drill_hole", is_through=False, depth=12.5)
+        self.assertEqual(cmd["hole_depth_mode"], "blind")
+
+    # ── 15. Missing depth returns unspecified ──────────────────────
+
+    def test_missing_depth_returns_unspecified(self):
+        cmd = self._command_for("drill_hole")  # no depth kwarg
+        self.assertEqual(cmd["hole_depth"], 0.0)
+        self.assertEqual(cmd["hole_depth_mode"], "unspecified")
+
+    # ── 16. Negative depth ────────────────────────────────────────
+
+    def test_negative_depth_returns_unspecified(self):
+        cmd = self._command_for("drill_hole", depth=-3)
+        self.assertEqual(cmd["hole_depth"], 0.0)
+        self.assertEqual(cmd["hole_depth_mode"], "unspecified")
+
+    # ── 17. Existing fields unchanged ──────────────────────────────
+
+    def test_overlay_type_unchanged_with_hole_depth(self):
+        cmd = self._command_for("minifix_hole", depth=12.0)
+        self.assertEqual(cmd["overlay_type"], "minifix_hole")
+
+    def test_face_unchanged_with_hole_depth(self):
+        cmd = self._command_for("drill_hole", face="LEFT", depth=10.0)
+        self.assertEqual(cmd["face"], "LEFT")
+
+    def test_hole_style_unchanged_with_hole_depth(self):
+        cmd = self._command_for("hinge_cup_hole", depth=12.0)
+        self.assertEqual(cmd["hole_style"], "cup")
+
+    def test_drill_direction_unchanged_with_hole_depth(self):
+        cmd = self._command_for("drill_hole", face="TOP", depth=10.0)
+        self.assertEqual(cmd["drill_direction"], "top")
+
 
 if __name__ == "__main__":
     unittest.main()
