@@ -30,6 +30,7 @@ class TestManufacturingCostReportContract(unittest.TestCase):
                 "edge_banding_labor_cost",
                 "assembly_labor_cost",
                 "total_labor_cost",
+                "overhead_cost",
                 "total_manufacturing_cost",
                 "currency",
                 "warnings",
@@ -49,6 +50,12 @@ class TestManufacturingCostReportContract(unittest.TestCase):
         self.assertEqual(report.hardware_cost, 0.0)
         self.assertEqual(report.complexity_cost, 0.0)
         self.assertEqual(report.panel_handling_cost, 0.0)
+        self.assertEqual(report.cnc_labor_cost, 0.0)
+        self.assertEqual(report.drilling_labor_cost, 0.0)
+        self.assertEqual(report.edge_banding_labor_cost, 0.0)
+        self.assertEqual(report.assembly_labor_cost, 0.0)
+        self.assertEqual(report.total_labor_cost, 0.0)
+        self.assertEqual(report.overhead_cost, 0.0)
         self.assertEqual(report.total_manufacturing_cost, 0.0)
         self.assertEqual(report.currency, "MAD")
         self.assertEqual(report.warnings, [])

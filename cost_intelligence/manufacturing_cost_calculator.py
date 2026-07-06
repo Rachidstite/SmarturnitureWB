@@ -47,6 +47,21 @@ class ManufacturingCostCalculator:
         )
         combined_warnings = context.warnings + labor_warnings
 
+        base_cost_before_overhead = (
+            material_cost
+            + edge_banding_cost
+            + drilling_cost
+            + hardware_cost
+            + complexity_cost
+            + panel_handling_cost
+            + total_labor_cost
+        )
+
+        overhead_cost = (
+            self.rules.overhead_flat_cost
+            + (base_cost_before_overhead * self.rules.overhead_percentage)
+        )
+
         return ManufacturingCostReport(
             material_cost=material_cost,
             edge_banding_cost=edge_banding_cost,
@@ -59,14 +74,9 @@ class ManufacturingCostCalculator:
             edge_banding_labor_cost=edge_banding_labor_cost,
             assembly_labor_cost=assembly_labor_cost,
             total_labor_cost=total_labor_cost,
+            overhead_cost=overhead_cost,
             total_manufacturing_cost=(
-                material_cost
-                + edge_banding_cost
-                + drilling_cost
-                + hardware_cost
-                + complexity_cost
-                + panel_handling_cost
-                + total_labor_cost
+                base_cost_before_overhead + overhead_cost
             ),
             currency=self.rules.currency,
             warnings=combined_warnings,

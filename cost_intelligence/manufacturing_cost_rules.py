@@ -10,6 +10,8 @@ class ManufacturingCostRules:
     complexity_material_type_rate: float = 25.0
     panel_handling_rate: float = 0.0
     operation_rates: Dict[str, float] = field(default_factory=dict)
+    overhead_flat_cost: float = 0.0
+    overhead_percentage: float = 0.0
     currency: str = "MAD"
 
     @classmethod

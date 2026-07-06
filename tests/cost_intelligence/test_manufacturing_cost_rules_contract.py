@@ -25,6 +25,8 @@ class TestManufacturingCostRulesContract(unittest.TestCase):
                 "complexity_material_type_rate",
                 "panel_handling_rate",
                 "operation_rates",
+                "overhead_flat_cost",
+                "overhead_percentage",
                 "currency",
             ],
         )
@@ -42,6 +44,8 @@ class TestManufacturingCostRulesContract(unittest.TestCase):
         self.assertEqual(rules.complexity_material_type_rate, 25.0)
         self.assertEqual(rules.panel_handling_rate, 0.0)
         self.assertEqual(rules.operation_rates, {})
+        self.assertEqual(rules.overhead_flat_cost, 0.0)
+        self.assertEqual(rules.overhead_percentage, 0.0)
         self.assertEqual(rules.currency, "MAD")
 
 
