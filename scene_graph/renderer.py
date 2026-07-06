@@ -442,7 +442,7 @@ class SceneRenderer:
 
     @staticmethod
     def _drill_viewport_command(overlay):
-        return {
+        return SceneRenderer._decorate_hole_command({
             "command_type": "circle_marker",
             "overlay_type": "drill_hole",
             "label": str(overlay.get("label", "") or "Drill hole"),
@@ -456,7 +456,7 @@ class SceneRenderer:
             "size": float(overlay.get("diameter", 0.0) or 0.0),
             "source_reference": str(overlay.get("source_operation_reference", "") or ""),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
-        }
+        }, overlay)
 
     @staticmethod
     def _groove_viewport_command(overlay):
@@ -502,7 +502,7 @@ class SceneRenderer:
         it with a distinct visual style (e.g. larger diameter marker,
         different colour).
         """
-        return {
+        return SceneRenderer._decorate_hole_command({
             "command_type": "circle_marker",
             "overlay_type": "minifix_hole",
             "label": str(overlay.get("label", "") or "Minifix hole"),
@@ -518,7 +518,7 @@ class SceneRenderer:
                 overlay.get("source_operation_reference", "") or ""
             ),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
-        }
+        }, overlay)
 
     @staticmethod
     def _confirmat_viewport_command(overlay):
@@ -528,7 +528,7 @@ class SceneRenderer:
         with overlay_type=confirmat_hole so the viewport can render
         it with a distinct visual style.
         """
-        return {
+        return SceneRenderer._decorate_hole_command({
             "command_type": "circle_marker",
             "overlay_type": "confirmat_hole",
             "label": str(overlay.get("label", "") or "Confirmat hole"),
@@ -544,7 +544,7 @@ class SceneRenderer:
                 overlay.get("source_operation_reference", "") or ""
             ),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
-        }
+        }, overlay)
 
     @staticmethod
     def _shelf_pin_viewport_command(overlay):
@@ -554,7 +554,7 @@ class SceneRenderer:
         so the viewport can render it with a distinct visual style
         (e.g. small diameter marker, different colour).
         """
-        return {
+        return SceneRenderer._decorate_hole_command({
             "command_type": "circle_marker",
             "overlay_type": "shelf_pin_hole",
             "label": str(overlay.get("label", "") or "Shelf pin hole"),
@@ -570,7 +570,7 @@ class SceneRenderer:
                 overlay.get("source_operation_reference", "") or ""
             ),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
-        }
+        }, overlay)
 
     @staticmethod
     def _drawer_slide_viewport_command(overlay):
@@ -579,7 +579,7 @@ class SceneRenderer:
         Reuses circle_marker command_type with overlay_type=drawer_slide_hole
         so the viewport can render it with a distinct visual style.
         """
-        return {
+        return SceneRenderer._decorate_hole_command({
             "command_type": "circle_marker",
             "overlay_type": "drawer_slide_hole",
             "label": str(overlay.get("label", "") or "Drawer slide hole"),
@@ -595,7 +595,7 @@ class SceneRenderer:
                 overlay.get("source_operation_reference", "") or ""
             ),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
-        }
+        }, overlay)
 
     @staticmethod
     def _hinge_cup_viewport_command(overlay):
@@ -605,7 +605,7 @@ class SceneRenderer:
         so the viewport can render it with a distinct visual style
         (e.g. larger diameter marker for 35mm cup holes).
         """
-        return {
+        return SceneRenderer._decorate_hole_command({
             "command_type": "circle_marker",
             "overlay_type": "hinge_cup_hole",
             "label": str(overlay.get("label", "") or "Hinge cup hole"),
@@ -621,7 +621,7 @@ class SceneRenderer:
                 overlay.get("source_operation_reference", "") or ""
             ),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
-        }
+        }, overlay)
 
     @staticmethod
     def _hinge_plate_viewport_command(overlay):
@@ -655,7 +655,7 @@ class SceneRenderer:
         Reuses circle_marker command_type with overlay_type=screw_hole
         so the viewport can render it with a distinct visual style.
         """
-        return {
+        return SceneRenderer._decorate_hole_command({
             "command_type": "circle_marker",
             "overlay_type": "screw_hole",
             "label": str(overlay.get("label", "") or "Screw hole"),
@@ -671,7 +671,51 @@ class SceneRenderer:
                 overlay.get("source_operation_reference", "") or ""
             ),
             "panel_identity": str(overlay.get("panel_identity", "") or ""),
-        }
+        }, overlay)
+
+    @staticmethod
+    def _resolve_hole_style(overlay_type: str, overlay: dict) -> str:
+        """Infer a high-fidelity hole style from existing overlay data.
+
+        Returns one of:
+          - 'through'   — hole passes entirely through the panel
+          - 'blind'     — hole has a defined depth, does not pass through
+          - 'cup'       — large-diameter hinge cup bore (hinge_cup_hole)
+          - 'pilot'     — small-diameter pilot/screw hole (screw_hole)
+
+        This is a rendering-only inference from existing overlay metadata.
+        No manufacturing logic, no reclassification of hardware_intent.
+        The overlay_type and is_through field are consumed directly from
+        the overlay dict that SceneRenderer already produced.
+        """
+        # Cup holes are always cup style regardless of is_through
+        if overlay_type in ("hinge_cup_hole",):
+            return "cup"
+        # Screw/pilot holes are always pilot style
+        if overlay_type in ("screw_hole",):
+            return "pilot"
+        # All other holes: use is_through if available
+        is_through = bool(overlay.get("is_through", False))
+        return "through" if is_through else "blind"
+
+    @staticmethod
+    def _decorate_hole_command(command: dict, overlay: dict | None = None) -> dict:
+        """Add a hole_style decoration to a hole viewport command in-place.
+
+        Reads command["overlay_type"], resolves the hole style via
+        _resolve_hole_style, and sets command["hole_style"].
+        When *overlay* is provided (the source overlay dict), it is used
+        as the source for _resolve_hole_style so that fields like
+        is_through are available. Falls back to command when overlay is
+        None for backward compatibility.
+        Returns the same dict for convenience (fluent / return-value wrapping).
+        """
+        overlay_type = str(command.get("overlay_type", "") or "")
+        source = overlay if overlay is not None else command
+        command["hole_style"] = SceneRenderer._resolve_hole_style(
+            overlay_type, source
+        )
+        return command
 
     def render(self, node: SceneNode):
         # استخدام الـ Registry

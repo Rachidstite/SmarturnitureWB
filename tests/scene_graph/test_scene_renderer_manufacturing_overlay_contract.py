@@ -1716,5 +1716,151 @@ class TestSceneRendererMinifixConfirmatOverlayContract(unittest.TestCase):
         )
 
 
+class TestHfg4A1UnifiedHoleStyleDecoration(unittest.TestCase):
+    """HFG-4A.1 — Unified Hole Style Decoration.
+
+    Every hole viewport command produced by SceneRenderer must carry
+    a hole_style key. Non-hole commands must NOT carry hole_style.
+    Specific overlay types resolve to specific style strings.
+    overlay_type values remain unchanged.
+    """
+
+    # ── Helper: build a single viewport command for a given overlay_type
+
+    @staticmethod
+    def _command_for(overlay_type, is_through=False, **kw):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        field_map = {
+            "drill_hole": "drill_holes",
+            "minifix_hole": "minifix_holes",
+            "confirmat_hole": "confirmat_holes",
+            "shelf_pin_hole": "shelf_pin_holes",
+            "drawer_slide_hole": "drawer_slide_holes",
+            "hinge_cup_hole": "hinge_cup_holes",
+            "screw_hole": "screw_holes",
+            "hinge_plate_position": "hinge_plate_positions",
+        }
+        hole = DrillHoleVisual(
+            panel_identity="P1", x=10.0, y=10.0,
+            is_through=is_through, **kw,
+        )
+        vm = VisualMetadata(**{field_map[overlay_type]: (hole,)})
+        overlays = SceneRenderer.build_visual_overlays(vm)
+        cmds = SceneRenderer.build_viewport_overlay_commands(overlays)
+        return cmds[0] if cmds else None
+
+    # ── 1. All hole commands have hole_style ───────────────────────
+
+    def test_drill_hole_has_hole_style(self):
+        cmd = self._command_for("drill_hole")
+        self.assertIn("hole_style", cmd)
+
+    def test_minifix_hole_has_hole_style(self):
+        cmd = self._command_for("minifix_hole")
+        self.assertIn("hole_style", cmd)
+
+    def test_confirmat_hole_has_hole_style(self):
+        cmd = self._command_for("confirmat_hole")
+        self.assertIn("hole_style", cmd)
+
+    def test_shelf_pin_hole_has_hole_style(self):
+        cmd = self._command_for("shelf_pin_hole")
+        self.assertIn("hole_style", cmd)
+
+    def test_drawer_slide_hole_has_hole_style(self):
+        cmd = self._command_for("drawer_slide_hole")
+        self.assertIn("hole_style", cmd)
+
+    def test_hinge_cup_hole_has_hole_style(self):
+        cmd = self._command_for("hinge_cup_hole")
+        self.assertIn("hole_style", cmd)
+
+    def test_screw_hole_has_hole_style(self):
+        cmd = self._command_for("screw_hole")
+        self.assertIn("hole_style", cmd)
+
+    # ── 2. Non-hole commands do NOT have hole_style ────────────────
+
+    def test_edge_banding_no_hole_style(self):
+        from scene_graph.metadata import EdgeBandVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(edge_banding=(EdgeBandVisual(side="TOP", banding="ABS"),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("hole_style", cmds[0])
+
+    def test_groove_no_hole_style(self):
+        from scene_graph.metadata import GrooveVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(grooves=(GrooveVisual(face="BACK", depth=8.0),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("hole_style", cmds[0])
+
+    def test_hardware_marker_no_hole_style(self):
+        from scene_graph.metadata import HardwareMarkerVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        vm = VisualMetadata(hardware_markers=(
+            HardwareMarkerVisual(panel_identity="P1", sku="HINGE", quantity=1),))
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        self.assertNotIn("hole_style", cmds[0])
+
+    def test_hinge_plate_position_no_hole_style(self):
+        cmd = self._command_for("hinge_plate_position")
+        self.assertNotIn("hole_style", cmd)
+
+    # ── 3. Correct style values ───────────────────────────────────
+
+    def test_hinge_cup_hole_style_is_cup(self):
+        cmd = self._command_for("hinge_cup_hole")
+        self.assertEqual(cmd["hole_style"], "cup")
+
+    def test_screw_hole_style_is_pilot(self):
+        cmd = self._command_for("screw_hole")
+        self.assertEqual(cmd["hole_style"], "pilot")
+
+    def test_blind_hole_style_is_blind(self):
+        for ot in ("drill_hole", "minifix_hole", "confirmat_hole",
+                   "shelf_pin_hole", "drawer_slide_hole"):
+            cmd = self._command_for(ot, is_through=False)
+            self.assertEqual(cmd["hole_style"], "blind",
+                             msg=f"{ot} with is_through=False")
+
+    def test_through_hole_style_is_through(self):
+        for ot in ("drill_hole", "minifix_hole", "confirmat_hole",
+                   "shelf_pin_hole", "drawer_slide_hole"):
+            cmd = self._command_for(ot, is_through=True)
+            self.assertEqual(cmd["hole_style"], "through",
+                             msg=f"{ot} with is_through=True")
+
+    # ── 4. overlay_type remains unchanged ─────────────────────────
+
+    def test_overlay_types_preserved_with_hole_style(self):
+        from scene_graph.metadata import DrillHoleVisual, VisualMetadata
+        from scene_graph.renderer import SceneRenderer
+        hole = DrillHoleVisual(panel_identity="P1", x=10.0, y=10.0)
+        vm = VisualMetadata(
+            drill_holes=(hole,),
+            minifix_holes=(hole,),
+            confirmat_holes=(hole,),
+            shelf_pin_holes=(hole,),
+            drawer_slide_holes=(hole,),
+            hinge_cup_holes=(hole,),
+            screw_holes=(hole,),
+        )
+        cmds = SceneRenderer.build_viewport_overlay_commands(
+            SceneRenderer.build_visual_overlays(vm))
+        for cmd in cmds:
+            ot = cmd["overlay_type"]
+            if ot in ("edge_banding", "groove", "hardware_marker", "hinge_plate_position"):
+                continue
+            self.assertIn("hole_style", cmd,
+                          msg=f"Missing hole_style for {ot}")
+            self.assertEqual(cmd["overlay_type"], ot,
+                             msg=f"overlay_type should remain {ot}")
+
+
 if __name__ == "__main__":
     unittest.main()
