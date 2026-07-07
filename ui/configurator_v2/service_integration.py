@@ -432,15 +432,40 @@ class ConfiguratorV2ServiceIntegration:
         )
         return preview
 
-    def update_active_base_cabinet_width(self, width_mm: float):
-        """Regenerate the active base cabinet using an updated width only."""
+    _ALLOWED_DIMENSION_FIELDS = frozenset({"width_mm", "height_mm", "depth_mm"})
+
+    def _update_active_base_cabinet_dimension(self, field_name: str, value: float):
+        """Regenerate the active base cabinet by updating a single dimension.
+
+        *field_name* must be one of ``width_mm``, ``height_mm``, ``depth_mm``.
+        Invalid field names return the current preview read model immediately.
+
+        This helper copies the current specification, sets only the target
+        field on the copy, calls ``engineering_application_service.execute``,
+        updates the ``ActiveEngineeringState``, and refreshes the preview.
+
+        Internal use only — never mutates the current specification.
+        """
+        if field_name not in self._ALLOWED_DIMENSION_FIELDS:
+            self.push_message(
+                severity="WARNING",
+                text=f"Invalid dimension field: {field_name}",
+                category="Engineering integration",
+                source_reference=(
+                    "ConfiguratorV2ServiceIntegration._update_active_base_cabinet_dimension"
+                ),
+            )
+            return self.workspace.preview_read_model
+
         service = getattr(self.service_bindings, "engineering_application_service", None)
         if service is None:
             self.push_message(
                 severity="UNSUPPORTED",
                 text="Engineering service integration not available yet",
                 category="Engineering integration",
-                source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+                source_reference=(
+                    "ConfiguratorV2ServiceIntegration._update_active_base_cabinet_dimension"
+                ),
             )
             return self.workspace.preview_read_model
 
@@ -451,12 +476,14 @@ class ConfiguratorV2ServiceIntegration:
                 severity="WARNING",
                 text="No active engineering specification available",
                 category="Engineering integration",
-                source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+                source_reference=(
+                    "ConfiguratorV2ServiceIntegration._update_active_base_cabinet_dimension"
+                ),
             )
             return self.workspace.preview_read_model
 
         next_specification = copy.copy(current_specification)
-        setattr(next_specification, "width_mm", width_mm)
+        setattr(next_specification, field_name, value)
 
         result = service.execute(specification=next_specification)
         if not result:
@@ -467,7 +494,9 @@ class ConfiguratorV2ServiceIntegration:
                 severity="WARNING",
                 text=error_text,
                 category="Engineering integration",
-                source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+                source_reference=(
+                    "ConfiguratorV2ServiceIntegration._update_active_base_cabinet_dimension"
+                ),
             )
             return self.workspace.preview_read_model
 
@@ -517,13 +546,38 @@ class ConfiguratorV2ServiceIntegration:
             }
 
         preview = self.refresh_preview(preview_source)
+
+        dimension_label = field_name.replace("_mm", "").replace("_", " ").title()
         self.push_message(
             severity="INFO",
-            text="Base cabinet width updated",
+            text=f"Base cabinet {dimension_label} updated",
             category="Engineering integration",
-            source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+            source_reference=(
+                f"ConfiguratorV2ServiceIntegration._update_active_base_cabinet_dimension"
+            ),
         )
         return preview
+
+    def update_active_base_cabinet_width(self, width_mm: float):
+        """Regenerate the active base cabinet using an updated width only.
+
+        Delegates to ``_update_active_base_cabinet_dimension``.
+        """
+        return self._update_active_base_cabinet_dimension("width_mm", width_mm)
+
+    def update_active_base_cabinet_height(self, height_mm: float):
+        """Regenerate the active base cabinet using an updated height only.
+
+        Delegates to ``_update_active_base_cabinet_dimension``.
+        """
+        return self._update_active_base_cabinet_dimension("height_mm", height_mm)
+
+    def update_active_base_cabinet_depth(self, depth_mm: float):
+        """Regenerate the active base cabinet using an updated depth only.
+
+        Delegates to ``_update_active_base_cabinet_dimension``.
+        """
+        return self._update_active_base_cabinet_dimension("depth_mm", depth_mm)
 
     def refresh_validation(self, source: Any = None):
         if source is None:

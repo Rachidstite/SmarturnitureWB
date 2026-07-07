@@ -555,6 +555,239 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         )
         self.assertEqual(result.selection_id, "cabinet-1")
 
+    # ── Alpha-UI-4B.3 — Live height and depth editing ──────────────
+
+    def _make_mock_result(self, width=800.0, height=900.0, depth=600.0):
+        """Create a mock engineering service result with a simple scene."""
+        spec = types.SimpleNamespace(
+            width_mm=width, height_mm=height, depth_mm=depth,
+        )
+        scene = types.SimpleNamespace()
+        cabinet = types.SimpleNamespace(scene_graph=scene)
+        result = Mock()
+        result.data = {"cabinet": cabinet, "specification": spec, "metadata": {}}
+        result.errors = ()
+        result.diagnostics = ()
+        return result
+
+    def test_height_edit_calls_engineering_service(self):
+        """Height change must call engineering_application_service.execute."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(height=720.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_height(750.0)
+
+        eng_service.execute.assert_called_once()
+        call_args = eng_service.execute.call_args
+        self.assertIn("specification", call_args.kwargs)
+        executed_spec = call_args.kwargs["specification"]
+        self.assertEqual(executed_spec.height_mm, 750.0)
+
+    def test_depth_edit_calls_engineering_service(self):
+        """Depth change must call engineering_application_service.execute."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(depth=580.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_depth(600.0)
+
+        eng_service.execute.assert_called_once()
+        call_args = eng_service.execute.call_args
+        self.assertIn("specification", call_args.kwargs)
+        executed_spec = call_args.kwargs["specification"]
+        self.assertEqual(executed_spec.depth_mm, 600.0)
+
+    def test_width_edit_still_works_after_refactor(self):
+        """Width editing must continue to work after the helper refactor."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(width=600.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_width(600.0)
+
+        eng_service.execute.assert_called_once()
+        call_args = eng_service.execute.call_args
+        executed_spec = call_args.kwargs["specification"]
+        self.assertEqual(executed_spec.width_mm, 600.0)
+
+    def test_height_edit_preserves_width_and_depth(self):
+        """Height must preserve width/depth of the copied specification."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(width=800.0, height=750.0, depth=580.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_height(750.0)
+
+        call_args = eng_service.execute.call_args
+        executed_spec = call_args.kwargs["specification"]
+        self.assertEqual(executed_spec.width_mm, 800.0, "width_mm was changed by height edit")
+        self.assertEqual(executed_spec.depth_mm, 580.0, "depth_mm was changed by height edit")
+        self.assertEqual(executed_spec.height_mm, 750.0, "height_mm was not updated")
+
+    def test_depth_edit_preserves_width_and_height(self):
+        """Depth must preserve width/height of the copied specification."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(width=800.0, height=720.0, depth=600.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_depth(600.0)
+
+        call_args = eng_service.execute.call_args
+        executed_spec = call_args.kwargs["specification"]
+        self.assertEqual(executed_spec.width_mm, 800.0, "width_mm was changed by depth edit")
+        self.assertEqual(executed_spec.height_mm, 720.0, "height_mm was changed by depth edit")
+        self.assertEqual(executed_spec.depth_mm, 600.0, "depth_mm was not updated")
+
+    def test_invalid_dimension_field_rejected(self):
+        """An invalid field name must be rejected safely."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        result = integration._update_active_base_cabinet_dimension("length_mm", 500.0)
+
+        eng_service.execute.assert_not_called()
+        self.assertIs(result, workspace.preview_read_model)
+
+    def test_dimension_edit_does_not_mutate_original_specification(self):
+        """The original specification must not be mutated by the edit."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(width=600.0, height=720.0, depth=580.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_width(600.0)
+
+        self.assertEqual(spec.width_mm, 800.0, "Original specification width was mutated")
+        self.assertEqual(spec.height_mm, 720.0, "Original specification height was mutated")
+        self.assertEqual(spec.depth_mm, 580.0, "Original specification depth was mutated")
+
+    def test_stale_flags_set_on_dimension_edit(self):
+        """Manufacturing/cost/commercial must be stale after dimension edit."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(width=800.0, height=900.0, depth=600.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_height(900.0)
+
+        state = workspace.active_engineering_state
+        self.assertFalse(state.engineering_dirty, "engineering_dirty should be False")
+        self.assertTrue(state.manufacturing_stale, "manufacturing_stale should be True")
+        self.assertTrue(state.cost_stale, "cost_stale should be True")
+        self.assertTrue(state.commercial_stale, "commercial_stale should be True")
+
+    def test_preview_not_source_of_truth_for_dimension_edit(self):
+        """PreviewReadModel values must not be the source of truth for dimension edits."""
+        workspace_module, integration_module, _, read_models = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(width=800.0, height=900.0, depth=600.0)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=720.0, depth=580.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        # Set a preview with deliberately wrong dimensions
+        bad_preview = read_models.PreviewReadModel(
+            preview_title="Stale Preview",
+            scene_bounds="999 x 999 x 999",
+        )
+        workspace.set_preview_read_model(bad_preview)
+
+        integration.update_active_base_cabinet_height(900.0)
+
+        state_spec = workspace.active_engineering_state.specification
+        self.assertEqual(state_spec.height_mm, 900.0,
+                         "Spec height should come from engineering result, not preview")
+        self.assertNotEqual(state_spec.height_mm, 999.0,
+                            "Spec height must not come from PreviewReadModel bounds")
+
+    def test_no_forbidden_imports_in_dimension_edit_path(self):
+        """Domain modules must not be imported via the dimension edit path."""
+        forbidden_modules = (
+            "domain.base_cabinet_engineering_entry",
+            "domain.base_cabinet_specification",
+            "manufacturing.factory_release_package",
+            "manufacturing.factory_decision_projection",
+            "manufacturing.manufacturing_production_package",
+            "commercial_outputs.commercial_package_report",
+            "cost_intelligence.quotation_document",
+        )
+        for module_name in forbidden_modules:
+            sys.modules.pop(module_name, None)
+
+        workspace_module, _, _, _ = self._import_modules()
+
+        for module_name in forbidden_modules:
+            self.assertNotIn(module_name, sys.modules,
+                             f"Forbidden module imported via dimension edit path: {module_name}")
+
 
 if __name__ == "__main__":
     unittest.main()
