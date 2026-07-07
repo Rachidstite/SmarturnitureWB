@@ -256,6 +256,323 @@ class TestConfiguratorV2PreviewIntegrationContract(unittest.TestCase):
         for module_name in forbidden_modules:
             self.assertNotIn(module_name, sys.modules)
 
+    # ── Alpha-UI-7.1 — Preview Synchronization Contract Tests ─────
+
+    def _make_mock_scene_node(self, node_id, width=800.0, height=900.0, depth=580.0):
+        """Create a scene graph node source for the projection pipeline."""
+        return types.SimpleNamespace(
+            node_id=node_id,
+            id=node_id,
+            node_type="PANEL",
+            type="PANEL",
+            role=types.SimpleNamespace(name="PANEL"),
+            label=f"Panel {node_id}",
+            display_name=f"Panel {node_id}",
+            name=f"Panel {node_id}",
+            width=width,
+            height=height,
+            depth=depth,
+            x=0.0, y=0.0, z=0.0,
+            visible=True,
+            selectable=True,
+            transform=None,
+            display_metadata={},
+            metadata={},
+            source_reference="mock",
+            children=(),
+        )
+
+    def _make_mock_scene_graph(self, node_count=5, width=800.0, height=900.0, depth=580.0):
+        """Create a mock scene graph with *node_count* nodes all sharing the
+        same *width*, *height*, *depth* so the union bounds are predictable."""
+        nodes = [
+            self._make_mock_scene_node(f"node-{i}", width, height, depth)
+            for i in range(node_count)
+        ]
+        scene_graph = Mock()
+        scene_graph.all_nodes = lambda: nodes
+        return scene_graph
+
+    def _make_mock_result_from_scene_graph(self, scene_graph, width=800.0, height=900.0, depth=580.0, shelf_count=3, door_count=2):
+        """Build an engineering-service result containing *scene_graph*
+        and a matching specification."""
+        spec = types.SimpleNamespace(
+            width_mm=width, height_mm=height, depth_mm=depth,
+            shelf_count=shelf_count, door_count=door_count,
+        )
+        cabinet = types.SimpleNamespace(scene_graph=scene_graph)
+        result = Mock()
+        result.data = {"cabinet": cabinet, "specification": spec, "metadata": {}}
+        result.errors = ()
+        result.diagnostics = ()
+        return result
+
+    def _make_engineering_state(self, spec, workspace_module):
+        """Create an ActiveEngineeringState without importing domain."""
+        return workspace_module.ActiveEngineeringState(
+            family="Base Cabinet",
+            specification=spec,
+            cabinet=None,
+            scene_graph=None,
+        )
+
+    def _make_specification(self, width=800.0, height=900.0, depth=580.0, shelf_count=3, door_count=2):
+        return types.SimpleNamespace(
+            width_mm=width, height_mm=height, depth_mm=depth,
+            shelf_count=shelf_count, door_count=door_count,
+        )
+
+    def _baseline_scene_bounds_label(self, width=800.0, height=900.0, depth=580.0):
+        """Return the expected scene_bounds label for uniform nodes
+        placed at the origin."""
+        return f"min=(0.0, 0.0, 0.0) max=({width}, {depth}, {height})"
+
+    def test_width_edit_changes_preview_scene_bounds(self):
+        """After width edit, PreviewReadModel scene_bounds must reflect
+        the new width."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        sg_before = self._make_mock_scene_graph(node_count=5, width=800.0, height=900.0, depth=580.0)
+        sg_after = self._make_mock_scene_graph(node_count=5, width=900.0, height=900.0, depth=580.0)
+        spec_before = self._make_specification(width=800.0)
+
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(
+            sg_after, width=900.0,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_width(900.0)
+
+        expected_bounds = self._baseline_scene_bounds_label(width=900.0)
+        self.assertIn(
+            expected_bounds, workspace.preview_read_model.scene_bounds,
+            f"Expected scene_bounds '{expected_bounds}' after width edit, "
+            f"got '{workspace.preview_read_model.scene_bounds}'",
+        )
+
+    def test_height_edit_changes_preview_scene_bounds(self):
+        """After height edit, PreviewReadModel scene_bounds must reflect
+        the new height."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        sg_after = self._make_mock_scene_graph(node_count=5, width=800.0, height=1200.0, depth=580.0)
+        spec_before = self._make_specification(height=900.0)
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(
+            sg_after, height=1200.0,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_height(1200.0)
+
+        expected_bounds = self._baseline_scene_bounds_label(height=1200.0)
+        self.assertIn(
+            expected_bounds, workspace.preview_read_model.scene_bounds,
+        )
+
+    def test_depth_edit_changes_preview_scene_bounds(self):
+        """After depth edit, PreviewReadModel scene_bounds must reflect
+        the new depth."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        sg_after = self._make_mock_scene_graph(node_count=5, width=800.0, height=900.0, depth=700.0)
+        spec_before = self._make_specification(depth=580.0)
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(
+            sg_after, depth=700.0,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_depth(700.0)
+
+        expected_bounds = self._baseline_scene_bounds_label(depth=700.0)
+        self.assertIn(
+            expected_bounds, workspace.preview_read_model.scene_bounds,
+        )
+
+    def test_shelf_count_edit_changes_preview_node_count(self):
+        """After shelf_count edit, PreviewReadModel node_count must
+        reflect the new number of scene nodes."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        # 3 nodes when shelf_count=1, 8 nodes when shelf_count=4
+        sg_after = self._make_mock_scene_graph(node_count=8)
+        spec_before = self._make_specification(shelf_count=1)
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(
+            sg_after, shelf_count=4,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_shelf_count(4)
+
+        self.assertEqual(
+            workspace.preview_read_model.node_count, 8,
+            "Expected node_count=8 after shelf_count edit to 4",
+        )
+
+    def test_door_count_edit_changes_preview_node_count(self):
+        """After door_count edit, PreviewReadModel node_count must
+        reflect the new number of scene nodes."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        sg_after = self._make_mock_scene_graph(node_count=10)
+        spec_before = self._make_specification(door_count=2)
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(
+            sg_after, door_count=5,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_door_count(5)
+
+        self.assertEqual(
+            workspace.preview_read_model.node_count, 10,
+            "Expected node_count=10 after door_count edit to 5",
+        )
+
+    def test_preview_generated_from_active_engineering_state_scene_graph(self):
+        """Preview must be generated from ActiveEngineeringState.scene_graph."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        sg = self._make_mock_scene_graph(node_count=5, width=800.0)
+        spec_before = self._make_specification()
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(sg)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_width(800.0)
+
+        self.assertTrue(workspace.preview_read_model.scene_available)
+        self.assertGreater(workspace.preview_read_model.node_count, 0)
+        self.assertNotEqual(workspace.preview_read_model.scene_bounds, "")
+
+    def test_preview_not_generated_from_itself(self):
+        """PreviewReadModel values must come from the engineering
+        result, not from a previously set PreviewReadModel."""
+        workspace_module, integration_module, _, read_models = self._import_modules()
+        eng_service = Mock()
+        sg = self._make_mock_scene_graph(node_count=3, width=800.0, height=900.0, depth=580.0)
+        spec_before = self._make_specification()
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(sg)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        # Set a deliberately stale preview
+        stale = read_models.PreviewReadModel(
+            preview_title="Stale Preview",
+            scene_bounds="min=(999,999,999) max=(999,999,999)",
+            node_count=999,
+            scene_available=False,
+        )
+        workspace.set_preview_read_model(stale)
+
+        integration.update_active_base_cabinet_width(800.0)
+
+        self.assertNotEqual(
+            workspace.preview_read_model.preview_title, "Stale Preview",
+            "Preview title must be refreshed, not stale",
+        )
+        self.assertNotEqual(
+            workspace.preview_read_model.scene_bounds, "min=(999,999,999) max=(999,999,999)",
+            "Scene bounds must be refreshed, not stale",
+        )
+        self.assertNotEqual(
+            workspace.preview_read_model.node_count, 999,
+            "Node count must be refreshed, not stale",
+        )
+
+    def test_preview_refresh_after_every_successful_edit(self):
+        """Preview must be refreshed after every successful engineering update."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        sg = self._make_mock_scene_graph(node_count=5, width=800.0)
+        spec_before = self._make_specification()
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(sg)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        # Capture the workspace's preview model BEFORE the edit
+        # (it's the empty default)
+        self.assertFalse(workspace.preview_read_model.scene_available)
+
+        integration.update_active_base_cabinet_width(800.0)
+
+        self.assertTrue(
+            workspace.preview_read_model.scene_available,
+            "Preview must be available (scene_available=True) after edit",
+        )
+
+    def test_preview_regeneration_is_deterministic(self):
+        """Same inputs must produce the same preview output."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        sg = self._make_mock_scene_graph(node_count=5, width=800.0)
+
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(sg)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        spec_before = self._make_specification()
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_width(800.0)
+        first_bounds = workspace.preview_read_model.scene_bounds
+        first_node_count = workspace.preview_read_model.node_count
+
+        # Reset and redo with the same inputs
+        eng_service_2 = Mock()
+        eng_service_2.execute.return_value = self._make_mock_result_from_scene_graph(sg)
+        bindings_2 = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service_2,
+        )
+        workspace_2 = workspace_module.create_configurator_v2_workspace(service_bindings=bindings_2)
+        integration_2 = integration_module.attach_service_integration(workspace_2, bindings_2)
+        spec_before_2 = self._make_specification()
+        workspace_2.active_engineering_state = self._make_engineering_state(spec_before_2, workspace_module)
+
+        integration_2.update_active_base_cabinet_width(800.0)
+        second_bounds = workspace_2.preview_read_model.scene_bounds
+        second_node_count = workspace_2.preview_read_model.node_count
+
+        self.assertEqual(first_bounds, second_bounds, "scene_bounds must be deterministic")
+        self.assertEqual(first_node_count, second_node_count, "node_count must be deterministic")
+
 
 if __name__ == "__main__":
     unittest.main()
