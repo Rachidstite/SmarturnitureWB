@@ -7,6 +7,13 @@ from unittest.mock import Mock, patch
 
 class _FakeSignal:
     def connect(self, _callback):
+        self._callback = _callback
+        return None
+
+    def emit(self, *args, **kwargs):
+        callback = getattr(self, "_callback", None)
+        if callable(callback):
+            return callback(*args, **kwargs)
         return None
 
 
@@ -85,6 +92,12 @@ class _FakeTabWidget(_FakeWidget):
         self.tabs.append((widget, title))
 
 
+class _FakeLineEdit(_FakeWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.editingFinished = _FakeSignal()
+
+
 def _fake_qt_module():
     return types.SimpleNamespace(
         QtWidgets=types.SimpleNamespace(
@@ -94,6 +107,7 @@ def _fake_qt_module():
             QHBoxLayout=_FakeLayout,
             QFormLayout=_FakeLayout,
             QComboBox=_FakeComboBox,
+            QLineEdit=_FakeLineEdit,
             QPushButton=_FakeButton,
             QLabel=_FakeWidget,
             QTabWidget=_FakeTabWidget,
@@ -440,6 +454,165 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
             any("Warnings: Check door hinge" in r for r in render_rows),
             "Existing warnings lost",
         )
+
+    def test_editable_dimension_fields_render_as_input_controls(self):
+        """Editable dimension fields must render as input-capable widgets."""
+        workspace_module, integration_module, adapters, read_models = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "cabinet-1",
+                "selection_type": "CABINET",
+                "display_name": "Cabinet",
+                "source_reference": "ProjectTreeRegion",
+                "fields": [
+                    {"name": "family", "label": "Family", "value": "Base Cabinet", "group": "Identity"},
+                ],
+            }
+        )
+
+        self.assertIn("width_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("height_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("depth_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertNotIn("family", workspace.inspector_region.editable_field_inputs)
+        self.assertEqual(
+            workspace.inspector_region.editable_field_inputs["width_mm"].text(),
+            "800.0",
+        )
+
+    def test_width_edit_calls_update_active_base_cabinet_width(self):
+        """Committing width from the inspector must call the width update method."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_width = Mock(return_value=workspace.preview_read_model)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        editor = workspace.inspector_region.editable_field_inputs["width_mm"]
+        editor.setText("900.0")
+        editor.editingFinished.emit()
+
+        integration.update_active_base_cabinet_width.assert_called_once_with(900.0)
+
+    def test_height_edit_calls_update_active_base_cabinet_height(self):
+        """Committing height from the inspector must call the height update method."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_height = Mock(return_value=workspace.preview_read_model)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        editor = workspace.inspector_region.editable_field_inputs["height_mm"]
+        editor.setText("950.0")
+        editor.editingFinished.emit()
+
+        integration.update_active_base_cabinet_height.assert_called_once_with(950.0)
+
+    def test_depth_edit_calls_update_active_base_cabinet_depth(self):
+        """Committing depth from the inspector must call the depth update method."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_depth = Mock(return_value=workspace.preview_read_model)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        editor = workspace.inspector_region.editable_field_inputs["depth_mm"]
+        editor.setText("650.0")
+        editor.editingFinished.emit()
+
+        integration.update_active_base_cabinet_depth.assert_called_once_with(650.0)
+
+    def test_non_editable_fields_do_not_trigger_edits(self):
+        """Non-editable inspector fields must remain passive."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_width = Mock(return_value=workspace.preview_read_model)
+        integration.update_active_base_cabinet_height = Mock(return_value=workspace.preview_read_model)
+        integration.update_active_base_cabinet_depth = Mock(return_value=workspace.preview_read_model)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "cabinet-1",
+                "selection_type": "CABINET",
+                "display_name": "Cabinet",
+                "source_reference": "ProjectTreeRegion",
+                "fields": [
+                    {"name": "family", "label": "Family", "value": "Base Cabinet", "group": "Identity"},
+                ],
+            }
+        )
+
+        self.assertNotIn("family", workspace.inspector_region.editable_field_inputs)
+        self.assertFalse(integration.update_active_base_cabinet_width.called)
+        self.assertFalse(integration.update_active_base_cabinet_height.called)
+        self.assertFalse(integration.update_active_base_cabinet_depth.called)
 
     def test_specification_fields_are_editable(self):
         """Specification dimension fields must be marked editable=True."""

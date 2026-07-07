@@ -718,12 +718,13 @@ class InspectorRegion(_ShellFrame):
         "Warnings": "metadata_value",
     }
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, on_field_commit=None):
         super().__init__(
             "Inspector",
             "Selected object read model and grouped metadata.",
             parent=parent,
         )
+        self.on_field_commit = on_field_commit
         self.read_model = empty_inspector_read_model()
         self.render_rows: list[str] = []
         self.selection_summary_values: dict[str, object] = {}
@@ -731,6 +732,7 @@ class InspectorRegion(_ShellFrame):
         self.group_headers: dict[str, object] = {}
         self.group_containers: dict[str, object] = {}
         self.group_field_labels: dict[str, list[object]] = {group: [] for group in INSPECTOR_FIELD_GROUPS}
+        self.editable_field_inputs: dict[str, object] = {}
 
         self._rebuild_render_state()
 
@@ -769,6 +771,21 @@ class InspectorRegion(_ShellFrame):
             group_rows.append(label)
             self.group_field_labels.setdefault(group_name, []).append(label)
             self.render_rows.append(f"{group_name} | {row_text}")
+            if field.editable and field.name in {"width_mm", "height_mm", "depth_mm"}:
+                editor_cls = getattr(QtWidgets, "QLineEdit", None)
+                if editor_cls is not None:
+                    editor = editor_cls()
+                    if hasattr(editor, "setText"):
+                        editor.setText(field.value)
+                    if hasattr(editor, "editingFinished") and callable(self.on_field_commit):
+                        editor.editingFinished.connect(
+                            lambda field_name=field.name, line_edit=editor: self.commit_field_edit(
+                                field_name,
+                                line_edit.text() if hasattr(line_edit, "text") else "",
+                            )
+                        )
+                    self.body_layout.addWidget(editor)
+                    self.editable_field_inputs[field.name] = editor
         self.field_group_rows[group_name] = group_rows
 
     def _rebuild_render_state(self):
@@ -779,6 +796,7 @@ class InspectorRegion(_ShellFrame):
         self.group_headers = {}
         self.group_containers = {}
         self.group_field_labels = {group: [] for group in INSPECTOR_FIELD_GROUPS}
+        self.editable_field_inputs = {}
 
         read_model = self.read_model or empty_inspector_read_model()
         warnings_text = ", ".join(read_model.warnings) if read_model.warnings else "None"
@@ -810,6 +828,11 @@ class InspectorRegion(_ShellFrame):
 
     def set_selection(self, selection: ConfiguratorSelection):
         self.set_read_model(build_inspector_read_model(selection))
+
+    def commit_field_edit(self, field_name: str, value: str):
+        if not callable(self.on_field_commit):
+            return
+        self.on_field_commit(field_name, value)
 
 
 class ReviewContainer(_ShellFrame):
@@ -950,7 +973,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         right_column = QtWidgets.QVBoxLayout()
         self.project_context_region = ProductContextRegion()
         self.product_state_indicator = ProductStateIndicator()
-        self.inspector_region = InspectorRegion()
+        self.inspector_region = InspectorRegion(on_field_commit=self._handle_inspector_field_commit)
         self.review_region = ReviewRegion()
         right_column.addWidget(self.project_context_region)
         right_column.addWidget(self.product_state_indicator)
@@ -1030,6 +1053,20 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def attach_service_integration(self, service_integration):
         self.service_integration = service_integration
+
+    def _handle_inspector_field_commit(self, field_name: str, value: str):
+        if self.service_integration is None:
+            return
+        try:
+            parsed_value = float(value)
+        except (TypeError, ValueError):
+            return
+        if field_name == "width_mm":
+            self.service_integration.update_active_base_cabinet_width(parsed_value)
+        elif field_name == "height_mm":
+            self.service_integration.update_active_base_cabinet_height(parsed_value)
+        elif field_name == "depth_mm":
+            self.service_integration.update_active_base_cabinet_depth(parsed_value)
 
     def set_project_tree_read_model(self, read_model: ProjectTreeReadModel):
         self.project_tree_read_model = read_model

@@ -10,6 +10,13 @@ from application.application_service_result import ApplicationServiceResult
 
 class _FakeSignal:
     def connect(self, _callback):
+        self._callback = _callback
+        return None
+
+    def emit(self, *args, **kwargs):
+        callback = getattr(self, "_callback", None)
+        if callable(callback):
+            return callback(*args, **kwargs)
         return None
 
 
@@ -85,6 +92,12 @@ class _FakeTabWidget(_FakeWidget):
         self.tabs.append((widget, title))
 
 
+class _FakeLineEdit(_FakeWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.editingFinished = _FakeSignal()
+
+
 def _fake_qt_module():
     return types.SimpleNamespace(
         QtWidgets=types.SimpleNamespace(
@@ -94,6 +107,7 @@ def _fake_qt_module():
             QHBoxLayout=_FakeLayout,
             QFormLayout=_FakeLayout,
             QComboBox=_FakeComboBox,
+            QLineEdit=_FakeLineEdit,
             QPushButton=_FakeButton,
             QLabel=_FakeWidget,
             QTabWidget=_FakeTabWidget,

@@ -42,6 +42,7 @@ from .scene_projection import SceneProjection, build_scene_projection
 from .visual_components import VisualComponent, build_visual_components
 from .workspace import (
     ConfiguratorV2ServiceBindings,
+    ConfiguratorSelection,
     ConfiguratorV2Workspace,
     empty_project_tree_read_model,
     empty_review_panel_read_models,
@@ -389,6 +390,13 @@ class ConfiguratorV2ServiceIntegration:
             cost_stale=True,
             commercial_stale=True,
         )
+        self.workspace.current_selection = ConfiguratorSelection(
+            selection_type="CABINET",
+            selection_id="base-cabinet",
+            display_name="Base Cabinet",
+            source_region="EngineeringApplicationService.execute",
+            metadata={},
+        )
 
         self.workspace.set_project_context(
             current_product_family="Base Cabinet",
@@ -424,6 +432,7 @@ class ConfiguratorV2ServiceIntegration:
             }
 
         preview = self.refresh_preview(preview_source)
+        self.refresh_inspector()
         self.push_message(
             severity="INFO",
             text="Base cabinet created",
@@ -517,6 +526,13 @@ class ConfiguratorV2ServiceIntegration:
             cost_stale=True,
             commercial_stale=True,
         )
+        self.workspace.current_selection = ConfiguratorSelection(
+            selection_type="CABINET",
+            selection_id="base-cabinet",
+            display_name="Base Cabinet",
+            source_region="EngineeringApplicationService.execute",
+            metadata={},
+        )
 
         preview_source = {
             "scene_graph": scene_graph,
@@ -543,9 +559,10 @@ class ConfiguratorV2ServiceIntegration:
                     "depth_mm": getattr(specification, "depth_mm", ""),
                     **(metadata if isinstance(metadata, dict) else {}),
                 },
-            }
+        }
 
         preview = self.refresh_preview(preview_source)
+        self.refresh_inspector()
 
         dimension_label = field_name.replace("_mm", "").replace("_", " ").title()
         self.push_message(
