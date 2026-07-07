@@ -68,6 +68,7 @@ _INSPECTOR_GROUPS = (
     "Geometry",
     "Materials",
     "Hardware",
+    "Configuration",
     "Manufacturing",
     "Validation",
     "Metadata",
@@ -2398,10 +2399,10 @@ def build_manufacturing_render_review_section(
 def _specification_dimension_fields(specification: Any) -> tuple[dict[str, Any], ...]:
     """Build inspector field dicts from an engineering specification.
 
-    Each field dict is a projection of the specification's width_mm,
-    height_mm, and depth_mm attributes suitable for passing into
-    ``build_inspector_read_model`` via the ``fields`` key.  Returns
-    empty tuple when *specification* is None.
+    Returns field dicts for width_mm, height_mm, depth_mm (dimensions
+    with unit "mm") and shelf_count (integer count).  Each field uses
+    ``getattr`` with a safe default so any specification-like object
+    is accepted without domain imports.
 
     Non-destructive — never mutates the specification.
     """
@@ -2434,6 +2435,15 @@ def _specification_dimension_fields(specification: Any) -> tuple[dict[str, Any],
             "editable": True,
             "source_reference": "ActiveEngineeringState.specification",
             "group": "Geometry",
+        },
+        {
+            "name": "shelf_count",
+            "label": "Shelf Count",
+            "value": str(getattr(specification, "shelf_count", "")),
+            "unit": "",
+            "editable": True,
+            "source_reference": "ActiveEngineeringState.specification",
+            "group": "Configuration",
         },
     )
 

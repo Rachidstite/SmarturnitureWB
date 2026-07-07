@@ -441,13 +441,21 @@ class ConfiguratorV2ServiceIntegration:
         )
         return preview
 
-    _ALLOWED_DIMENSION_FIELDS = frozenset({"width_mm", "height_mm", "depth_mm"})
+    _ALLOWED_EDITABLE_FIELDS = frozenset({
+        "width_mm", "height_mm", "depth_mm", "shelf_count",
+    })
+
+    _INTEGER_FIELDS = frozenset({"shelf_count"})
 
     def _update_active_base_cabinet_dimension(self, field_name: str, value: float):
-        """Regenerate the active base cabinet by updating a single dimension.
+        """Regenerate the active base cabinet by updating a single editable field.
 
-        *field_name* must be one of ``width_mm``, ``height_mm``, ``depth_mm``.
-        Invalid field names return the current preview read model immediately.
+        *field_name* must be one of the allowed editable fields (width_mm,
+        height_mm, depth_mm, shelf_count).  Invalid field names return the
+        current preview read model immediately.
+
+        Integer-valued fields (shelf_count) are validated to be non-negative
+        integers.  Invalid integer values are rejected safely.
 
         This helper copies the current specification, sets only the target
         field on the copy, calls ``engineering_application_service.execute``,
@@ -455,16 +463,29 @@ class ConfiguratorV2ServiceIntegration:
 
         Internal use only — never mutates the current specification.
         """
-        if field_name not in self._ALLOWED_DIMENSION_FIELDS:
+        if field_name not in self._ALLOWED_EDITABLE_FIELDS:
             self.push_message(
                 severity="WARNING",
-                text=f"Invalid dimension field: {field_name}",
+                text=f"Invalid editable field: {field_name}",
                 category="Engineering integration",
                 source_reference=(
                     "ConfiguratorV2ServiceIntegration._update_active_base_cabinet_dimension"
                 ),
             )
             return self.workspace.preview_read_model
+
+        # Integer field validation
+        if field_name in self._INTEGER_FIELDS:
+            if not isinstance(value, int) or value < 0:
+                self.push_message(
+                    severity="WARNING",
+                    text=f"Invalid value for {field_name}: must be a non-negative integer",
+                    category="Engineering integration",
+                    source_reference=(
+                        "ConfiguratorV2ServiceIntegration._update_active_base_cabinet_dimension"
+                    ),
+                )
+                return self.workspace.preview_read_model
 
         service = getattr(self.service_bindings, "engineering_application_service", None)
         if service is None:
@@ -595,6 +616,15 @@ class ConfiguratorV2ServiceIntegration:
         Delegates to ``_update_active_base_cabinet_dimension``.
         """
         return self._update_active_base_cabinet_dimension("depth_mm", depth_mm)
+
+    def update_active_base_cabinet_shelf_count(self, shelf_count: int):
+        """Regenerate the active base cabinet using an updated shelf count only.
+
+        *shelf_count* must be a non-negative integer.  Delegates to
+        ``_update_active_base_cabinet_dimension`` which validates
+        integer fields.
+        """
+        return self._update_active_base_cabinet_dimension("shelf_count", shelf_count)
 
     def refresh_validation(self, source: Any = None):
         if source is None:

@@ -236,12 +236,13 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
 
     # ── Alpha-UI-4B.2 — Inspector binding to ActiveEngineeringState ──
 
-    def _make_specification(self, width=800.0, height=900.0, depth=600.0):
+    def _make_specification(self, width=800.0, height=900.0, depth=600.0, shelf_count=3):
         """Create a specification-like object without importing domain."""
         return types.SimpleNamespace(
             width_mm=width,
             height_mm=height,
             depth_mm=depth,
+            shelf_count=shelf_count,
         )
 
     def _make_engineering_state(self, spec, workspace_module=None):
@@ -730,10 +731,11 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
 
     # ── Alpha-UI-4B.3 — Live height and depth editing ──────────────
 
-    def _make_mock_result(self, width=800.0, height=900.0, depth=600.0):
+    def _make_mock_result(self, width=800.0, height=900.0, depth=600.0, shelf_count=3):
         """Create a mock engineering service result with a simple scene."""
         spec = types.SimpleNamespace(
             width_mm=width, height_mm=height, depth_mm=depth,
+            shelf_count=shelf_count,
         )
         scene = types.SimpleNamespace()
         cabinet = types.SimpleNamespace(scene_graph=scene)
@@ -960,6 +962,352 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         for module_name in forbidden_modules:
             self.assertNotIn(module_name, sys.modules,
                              f"Forbidden module imported via dimension edit path: {module_name}")
+
+    # ── Alpha-UI-5B — Live shelf count editing ────────────────────
+
+    def test_shelf_count_appears_in_inspector(self):
+        """shelf_count value must appear in the Inspector from specification."""
+        workspace_module, integration_module, _, read_models = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(shelf_count=4)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "base-cabinet",
+                "selection_type": "CABINET",
+                "display_name": "Base Cabinet",
+            }
+        )
+
+        config_labels = workspace.inspector_region.group_field_labels.get("Configuration", [])
+        config_texts = [getattr(lbl, "_text", "") or "" for lbl in config_labels]
+        self.assertTrue(
+            any("Shelf Count: 4" in t for t in config_texts),
+            f"Expected 'Shelf Count: 4' in Configuration fields, got: {config_texts}",
+        )
+
+    def test_shelf_count_field_is_editable(self):
+        """shelf_count must be marked editable=True in the inspector enrichment."""
+        workspace_module, _, adapters_mod, _ = self._import_modules()
+        spec = self._make_specification(shelf_count=4)
+
+        enriched = adapters_mod.enrich_inspector_source_with_specification(
+            {"selection_id": "cabinet-1"},
+            self._make_engineering_state(spec, workspace_module),
+        )
+
+        fields = enriched.get("fields", [])
+        shelf_fields = [f for f in fields if f.get("name") == "shelf_count"]
+        self.assertEqual(len(shelf_fields), 1, "Expected one shelf_count field")
+        self.assertTrue(shelf_fields[0].get("editable"), "shelf_count must be editable=True")
+        self.assertEqual(shelf_fields[0].get("group"), "Configuration",
+                         "shelf_count group must be Configuration")
+        self.assertEqual(shelf_fields[0].get("unit"), "",
+                         "shelf_count unit must be empty string")
+
+    def test_shelf_count_renders_as_editable_input(self):
+        """shelf_count must render as an input-capable control in the inspector."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_width = Mock(return_value=workspace.preview_read_model)
+        integration.update_active_base_cabinet_height = Mock(return_value=workspace.preview_read_model)
+        integration.update_active_base_cabinet_depth = Mock(return_value=workspace.preview_read_model)
+        integration.update_active_base_cabinet_shelf_count = Mock(return_value=workspace.preview_read_model)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0, shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        self.assertIn("shelf_count", workspace.inspector_region.editable_field_inputs)
+        self.assertEqual(
+            workspace.inspector_region.editable_field_inputs["shelf_count"].text(),
+            "3",
+        )
+
+    def test_shelf_count_commit_calls_update_method(self):
+        """Committing shelf_count from the inspector must call update method."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_shelf_count = Mock(
+            return_value=workspace.preview_read_model
+        )
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0, shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        editor = workspace.inspector_region.editable_field_inputs["shelf_count"]
+        editor.setText("5")
+        editor.editingFinished.emit()
+
+        integration.update_active_base_cabinet_shelf_count.assert_called_once_with(5)
+
+    def test_shelf_count_edit_calls_engineering_service(self):
+        """shelf_count edit must call engineering_application_service.execute."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(shelf_count=5)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0, shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_shelf_count(5)
+
+        eng_service.execute.assert_called_once()
+        call_args = eng_service.execute.call_args
+        self.assertIn("specification", call_args.kwargs)
+        executed_spec = call_args.kwargs["specification"]
+        self.assertEqual(executed_spec.shelf_count, 5)
+
+    def test_shelf_count_edit_preserves_dimensions(self):
+        """shelf_count edit must preserve width/height/depth."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(
+            width=800.0, height=900.0, depth=600.0, shelf_count=5,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0, shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_shelf_count(5)
+
+        call_args = eng_service.execute.call_args
+        executed_spec = call_args.kwargs["specification"]
+        self.assertEqual(executed_spec.width_mm, 800.0, "width_mm changed by shelf_count edit")
+        self.assertEqual(executed_spec.height_mm, 900.0, "height_mm changed by shelf_count edit")
+        self.assertEqual(executed_spec.depth_mm, 600.0, "depth_mm changed by shelf_count edit")
+        self.assertEqual(executed_spec.shelf_count, 5, "shelf_count not updated")
+
+    def test_invalid_shelf_count_rejected(self):
+        """Negative integer must be rejected for shelf_count."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        result = integration.update_active_base_cabinet_shelf_count(-1)
+
+        eng_service.execute.assert_not_called()
+        self.assertIs(result, workspace.preview_read_model)
+
+    def test_shelf_count_edit_does_not_mutate_original_specification(self):
+        """Original specification must not be mutated by shelf_count edit."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(shelf_count=5)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_shelf_count(5)
+
+        self.assertEqual(spec.shelf_count, 3, "Original specification shelf_count was mutated")
+
+    def test_stale_flags_set_on_shelf_count_edit(self):
+        """Manufacturing/cost/commercial must be stale after shelf_count edit."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(shelf_count=5)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.update_active_base_cabinet_shelf_count(5)
+
+        state = workspace.active_engineering_state
+        self.assertFalse(state.engineering_dirty, "engineering_dirty should be False")
+        self.assertTrue(state.manufacturing_stale, "manufacturing_stale should be True")
+        self.assertTrue(state.cost_stale, "cost_stale should be True")
+        self.assertTrue(state.commercial_stale, "commercial_stale should be True")
+
+    def test_preview_not_source_of_truth_for_shelf_count(self):
+        """PreviewReadModel must not be the source of truth for shelf_count."""
+        workspace_module, integration_module, _, read_models = self._import_modules()
+        eng_service = Mock()
+        eng_service.execute.return_value = self._make_mock_result(shelf_count=5)
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        bad_preview = read_models.PreviewReadModel(
+            preview_title="Stale",
+        )
+        workspace.set_preview_read_model(bad_preview)
+
+        integration.update_active_base_cabinet_shelf_count(5)
+
+        state_spec = workspace.active_engineering_state.specification
+        self.assertEqual(state_spec.shelf_count, 5,
+                         "Spec shelf_count should come from engineering result, not preview")
+
+    def test_non_editable_config_fields_remain_read_only(self):
+        """Non-editable fields (e.g. door_count) must remain passive.
+
+        Without specification enrichment, metadata-derived fields have
+        editable=False and must NOT appear as input controls.
+        """
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_shelf_count = Mock(
+            return_value=workspace.preview_read_model
+        )
+
+        # No active engineering state — metadata-only path has editable=False
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+                metadata={
+                    "width_mm": "800",
+                    "height_mm": "900",
+                    "depth_mm": "600",
+                    "shelf_count": "3",
+                    "door_count": "2",
+                },
+            )
+        )
+
+        editable_inputs = workspace.inspector_region.editable_field_inputs
+        # Without specification enrichment, no fields should be editable
+        # because metadata-derived fields have editable=False
+        self.assertEqual(
+            len(editable_inputs), 0,
+            f"No fields should be editable without specification enrichment, "
+            f"got: {list(editable_inputs.keys())}",
+        )
+        self.assertFalse(
+            integration.update_active_base_cabinet_shelf_count.called,
+        )
+
+    def test_shelf_count_is_editable_only_with_specification(self):
+        """shelf_count becomes editable only when specification enrichment is active."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_shelf_count = Mock(
+            return_value=workspace.preview_read_model
+        )
+
+        spec = self._make_specification(shelf_count=3)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        self.assertIn("shelf_count", workspace.inspector_region.editable_field_inputs)
+        self.assertEqual(
+            workspace.inspector_region.editable_field_inputs["shelf_count"].text(),
+            "3",
+        )
+
+    def test_no_forbidden_imports_in_shelf_count_path(self):
+        """No domain modules imported via shelf_count editing path."""
+        forbidden_modules = (
+            "domain.base_cabinet_engineering_entry",
+            "domain.base_cabinet_specification",
+            "manufacturing.factory_release_package",
+            "manufacturing.factory_decision_projection",
+            "manufacturing.manufacturing_production_package",
+            "commercial_outputs.commercial_package_report",
+            "cost_intelligence.quotation_document",
+        )
+        for module_name in forbidden_modules:
+            sys.modules.pop(module_name, None)
+
+        workspace_module, _, _, _ = self._import_modules()
+
+        for module_name in forbidden_modules:
+            self.assertNotIn(
+                module_name, sys.modules,
+                f"Forbidden module imported via shelf_count path: {module_name}",
+            )
 
 
 if __name__ == "__main__":
