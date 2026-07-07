@@ -442,10 +442,10 @@ class ConfiguratorV2ServiceIntegration:
         return preview
 
     _ALLOWED_EDITABLE_FIELDS = frozenset({
-        "width_mm", "height_mm", "depth_mm", "shelf_count",
+        "width_mm", "height_mm", "depth_mm", "shelf_count", "door_count",
     })
 
-    _INTEGER_FIELDS = frozenset({"shelf_count"})
+    _INTEGER_FIELDS = frozenset({"shelf_count", "door_count"})
 
     def _update_active_base_cabinet_dimension(self, field_name: str, value: float):
         """Regenerate the active base cabinet by updating a single editable field.
@@ -625,6 +625,15 @@ class ConfiguratorV2ServiceIntegration:
         integer fields.
         """
         return self._update_active_base_cabinet_dimension("shelf_count", shelf_count)
+
+    def update_active_base_cabinet_door_count(self, door_count: int):
+        """Regenerate the active base cabinet using an updated door count only.
+
+        *door_count* must be a non-negative integer.  Delegates to
+        ``_update_active_base_cabinet_dimension`` which validates
+        integer fields.
+        """
+        return self._update_active_base_cabinet_dimension("door_count", door_count)
 
     def refresh_validation(self, source: Any = None):
         if source is None:

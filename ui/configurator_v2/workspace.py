@@ -772,7 +772,7 @@ class InspectorRegion(_ShellFrame):
             group_rows.append(label)
             self.group_field_labels.setdefault(group_name, []).append(label)
             self.render_rows.append(f"{group_name} | {row_text}")
-            if field.editable and field.name in {"width_mm", "height_mm", "depth_mm", "shelf_count"}:
+            if field.editable and field.name in {"width_mm", "height_mm", "depth_mm", "shelf_count", "door_count"}:
                 editor_cls = getattr(QtWidgets, "QLineEdit", None)
                 if editor_cls is not None:
                     editor = editor_cls()
@@ -1059,7 +1059,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         if self.service_integration is None:
             return
         try:
-            if field_name == "shelf_count":
+            if field_name in ("shelf_count", "door_count"):
                 parsed_value = int(value)
             else:
                 parsed_value = float(value)
@@ -1073,6 +1073,8 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             self.service_integration.update_active_base_cabinet_depth(parsed_value)
         elif field_name == "shelf_count":
             self.service_integration.update_active_base_cabinet_shelf_count(parsed_value)
+        elif field_name == "door_count":
+            self.service_integration.update_active_base_cabinet_door_count(parsed_value)
 
     def set_project_tree_read_model(self, read_model: ProjectTreeReadModel):
         self.project_tree_read_model = read_model

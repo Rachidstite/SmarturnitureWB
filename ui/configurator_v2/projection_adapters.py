@@ -2400,9 +2400,9 @@ def _specification_dimension_fields(specification: Any) -> tuple[dict[str, Any],
     """Build inspector field dicts from an engineering specification.
 
     Returns field dicts for width_mm, height_mm, depth_mm (dimensions
-    with unit "mm") and shelf_count (integer count).  Each field uses
-    ``getattr`` with a safe default so any specification-like object
-    is accepted without domain imports.
+    with unit "mm"), shelf_count (integer count), and door_count
+    (integer count).  Each field uses ``getattr`` with a safe default
+    so any specification-like object is accepted without domain imports.
 
     Non-destructive — never mutates the specification.
     """
@@ -2440,6 +2440,15 @@ def _specification_dimension_fields(specification: Any) -> tuple[dict[str, Any],
             "name": "shelf_count",
             "label": "Shelf Count",
             "value": str(getattr(specification, "shelf_count", "")),
+            "unit": "",
+            "editable": True,
+            "source_reference": "ActiveEngineeringState.specification",
+            "group": "Configuration",
+        },
+        {
+            "name": "door_count",
+            "label": "Door Count",
+            "value": str(getattr(specification, "door_count", "")),
             "unit": "",
             "editable": True,
             "source_reference": "ActiveEngineeringState.specification",
