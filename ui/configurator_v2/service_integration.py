@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib
 from dataclasses import dataclass, field
 from typing import Any
@@ -26,6 +27,7 @@ from .projection_adapters import (
     build_validation_review_projection,
 )
 from .foi_presentation_adapter import build_foi_presentation_read_model
+from .engineering_state import ActiveEngineeringState
 from factory_dashboard import build_factory_dashboard_read_model
 from factory_dashboard import build_nesting_savings_dashboard_section
 from factory_operational_intelligence import (
@@ -312,6 +314,211 @@ class ConfiguratorV2ServiceIntegration:
             self.workspace.set_preview_read_model(read_model)
         return read_model
 
+    def create_base_cabinet(self):
+        """Create a base cabinet through the engineering application service.
+
+        This is a narrow UI orchestration path only:
+        service call -> engineering result -> existing preview projection.
+        No engineering logic, scene construction, or rendering is performed here.
+        """
+        service = getattr(self.service_bindings, "engineering_application_service", None)
+        if service is None:
+            self.push_message(
+                severity="UNSUPPORTED",
+                text="Engineering service integration not available yet",
+                category="Engineering integration",
+                source_reference="ConfiguratorV2ServiceIntegration.create_base_cabinet",
+            )
+            return build_preview_read_model(
+                {
+                    "preview_title": "Base Cabinet",
+                    "preview_state": "Unavailable",
+                    "viewport_message": "Engineering service integration not available yet",
+                    "available_representations": (),
+                    "warnings": (),
+                    "unsupported_reason": "Engineering service integration not available yet",
+                    "current_family": "Base Cabinet",
+                },
+                stale=False,
+            )
+
+        result = service.execute()
+        if not result:
+            error_text = "; ".join(tuple(getattr(result, "errors", ()) or ())) or (
+                "Engineering service failed"
+            )
+            self.push_message(
+                severity="WARNING",
+                text=error_text,
+                category="Engineering integration",
+                source_reference="ConfiguratorV2ServiceIntegration.create_base_cabinet",
+            )
+            return build_preview_read_model(
+                {
+                    "preview_title": "Base Cabinet",
+                    "preview_state": "Unavailable",
+                    "viewport_message": error_text,
+                    "available_representations": (),
+                    "warnings": (),
+                    "unsupported_reason": error_text,
+                    "current_family": "Base Cabinet",
+                },
+                stale=False,
+            )
+
+        payload = getattr(result, "data", None) or {}
+        cabinet = payload.get("cabinet") if isinstance(payload, dict) else None
+        specification = payload.get("specification") if isinstance(payload, dict) else None
+        metadata = payload.get("metadata") if isinstance(payload, dict) else {}
+        scene_graph = getattr(cabinet, "scene_graph", None) or getattr(cabinet, "graph", None)
+
+        self.workspace.active_engineering_state = ActiveEngineeringState(
+            family="Base Cabinet",
+            specification=specification,
+            cabinet=cabinet,
+            scene_graph=scene_graph,
+            metadata=dict(metadata) if isinstance(metadata, dict) else {},
+            engineering_dirty=False,
+            manufacturing_stale=True,
+            cost_stale=True,
+            commercial_stale=True,
+        )
+
+        self.workspace.set_project_context(
+            current_product_family="Base Cabinet",
+            current_product="Base Cabinet",
+            current_state=self.workspace.current_product_state,
+        )
+
+        preview_source = {
+            "scene_graph": scene_graph,
+            "preview_title": "Base Cabinet",
+            "current_family": "Base Cabinet",
+            "preview_state": "Ready" if scene_graph is not None else "Unavailable",
+            "viewport_message": "Base cabinet engineering model ready"
+            if scene_graph is not None
+            else "Engineering model did not produce a scene graph",
+            "available_representations": ("Customer View", "Design View")
+            if scene_graph is not None
+            else (),
+            "warnings": tuple(getattr(result, "diagnostics", ()) or ()),
+            "source_reference": "EngineeringApplicationService.execute",
+        }
+        if specification is not None:
+            preview_source["selection"] = {
+                "selection_type": "CABINET",
+                "selection_id": "base-cabinet",
+                "display_name": "Base Cabinet",
+                "metadata": {
+                    "width_mm": getattr(specification, "width_mm", ""),
+                    "height_mm": getattr(specification, "height_mm", ""),
+                    "depth_mm": getattr(specification, "depth_mm", ""),
+                    **(metadata if isinstance(metadata, dict) else {}),
+                },
+            }
+
+        preview = self.refresh_preview(preview_source)
+        self.push_message(
+            severity="INFO",
+            text="Base cabinet created",
+            category="Engineering integration",
+            source_reference="ConfiguratorV2ServiceIntegration.create_base_cabinet",
+        )
+        return preview
+
+    def update_active_base_cabinet_width(self, width_mm: float):
+        """Regenerate the active base cabinet using an updated width only."""
+        service = getattr(self.service_bindings, "engineering_application_service", None)
+        if service is None:
+            self.push_message(
+                severity="UNSUPPORTED",
+                text="Engineering service integration not available yet",
+                category="Engineering integration",
+                source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+            )
+            return self.workspace.preview_read_model
+
+        active_state = getattr(self.workspace, "active_engineering_state", None)
+        current_specification = getattr(active_state, "specification", None)
+        if current_specification is None:
+            self.push_message(
+                severity="WARNING",
+                text="No active engineering specification available",
+                category="Engineering integration",
+                source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+            )
+            return self.workspace.preview_read_model
+
+        next_specification = copy.copy(current_specification)
+        setattr(next_specification, "width_mm", width_mm)
+
+        result = service.execute(specification=next_specification)
+        if not result:
+            error_text = "; ".join(tuple(getattr(result, "errors", ()) or ())) or (
+                "Engineering service failed"
+            )
+            self.push_message(
+                severity="WARNING",
+                text=error_text,
+                category="Engineering integration",
+                source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+            )
+            return self.workspace.preview_read_model
+
+        payload = getattr(result, "data", None) or {}
+        cabinet = payload.get("cabinet") if isinstance(payload, dict) else None
+        specification = payload.get("specification") if isinstance(payload, dict) else None
+        metadata = payload.get("metadata") if isinstance(payload, dict) else {}
+        scene_graph = getattr(cabinet, "scene_graph", None) or getattr(cabinet, "graph", None)
+
+        self.workspace.active_engineering_state = ActiveEngineeringState(
+            family=getattr(active_state, "family", "") or "Base Cabinet",
+            specification=specification,
+            cabinet=cabinet,
+            scene_graph=scene_graph,
+            metadata=dict(metadata) if isinstance(metadata, dict) else {},
+            engineering_dirty=False,
+            manufacturing_stale=True,
+            cost_stale=True,
+            commercial_stale=True,
+        )
+
+        preview_source = {
+            "scene_graph": scene_graph,
+            "preview_title": getattr(self.workspace, "current_product", None) or "Base Cabinet",
+            "current_family": getattr(self.workspace, "current_product_family", None) or "Base Cabinet",
+            "preview_state": "Ready" if scene_graph is not None else "Unavailable",
+            "viewport_message": "Base cabinet engineering model ready"
+            if scene_graph is not None
+            else "Engineering model did not produce a scene graph",
+            "available_representations": ("Customer View", "Design View")
+            if scene_graph is not None
+            else (),
+            "warnings": tuple(getattr(result, "diagnostics", ()) or ()),
+            "source_reference": "EngineeringApplicationService.execute",
+        }
+        if specification is not None:
+            preview_source["selection"] = {
+                "selection_type": "CABINET",
+                "selection_id": "base-cabinet",
+                "display_name": "Base Cabinet",
+                "metadata": {
+                    "width_mm": getattr(specification, "width_mm", ""),
+                    "height_mm": getattr(specification, "height_mm", ""),
+                    "depth_mm": getattr(specification, "depth_mm", ""),
+                    **(metadata if isinstance(metadata, dict) else {}),
+                },
+            }
+
+        preview = self.refresh_preview(preview_source)
+        self.push_message(
+            severity="INFO",
+            text="Base cabinet width updated",
+            category="Engineering integration",
+            source_reference="ConfiguratorV2ServiceIntegration.update_active_base_cabinet_width",
+        )
+        return preview
+
     def refresh_validation(self, source: Any = None):
         if source is None:
             return self._refresh_review_panels(
@@ -381,10 +588,11 @@ class ConfiguratorV2ServiceIntegration:
         def _merge(panel):
             if panel.panel_name != "Manufacturing":
                 return panel
-            sections = panel.sections + (render_section,)
+            sections = list(panel.sections)
+            sections.append(render_section)
             return ReviewPanelReadModel(
                 panel_name=panel.panel_name,
-                sections=sections,
+                sections=tuple(sections),
                 stale=panel.stale,
                 available=panel.available,
             )
