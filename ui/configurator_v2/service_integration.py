@@ -25,6 +25,7 @@ from .projection_adapters import (
     build_release_review_projection,
     build_review_panel_read_models,
     build_validation_review_projection,
+    enrich_inspector_source_with_specification,
 )
 from .foi_presentation_adapter import build_foi_presentation_read_model
 from .engineering_state import ActiveEngineeringState
@@ -216,6 +217,11 @@ class ConfiguratorV2ServiceIntegration:
                 source_reference="ConfiguratorV2ServiceIntegration.refresh_inspector",
             )
             return read_model
+
+        # Enrich with ActiveEngineeringState specification if available
+        active_state = getattr(self.workspace, "active_engineering_state", None)
+        if active_state is not None and getattr(active_state, "specification", None) is not None:
+            source = enrich_inspector_source_with_specification(source, active_state)
 
         read_model = build_inspector_read_model(source)
         if read_model.unsupported:

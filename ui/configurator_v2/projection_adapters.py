@@ -2392,6 +2392,87 @@ def build_manufacturing_render_review_section(
     )
 
 
+# ── Specification-to-Inspector enrichment ──────────────────────────
+
+
+def _specification_dimension_fields(specification: Any) -> tuple[dict[str, Any], ...]:
+    """Build inspector field dicts from an engineering specification.
+
+    Each field dict is a projection of the specification's width_mm,
+    height_mm, and depth_mm attributes suitable for passing into
+    ``build_inspector_read_model`` via the ``fields`` key.  Returns
+    empty tuple when *specification* is None.
+
+    Non-destructive — never mutates the specification.
+    """
+    if specification is None:
+        return ()
+    return (
+        {
+            "name": "width_mm",
+            "label": "Width",
+            "value": str(getattr(specification, "width_mm", "")),
+            "unit": "mm",
+            "editable": True,
+            "source_reference": "ActiveEngineeringState.specification",
+            "group": "Geometry",
+        },
+        {
+            "name": "height_mm",
+            "label": "Height",
+            "value": str(getattr(specification, "height_mm", "")),
+            "unit": "mm",
+            "editable": True,
+            "source_reference": "ActiveEngineeringState.specification",
+            "group": "Geometry",
+        },
+        {
+            "name": "depth_mm",
+            "label": "Depth",
+            "value": str(getattr(specification, "depth_mm", "")),
+            "unit": "mm",
+            "editable": True,
+            "source_reference": "ActiveEngineeringState.specification",
+            "group": "Geometry",
+        },
+    )
+
+
+def enrich_inspector_source_with_specification(
+    source: Any,
+    engineering_state: Any,
+) -> dict[str, Any]:
+    """Enrich an inspector source dict with specification dimension fields.
+
+    Returns a new dict based on *source* (converted to a flat dict via
+    ``_as_dict``) with ``width_mm``, ``height_mm``, ``depth_mm`` field
+    entries prepended to the ``fields`` list under the ``Geometry`` group.
+
+    Existing fields from the original source are preserved.
+    When *engineering_state* is None or carries no specification, the
+    source is returned as a plain dict with no enrichment.
+
+    Never mutates *source*, *engineering_state*, or the specification.
+    """
+    if engineering_state is None:
+        return _as_dict(source) if not isinstance(source, Mapping) else dict(source)
+
+    specification = getattr(engineering_state, "specification", None)
+    if specification is None:
+        return _as_dict(source) if not isinstance(source, Mapping) else dict(source)
+
+    enriched = _as_dict(source) if not isinstance(source, Mapping) else dict(source)
+
+    spec_fields = _specification_dimension_fields(specification)
+    existing_fields = enriched.get("fields", ())
+    if isinstance(existing_fields, (tuple, list)) and existing_fields:
+        enriched["fields"] = list(spec_fields) + list(existing_fields)
+    else:
+        enriched["fields"] = list(spec_fields)
+
+    return enriched
+
+
 __all__ = [
     "build_project_tree_read_model",
     "build_inspector_read_model",
@@ -2404,4 +2485,5 @@ __all__ = [
     "build_cost_review_projection",
     "build_commercial_review_projection",
     "build_release_review_projection",
+    "enrich_inspector_source_with_specification",
 ]

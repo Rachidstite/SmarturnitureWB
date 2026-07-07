@@ -220,6 +220,341 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         for module_name in forbidden_modules:
             self.assertNotIn(module_name, sys.modules)
 
+    # ── Alpha-UI-4B.2 — Inspector binding to ActiveEngineeringState ──
+
+    def _make_specification(self, width=800.0, height=900.0, depth=600.0):
+        """Create a specification-like object without importing domain."""
+        return types.SimpleNamespace(
+            width_mm=width,
+            height_mm=height,
+            depth_mm=depth,
+        )
+
+    def _make_engineering_state(self, spec, workspace_module=None):
+        """Create an ActiveEngineeringState without importing domain.
+
+        Uses the provided workspace module if given (avoids re-import
+        outside the Qt mock context). Falls back to importing fresh
+        when no module is provided.
+        """
+        if workspace_module is not None:
+            eng_state_cls = workspace_module.ActiveEngineeringState
+        else:
+            eng_state_cls = importlib.import_module(
+                "ui.configurator_v2.workspace"
+            ).ActiveEngineeringState
+        return eng_state_cls(
+            family="Base Cabinet",
+            specification=spec,
+            cabinet=None,
+            scene_graph=None,
+        )
+
+    def test_inspector_reads_width_mm_from_specification(self):
+        workspace_module, integration_module, adapters, read_models = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "base-cabinet",
+                "selection_type": "CABINET",
+                "display_name": "Base Cabinet",
+                "source_reference": "EngineeringIntegration",
+            }
+        )
+
+        geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
+        geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
+        width_rows = [t for t in geometry_texts if "Width" in t]
+        self.assertTrue(
+            any("800" in t and "mm" in t for t in width_rows),
+            f"Expected Width: 800 mm in Geometry fields, got: {geometry_texts}",
+        )
+
+    def test_inspector_reads_height_mm_from_specification(self):
+        workspace_module, integration_module, adapters, read_models = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(height=900.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "base-cabinet",
+                "selection_type": "CABINET",
+                "display_name": "Base Cabinet",
+                "source_reference": "EngineeringIntegration",
+            }
+        )
+
+        geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
+        geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
+        height_rows = [t for t in geometry_texts if "Height" in t]
+        self.assertTrue(
+            any("900" in t and "mm" in t for t in height_rows),
+            f"Expected Height: 900 mm in Geometry fields, got: {geometry_texts}",
+        )
+
+    def test_inspector_reads_depth_mm_from_specification(self):
+        workspace_module, integration_module, adapters, read_models = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "base-cabinet",
+                "selection_type": "CABINET",
+                "display_name": "Base Cabinet",
+                "source_reference": "EngineeringIntegration",
+            }
+        )
+
+        geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
+        geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
+        depth_rows = [t for t in geometry_texts if "Depth" in t]
+        self.assertTrue(
+            any("600" in t and "mm" in t for t in depth_rows),
+            f"Expected Depth: 600 mm in Geometry fields, got: {geometry_texts}",
+        )
+
+    def test_inspector_not_from_preview_read_model(self):
+        """Inspector must NOT read dimensions from PreviewReadModel."""
+        workspace_module, integration_module, adapters, read_models = self._import_modules()
+        workspace = workspace_module.create_configurator_v2_workspace()
+        preview_rm = read_models.PreviewReadModel(
+            preview_title="Test Cabinet",
+            preview_state="Ready",
+            scene_available=True,
+            node_count=10,
+            scene_bounds="800 x 900 x 600",
+        )
+        workspace.set_preview_read_model(preview_rm)
+        workspace.set_inspector_read_model(
+            read_models.InspectorReadModel(
+                selection_id="cabinet-1",
+                selection_type="CABINET",
+                display_name="Cabinet",
+            )
+        )
+
+        geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
+        render_rows = workspace.inspector_region.render_rows
+
+        self.assertFalse(
+            any("Width" in r for r in render_rows),
+            f"Inspector should not show Width from PreviewReadModel, got: {render_rows}",
+        )
+        self.assertFalse(
+            any("Height" in r for r in render_rows),
+            "Inspector should not show Height from PreviewReadModel",
+        )
+        self.assertFalse(
+            any("Depth" in r for r in render_rows),
+            "Inspector should not show Depth from PreviewReadModel",
+        )
+
+    def test_inspector_preserves_existing_fields_when_enriched(self):
+        """Specification enrichment must preserve existing fields and sections."""
+        workspace_module, integration_module, adapters, read_models = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "cabinet-1",
+                "selection_type": "CABINET",
+                "display_name": "Cabinet",
+                "source_reference": "ProjectTreeRegion",
+                "fields": [
+                    {"name": "family", "label": "Family", "value": "Base Cabinet", "group": "Identity"},
+                    {"name": "material", "label": "Material", "value": "Birch Plywood", "group": "Materials"},
+                ],
+                "warnings": ["Check door hinge"],
+                "stale": False,
+            }
+        )
+
+        render_rows = workspace.inspector_region.render_rows
+        identity_labels = workspace.inspector_region.group_field_labels.get("Identity", [])
+        identity_texts = [getattr(lbl, "_text", "") or "" for lbl in identity_labels]
+        materials_labels = workspace.inspector_region.group_field_labels.get("Materials", [])
+        materials_texts = [getattr(lbl, "_text", "") or "" for lbl in materials_labels]
+
+        # Original fields preserved
+        self.assertTrue(
+            any("Family: Base Cabinet" in t for t in identity_texts),
+            f"Existing Identity fields lost, got: {identity_texts}",
+        )
+        self.assertTrue(
+            any("Material: Birch Plywood" in t for t in materials_texts),
+            f"Existing Materials fields lost, got: {materials_texts}",
+        )
+        # Specification fields present
+        geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
+        geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
+        self.assertTrue(
+            any("Width: 800" in t for t in geometry_texts),
+            f"Specification Width field missing, got: {geometry_texts}",
+        )
+        self.assertTrue(
+            any("Height: 900" in t for t in geometry_texts),
+            "Specification Height field missing",
+        )
+        self.assertTrue(
+            any("Depth: 600" in t for t in geometry_texts),
+            "Specification Depth field missing",
+        )
+        # Warnings preserved
+        self.assertTrue(
+            any("Warnings: Check door hinge" in r for r in render_rows),
+            "Existing warnings lost",
+        )
+
+    def test_specification_fields_are_editable(self):
+        """Specification dimension fields must be marked editable=True."""
+        workspace_module, _, adapters_mod, _ = self._import_modules()
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+
+        enriched = adapters_mod.enrich_inspector_source_with_specification(
+            {"selection_id": "cabinet-1"},
+            self._make_engineering_state(spec, workspace_module),
+        )
+
+        fields = enriched.get("fields", [])
+        width_fields = [f for f in fields if f.get("name") == "width_mm"]
+        height_fields = [f for f in fields if f.get("name") == "height_mm"]
+        depth_fields = [f for f in fields if f.get("name") == "depth_mm"]
+
+        self.assertEqual(len(width_fields), 1, "Expected one width_mm field")
+        self.assertEqual(len(height_fields), 1, "Expected one height_mm field")
+        self.assertEqual(len(depth_fields), 1, "Expected one depth_mm field")
+
+        self.assertTrue(width_fields[0].get("editable"), "width_mm must be editable=True")
+        self.assertTrue(height_fields[0].get("editable"), "height_mm must be editable=True")
+        self.assertTrue(depth_fields[0].get("editable"), "depth_mm must be editable=True")
+        self.assertEqual(width_fields[0].get("unit"), "mm", "width_mm unit must be mm")
+        self.assertEqual(height_fields[0].get("unit"), "mm", "height_mm unit must be mm")
+        self.assertEqual(depth_fields[0].get("unit"), "mm", "depth_mm unit must be mm")
+
+    def test_no_forbidden_imports_in_specification_enrichment_path(self):
+        """Domain modules must not be imported via the specification enrichment path."""
+        forbidden_modules = (
+            "domain.base_cabinet_engineering_entry",
+            "domain.base_cabinet_specification",
+            "manufacturing.factory_release_package",
+            "manufacturing.factory_decision_projection",
+            "manufacturing.manufacturing_production_package",
+            "commercial_outputs.commercial_package_report",
+            "cost_intelligence.quotation_document",
+        )
+        for module_name in forbidden_modules:
+            sys.modules.pop(module_name, None)
+
+        workspace_module, _, adapters_mod, _ = self._import_modules()
+
+        spec = self._make_specification(width=800.0)
+        eng_state = self._make_engineering_state(spec, workspace_module)
+
+        # Call the enrichment function directly
+        result = adapters_mod.enrich_inspector_source_with_specification(
+            {"selection_id": "cabinet-1"},
+            eng_state,
+        )
+
+        self.assertIsNotNone(result)
+        self.assertIn("fields", result)
+
+        for module_name in forbidden_modules:
+            self.assertNotIn(
+                module_name,
+                sys.modules,
+                f"Forbidden module imported: {module_name}",
+            )
+
+    def test_specification_not_mutated_by_enrichment(self):
+        """The specification must not be mutated by the enrichment path."""
+        workspace_module, _, adapters_mod, _ = self._import_modules()
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        eng_state = self._make_engineering_state(spec, workspace_module)
+
+        expected_width = spec.width_mm
+        expected_height = spec.height_mm
+        expected_depth = spec.depth_mm
+
+        adapters_mod.enrich_inspector_source_with_specification(
+            {"selection_id": "cabinet-1"},
+            eng_state,
+        )
+
+        self.assertEqual(spec.width_mm, expected_width, "width_mm was mutated")
+        self.assertEqual(spec.height_mm, expected_height, "height_mm was mutated")
+        self.assertEqual(spec.depth_mm, expected_depth, "depth_mm was mutated")
+
+    def test_no_active_state_returns_empty_inspector(self):
+        """When no active engineering state exists, inspector must remain empty."""
+        workspace_module, integration_module, adapters, read_models = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        # No active_engineering_state set — default is empty ActiveEngineeringState with no spec
+        workspace.active_engineering_state = workspace_module.ActiveEngineeringState()
+
+        result = integration.refresh_inspector(
+            {
+                "selection_id": "cabinet-1",
+                "selection_type": "CABINET",
+                "display_name": "Cabinet",
+            }
+        )
+
+        geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
+        geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
+        self.assertFalse(
+            any("Width" in t for t in geometry_texts),
+            "No Width should appear without specification",
+        )
+        self.assertFalse(
+            any("Height" in t for t in geometry_texts),
+            "No Height should appear without specification",
+        )
+        self.assertEqual(result.selection_id, "cabinet-1")
+
 
 if __name__ == "__main__":
     unittest.main()

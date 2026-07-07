@@ -18,7 +18,7 @@ from .read_models import (
     empty_project_tree_read_model,
     empty_review_panel_read_models,
 )
-from .projection_adapters import build_inspector_read_model, build_preview_read_model
+from .projection_adapters import build_inspector_read_model, build_preview_read_model, enrich_inspector_source_with_specification
 from .furniture_visual_styles import (
     FurnitureVisualStyle,
     apply_furniture_visual_styles,
@@ -993,7 +993,12 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
     def set_selection(self, selection: ConfiguratorSelection | None):
         selection = selection or ConfiguratorSelection()
         self.current_selection = selection
-        self.set_inspector_read_model(build_inspector_read_model(selection))
+        source = selection
+        # Enrich with ActiveEngineeringState specification if available
+        active_state = getattr(self, "active_engineering_state", None)
+        if active_state is not None and getattr(active_state, "specification", None) is not None:
+            source = enrich_inspector_source_with_specification(source, active_state)
+        self.set_inspector_read_model(build_inspector_read_model(source))
         self.set_preview_read_model(
             build_preview_read_model(
                 {
