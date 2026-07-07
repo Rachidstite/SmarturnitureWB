@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.qt_compat import QtWidgets
+from .engineering_state import ActiveEngineeringState
 from .read_models import (
     InspectorFieldReadModel,
     InspectorReadModel,
@@ -908,6 +909,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.current_product_state = "Draft"
         self.current_selection = ConfiguratorSelection()
         self.service_integration = None
+        self.active_engineering_state = ActiveEngineeringState()
         self.project_tree_read_model = empty_project_tree_read_model()
         self.inspector_read_model = empty_inspector_read_model()
         self.preview_read_model = empty_preview_read_model()
