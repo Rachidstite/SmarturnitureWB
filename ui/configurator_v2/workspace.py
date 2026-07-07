@@ -169,6 +169,10 @@ class ConfiguratorV2ServiceBindings:
     project_application_service: Any | None = None
     engineering_application_service: Any | None = None
     manufacturing_application_service: Any | None = None
+    manufacturing_runtime_pipeline_builder: Any | None = None
+    manufacturing_production_package_builder: Any | None = None
+    manufacturing_cost_pipeline_builder: Any | None = None
+    manufacturing_commercial_pipeline_builder: Any | None = None
 
 
 def _frame_layout(widget):
@@ -919,6 +923,9 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self._foi_blocking: Any = None
         self._foi_recommendations: Any = None
         self._foi_decision: Any = None
+        self._manufacturing_production_package: Any = None
+        self._manufacturing_cost_summary: Any = None
+        self._manufacturing_commercial_result: Any = None
         self.factory_dashboard_read_model: FactoryDashboardReadModel | None = None
 
         root_layout = QtWidgets.QVBoxLayout(self)
@@ -1159,6 +1166,15 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
     ):
         from factory_dashboard import FactoryDashboardReadModel as _DashModel
         self.factory_dashboard_read_model = read_model or _DashModel()
+
+    def set_manufacturing_result(self, production_package: Any = None):
+        self._manufacturing_production_package = production_package
+
+    def set_cost_result(self, cost_summary: Any = None):
+        self._manufacturing_cost_summary = cost_summary
+
+    def set_commercial_result(self, commercial_result: Any = None):
+        self._manufacturing_commercial_result = commercial_result
 
 
 def create_configurator_v2_workspace(

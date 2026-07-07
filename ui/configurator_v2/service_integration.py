@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -50,6 +51,24 @@ class ConfiguratorV2ServiceIntegration:
 
     def __post_init__(self):
         self.service_bindings = self.service_bindings or ConfiguratorV2ServiceBindings()
+
+    @staticmethod
+    def _load_attr(package_name: str, module_name: str, attr_name: str) -> Any:
+        module = importlib.import_module(".".join((package_name, module_name)))
+        return getattr(module, attr_name)
+
+    def _resolve_builder_class(
+        self,
+        binding_name: str,
+        *,
+        package_name: str,
+        module_name: str,
+        class_name: str,
+    ) -> Any:
+        injected = getattr(self.service_bindings, binding_name, None)
+        if injected is not None:
+            return injected
+        return self._load_attr(package_name, module_name, class_name)
 
     def push_message(
         self,
@@ -336,10 +355,10 @@ class ConfiguratorV2ServiceIntegration:
     ):
         """Add rendering metadata section to the existing Manufacturing panel.
 
-        Accepts an iterable of viewport command dicts (SceneRenderer
-        output).  Calls ``build_manufacturing_render_review_section``
-        to extract a ``\"Rendering Details\"`` section, then appends it
-        to the existing Manufacturing review panel.
+        Accepts an iterable of viewport command dicts. Calls
+        ``build_manufacturing_render_review_section`` to extract a
+        ``\"Rendering Details\"`` section, then appends it to the
+        existing Manufacturing review panel.
 
         When *commands* is None or empty, the existing Manufacturing
         panel is returned unchanged.  When no Manufacturing panel
@@ -492,15 +511,15 @@ class ConfiguratorV2ServiceIntegration:
         Returns FactoryDashboardReadModel (or empty read model when no FOI
         data is available).
         """
-        from factory_dashboard import FactoryDashboardReadModel as _DashModel
-
         readiness = getattr(self.workspace, "_foi_readiness", None)
         blocking = getattr(self.workspace, "_foi_blocking", None)
         recommendations = getattr(self.workspace, "_foi_recommendations", None)
         decision = getattr(self.workspace, "_foi_decision", None)
 
         if not any(x is not None for x in (readiness, blocking, recommendations, decision)):
-            empty = _DashModel()
+            empty = self.workspace.factory_dashboard_read_model.__class__() if getattr(
+                self.workspace, "factory_dashboard_read_model", None
+            ) is not None else build_factory_dashboard_read_model()
             self.workspace.set_factory_dashboard_read_model(empty)
             return empty
 
@@ -535,13 +554,321 @@ class ConfiguratorV2ServiceIntegration:
         self.workspace.set_review_panel_read_models(read_models)
         return read_models
 
+    def generate_manufacturing(self, source: Any = None) -> str:
+        """Generate manufacturing from an Engineering scene graph.
+
+        Calls ``ManufacturingRuntimePipelineBuilder`` to produce a
+        manufacturing package, then refreshes the Manufacturing review
+        panel with operation data.
+
+        Returns a status string: "ok", "no_source", or "failed".
+        """
+        if source is None:
+            self.push_message(
+                severity="INFO",
+                text="Manufacturing generation requires an Engineering scene graph",
+                category="Manufacturing integration",
+                source_reference="ConfiguratorV2ServiceIntegration.generate_manufacturing",
+            )
+            return "no_source"
+
+        try:
+            runtime_builder = self._resolve_builder_class(
+                "manufacturing_runtime_pipeline_builder",
+                package_name="manufacturing",
+                module_name="manufacturing_runtime_pipeline_builder",
+                class_name="ManufacturingRuntimePipelineBuilder",
+            )
+            package_builder = self._resolve_builder_class(
+                "manufacturing_production_package_builder",
+                package_name="manufacturing",
+                module_name="manufacturing_production_package_builder",
+                class_name="ManufacturingProductionPackageBuilder",
+            )
+
+            runtime_result = runtime_builder().build(source)
+            production_package = package_builder().build(
+                runtime_result.manufacturing_package
+            )
+            self.workspace.set_manufacturing_result(production_package)
+
+            # Refresh Manufacturing review panel
+            self.workspace.set_review_panel_read_models(
+                self._merge_review_panel(
+                    "Manufacturing",
+                    build_manufacturing_review_projection(
+                        self._manufacturing_operations(production_package)
+                    ),
+                )
+            )
+
+            self.push_message(
+                severity="INFO",
+                text="Manufacturing generated successfully",
+                category="Manufacturing integration",
+                source_reference="ConfiguratorV2ServiceIntegration.generate_manufacturing",
+            )
+            return "ok"
+        except Exception as exc:
+            self.push_message(
+                severity="WARNING",
+                text=f"Manufacturing generation failed: {exc}",
+                category="Manufacturing integration",
+                source_reference="ConfiguratorV2ServiceIntegration.generate_manufacturing",
+            )
+            return "failed"
+
+    def review_cost(self) -> str:
+        """Review cost from stored production package.
+
+        Calls ``ManufacturingCostPipelineBuilder`` with the stored
+        production package, then refreshes the Cost review panel.
+
+        Returns a status string: "ok", "no_manufacturing", or "failed".
+        """
+        production_package = getattr(
+            self.workspace, "_manufacturing_production_package", None
+        )
+        if production_package is None:
+            self.push_message(
+                severity="INFO",
+                text="Cost review requires manufacturing to be generated first",
+                category="Cost integration",
+                source_reference="ConfiguratorV2ServiceIntegration.review_cost",
+            )
+            return "no_manufacturing"
+
+        try:
+            cost_builder = self._resolve_builder_class(
+                "manufacturing_cost_pipeline_builder",
+                package_name="cost_intelligence",
+                module_name="manufacturing_cost_pipeline_builder",
+                class_name="ManufacturingCostPipelineBuilder",
+            )
+
+            cost_summary = cost_builder().build(production_package)
+            self.workspace.set_cost_result(cost_summary)
+
+            cost_items = self._cost_items_from_summary(cost_summary)
+            self.workspace.set_review_panel_read_models(
+                self._merge_review_panel(
+                    "Cost",
+                    build_cost_review_projection({"cost_items": cost_items}),
+                )
+            )
+
+            self.push_message(
+                severity="INFO",
+                text="Cost review completed",
+                category="Cost integration",
+                source_reference="ConfiguratorV2ServiceIntegration.review_cost",
+            )
+            return "ok"
+        except Exception as exc:
+            self.push_message(
+                severity="WARNING",
+                text=f"Cost review failed: {exc}",
+                category="Cost integration",
+                source_reference="ConfiguratorV2ServiceIntegration.review_cost",
+            )
+            return "failed"
+
+    def review_commercial(self, *, markup_rate: float = 0.0, currency: str = "MAD") -> str:
+        """Review commercial from stored cost summary.
+
+        Calls ``ManufacturingCommercialPipelineBuilder`` with the stored
+        cost summary, then refreshes the Commercial review panel.
+
+        Returns a status string: "ok", "no_cost", or "failed".
+        """
+        cost_summary = getattr(
+            self.workspace, "_manufacturing_cost_summary", None
+        )
+        if cost_summary is None:
+            self.push_message(
+                severity="INFO",
+                text="Commercial review requires cost review first",
+                category="Commercial integration",
+                source_reference="ConfiguratorV2ServiceIntegration.review_commercial",
+            )
+            return "no_cost"
+
+        try:
+            commercial_builder = self._resolve_builder_class(
+                "manufacturing_commercial_pipeline_builder",
+                package_name="cost_intelligence",
+                module_name="manufacturing_commercial_pipeline_builder",
+                class_name="ManufacturingCommercialPipelineBuilder",
+            )
+            production_package = getattr(
+                self.workspace, "_manufacturing_production_package", None
+            )
+            commercial_result = commercial_builder().build(
+                production_package,
+                markup_rate,
+                currency,
+                manufacturing_cost_summary=cost_summary,
+            )
+            self.workspace.set_commercial_result(commercial_result)
+
+            commercial_items = self._commercial_items_from_result(commercial_result)
+            self.workspace.set_review_panel_read_models(
+                self._merge_review_panel(
+                    "Commercial",
+                    build_commercial_review_projection(
+                        {"commercial_items": commercial_items}
+                    ),
+                )
+            )
+
+            self.push_message(
+                severity="INFO",
+                text="Commercial review completed",
+                category="Commercial integration",
+                source_reference="ConfiguratorV2ServiceIntegration.review_commercial",
+            )
+            return "ok"
+        except Exception as exc:
+            self.push_message(
+                severity="WARNING",
+                text=f"Commercial review failed: {exc}",
+                category="Commercial integration",
+                source_reference="ConfiguratorV2ServiceIntegration.review_commercial",
+            )
+            return "failed"
+
+    # ── internal helpers ───────────────────────────────────────────
+
+    def _merge_review_panel(
+        self, panel_name: str, panel: Any
+    ) -> tuple[ReviewPanelReadModel, ...]:
+        from .read_models import ReviewPanelReadModel as _RPM
+
+        existing = tuple(self.workspace.review_panel_read_models or ())
+        names = self.workspace.review_panel_names
+        return tuple(
+            panel if name == panel_name
+            else existing[i] if i < len(existing)
+            else _RPM(panel_name=name)
+            for i, name in enumerate(names)
+        )
+
+    @staticmethod
+    def _manufacturing_operations(production_package: Any) -> list[dict[str, str]]:
+        operations = []
+        reports = [
+            getattr(production_package, attr, None)
+            for attr in (
+                "cutlist_report", "edge_report", "machining_report",
+                "cnc_report", "assembly_report", "hardware_report",
+            )
+        ]
+        for report in reports:
+            if report is None:
+                continue
+            items = getattr(report, "items", None) or getattr(report, "operations", None) or ()
+            report_name = getattr(report, "__class__", type(report)).__name__
+            count = len(items) if hasattr(items, "__len__") else 0
+            operations.append({
+                "operation_label": report_name.replace("Report", ""),
+                "operation_status": "PASS" if count > 0 else "INFO",
+                "operation_message": f"{count} item(s)",
+            })
+        return operations
+
+    @staticmethod
+    def _cost_items_from_summary(cost_summary: Any) -> list[dict[str, str]]:
+        cost = getattr(cost_summary, "cost_report", None) or cost_summary
+        items = []
+        _fields = [
+            ("material_cost", "Material", "Material"),
+            ("sheet_cost", "Material", "Sheet Cost"),
+            ("waste_cost", "Waste", "Waste"),
+            ("edge_banding_cost", "Material", "Edge Banding"),
+            ("drilling_cost", "Material", "Machining"),
+            ("hardware_cost", "Hardware", "Hardware"),
+            ("complexity_cost", "Material", "Complexity"),
+            ("panel_handling_cost", "Material", "Panel Handling"),
+            ("cnc_labor_cost", "Labor", "CNC Labor"),
+            ("drilling_labor_cost", "Labor", "Drilling Labor"),
+            ("edge_banding_labor_cost", "Labor", "Edge Banding Labor"),
+            ("assembly_labor_cost", "Labor", "Assembly Labor"),
+            ("total_labor_cost", "Labor", "Total Labor"),
+            ("overhead_cost", "Other", "Overhead"),
+            ("recovered_value", "Other", "Recovered Value"),
+            ("net_material_cost", "Material", "Net Material"),
+        ]
+        for field, category, label in _fields:
+            raw = float(getattr(cost, field, 0.0) or 0.0)
+            if raw:
+                items.append({
+                    "item_label": label,
+                    "item_category": category,
+                    "item_amount": f"{raw:.2f}",
+                })
+        total = float(getattr(cost, "total_manufacturing_cost", 0.0) or 0.0)
+        items.append({
+            "item_label": "Total Manufacturing Cost",
+            "item_category": "Totals",
+            "item_amount": f"{total:.2f}",
+        })
+        return items
+
+    @staticmethod
+    def _commercial_items_from_result(commercial_result: Any) -> list[dict[str, str]]:
+        items = []
+        summary = getattr(commercial_result, "manufacturing_cost_summary", None)
+        if summary is not None:
+            total = float(
+                getattr(summary, "total_manufacturing_cost", 0.0) or 0.0
+            )
+            items.append({
+                "item_label": "Production Cost",
+                "item_category": "Pricing",
+                "item_value": f"{total:.2f}",
+            })
+        quotation = getattr(commercial_result, "quotation_report", None)
+        if quotation is not None:
+            for label, field in (
+                ("Production Cost", "production_cost"),
+                ("Markup Rate", "markup_rate"),
+                ("Markup Amount", "markup_amount"),
+                ("Selling Price", "selling_price"),
+            ):
+                raw = float(getattr(quotation, field, 0.0) or 0.0)
+                items.append({
+                    "item_label": label,
+                    "item_category": "Pricing" if label in ("Production Cost", "Markup Rate") else "Summary",
+                    "item_value": f"{raw:.2f}" if field != "markup_rate" else f"{raw:.0%}",
+                })
+            items.append({
+                "item_label": "Currency",
+                "item_category": "Summary",
+                "item_value": str(getattr(quotation, "currency", "MAD")),
+            })
+        profitability = getattr(commercial_result, "profitability_report", None)
+        if profitability is not None:
+            for label, field in (
+                ("Gross Profit", "gross_profit"),
+                ("Gross Margin Rate", "gross_margin_rate"),
+                ("Status", "profitability_status"),
+            ):
+                raw = getattr(profitability, field, None)
+                if raw is not None:
+                    items.append({
+                        "item_label": label,
+                        "item_category": "Summary",
+                        "item_value": f"{raw:.2%}" if field == "gross_margin_rate" else str(raw),
+                    })
+        return items
+
 
 @dataclass(frozen=True)
 class EngineeringProjectionResult:
     """Read-only result of projecting Engineering source through the adapter pipeline.
 
     All fields are CV2-native frozen dataclasses — no Engineering types,
-    no domain types, no FreeCAD objects.
+    no domain types, and no backend geometry objects.
 
     The ``visual_components`` and ``interactive_components`` fields are
     mutually exclusive: interactive_components is populated when any
