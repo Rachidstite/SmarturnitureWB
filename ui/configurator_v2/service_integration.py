@@ -427,6 +427,8 @@ class ConfiguratorV2ServiceIntegration:
                     "width_mm": getattr(specification, "width_mm", ""),
                     "height_mm": getattr(specification, "height_mm", ""),
                     "depth_mm": getattr(specification, "depth_mm", ""),
+                    "shelf_count": getattr(specification, "shelf_count", ""),
+                    "door_count": getattr(specification, "door_count", ""),
                     **(metadata if isinstance(metadata, dict) else {}),
                 },
             }
@@ -578,6 +580,8 @@ class ConfiguratorV2ServiceIntegration:
                     "width_mm": getattr(specification, "width_mm", ""),
                     "height_mm": getattr(specification, "height_mm", ""),
                     "depth_mm": getattr(specification, "depth_mm", ""),
+                    "shelf_count": getattr(specification, "shelf_count", ""),
+                    "door_count": getattr(specification, "door_count", ""),
                     **(metadata if isinstance(metadata, dict) else {}),
                 },
         }

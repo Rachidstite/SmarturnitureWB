@@ -573,6 +573,163 @@ class TestConfiguratorV2PreviewIntegrationContract(unittest.TestCase):
         self.assertEqual(first_bounds, second_bounds, "scene_bounds must be deterministic")
         self.assertEqual(first_node_count, second_node_count, "node_count must be deterministic")
 
+    # ── Alpha-UI-7.2 — Preview selection metadata completion ──────
+
+    def test_preview_metadata_includes_shelf_count_after_create(self):
+        """Preview selection metadata must include shelf_count after base cabinet creation."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+
+        eng_service = Mock()
+        sg = self._make_mock_scene_graph(node_count=5)
+        spec = self._make_specification(shelf_count=4, door_count=2)
+        cabinet = types.SimpleNamespace(scene_graph=sg)
+        result = Mock()
+        result.data = {"cabinet": cabinet, "specification": spec, "metadata": {}}
+        result.errors = ()
+        result.diagnostics = ()
+
+        eng_service.execute.return_value = result
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        integration.create_base_cabinet()
+
+        state_spec = workspace.active_engineering_state.specification
+        self.assertEqual(state_spec.shelf_count, 4)
+
+    def test_preview_metadata_includes_door_count_after_create(self):
+        """Preview selection metadata must include door_count after base cabinet creation."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+
+        eng_service = Mock()
+        sg = self._make_mock_scene_graph(node_count=5)
+        spec = self._make_specification(shelf_count=3, door_count=5)
+        cabinet = types.SimpleNamespace(scene_graph=sg)
+        result = Mock()
+        result.data = {"cabinet": cabinet, "specification": spec, "metadata": {}}
+        result.errors = ()
+        result.diagnostics = ()
+
+        eng_service.execute.return_value = result
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        integration.create_base_cabinet()
+
+        state_spec = workspace.active_engineering_state.specification
+        self.assertEqual(state_spec.door_count, 5)
+
+    def test_preview_selection_metadata_contains_shelf_count_after_edit(self):
+        """Preview selection metadata must include shelf_count after shelf_count edit."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+
+        eng_service = Mock()
+        sg = self._make_mock_scene_graph(node_count=8)
+        spec_before = self._make_specification(shelf_count=3)
+
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(
+            sg, shelf_count=5,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_shelf_count(5)
+
+        state_spec = workspace.active_engineering_state.specification
+        self.assertEqual(state_spec.shelf_count, 5)
+
+    def test_preview_selection_metadata_contains_door_count_after_edit(self):
+        """Preview selection metadata must include door_count after door_count edit."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+
+        eng_service = Mock()
+        sg = self._make_mock_scene_graph(node_count=10)
+        spec_before = self._make_specification(door_count=2)
+
+        eng_service.execute.return_value = self._make_mock_result_from_scene_graph(
+            sg, door_count=4,
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            engineering_application_service=eng_service,
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        workspace.active_engineering_state = self._make_engineering_state(spec_before, workspace_module)
+
+        integration.update_active_base_cabinet_door_count(4)
+
+        state_spec = workspace.active_engineering_state.specification
+        self.assertEqual(state_spec.door_count, 4)
+
+    def test_preview_metadata_width_height_depth_unchanged_by_new_fields(self):
+        """Width, height, depth in preview metadata must be unchanged by adding shelf/door counts."""
+        workspace_module, integration_module, adapters, _ = self._import_modules()
+
+        preview_rm = adapters.build_preview_read_model({
+            "selection": {
+                "selection_type": "CABINET",
+                "selection_id": "base-cabinet",
+                "display_name": "Base Cabinet",
+                "metadata": {
+                    "width_mm": 800,
+                    "height_mm": 900,
+                    "depth_mm": 600,
+                    "shelf_count": 4,
+                    "door_count": 2,
+                },
+            },
+        })
+
+        self.assertIsNotNone(preview_rm)
+        self.assertTrue(preview_rm.items)
+
+        selection_item = preview_rm.items[0]
+        md = dict(selection_item.display_metadata)
+        self.assertIn("width_mm", md)
+        self.assertIn("height_mm", md)
+        self.assertIn("depth_mm", md)
+        self.assertIn("shelf_count", md)
+        self.assertIn("door_count", md)
+
+    def test_missing_shelf_count_falls_back_safely(self):
+        """When specification lacks shelf_count, the metadata must use empty string fallback."""
+        workspace_module, integration_module, adapters, _ = self._import_modules()
+
+        spec = types.SimpleNamespace(
+            width_mm=800.0, height_mm=900.0, depth_mm=600.0,
+        )
+        preview_rm = adapters.build_preview_read_model({
+            "selection": {
+                "selection_type": "CABINET",
+                "selection_id": "base-cabinet",
+                "display_name": "Base Cabinet",
+                "metadata": {
+                    "width_mm": getattr(spec, "width_mm", ""),
+                    "height_mm": getattr(spec, "height_mm", ""),
+                    "depth_mm": getattr(spec, "depth_mm", ""),
+                    "shelf_count": getattr(spec, "shelf_count", ""),
+                    "door_count": getattr(spec, "door_count", ""),
+                },
+            },
+        })
+
+        self.assertIsNotNone(preview_rm)
+        self.assertTrue(preview_rm.items)
+        selection_item = preview_rm.items[0]
+        md = dict(selection_item.display_metadata)
+        self.assertEqual(md.get("shelf_count", ""), "", "shelf_count must fall back to empty string")
+        self.assertEqual(md.get("door_count", ""), "", "door_count must fall back to empty string")
+
 
 if __name__ == "__main__":
     unittest.main()
