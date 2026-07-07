@@ -923,6 +923,8 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self._foi_blocking: Any = None
         self._foi_recommendations: Any = None
         self._foi_decision: Any = None
+        self._nesting_savings_report: Any = None
+        self._nesting_savings_dashboard_section: Any = None
         self._manufacturing_production_package: Any = None
         self._manufacturing_cost_summary: Any = None
         self._manufacturing_commercial_result: Any = None
@@ -1166,6 +1168,18 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
     ):
         from factory_dashboard import FactoryDashboardReadModel as _DashModel
         self.factory_dashboard_read_model = read_model or _DashModel()
+
+    def set_nesting_savings_report(
+        self,
+        savings_report: Any = None,
+    ):
+        self._nesting_savings_report = savings_report
+
+    def set_nesting_savings_dashboard_section(
+        self,
+        section: Any = None,
+    ):
+        self._nesting_savings_dashboard_section = section
 
     def set_manufacturing_result(self, production_package: Any = None):
         self._manufacturing_production_package = production_package

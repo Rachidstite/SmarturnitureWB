@@ -27,6 +27,7 @@ from .projection_adapters import (
 )
 from .foi_presentation_adapter import build_foi_presentation_read_model
 from factory_dashboard import build_factory_dashboard_read_model
+from factory_dashboard import build_nesting_savings_dashboard_section
 from factory_operational_intelligence import (
     build_factory_readiness_read_model,
     build_factory_blocking_analysis_read_model,
@@ -515,8 +516,12 @@ class ConfiguratorV2ServiceIntegration:
         blocking = getattr(self.workspace, "_foi_blocking", None)
         recommendations = getattr(self.workspace, "_foi_recommendations", None)
         decision = getattr(self.workspace, "_foi_decision", None)
+        nesting_section = self._resolve_nesting_savings_dashboard_section()
 
-        if not any(x is not None for x in (readiness, blocking, recommendations, decision)):
+        if not any(
+            x is not None
+            for x in (readiness, blocking, recommendations, decision, nesting_section)
+        ):
             empty = self.workspace.factory_dashboard_read_model.__class__() if getattr(
                 self.workspace, "factory_dashboard_read_model", None
             ) is not None else build_factory_dashboard_read_model()
@@ -529,6 +534,7 @@ class ConfiguratorV2ServiceIntegration:
             recommendations=recommendations,
             decision=decision,
         )
+        dashboard = self._append_dashboard_section(dashboard, nesting_section)
         self.workspace.set_factory_dashboard_read_model(dashboard)
         return dashboard
 
@@ -751,6 +757,32 @@ class ConfiguratorV2ServiceIntegration:
             else existing[i] if i < len(existing)
             else _RPM(panel_name=name)
             for i, name in enumerate(names)
+        )
+
+    def _resolve_nesting_savings_dashboard_section(self):
+        section = getattr(self.workspace, "_nesting_savings_dashboard_section", None)
+        if section is not None:
+            return section
+        savings_report = getattr(self.workspace, "_nesting_savings_report", None)
+        if savings_report is None:
+            return None
+        return build_nesting_savings_dashboard_section(savings_report)
+
+    @staticmethod
+    def _append_dashboard_section(dashboard: Any, section: Any):
+        if dashboard is None or section is None:
+            return dashboard
+        dashboard_type = dashboard.__class__
+        sections = list(tuple(getattr(dashboard, "sections", ()) or ()))
+        sections.append(section)
+        return dashboard_type(
+            sections=tuple(sections),
+            factory_status=getattr(dashboard, "factory_status", "") or "",
+            decision_status=getattr(dashboard, "decision_status", "") or "",
+            critical_blocker_count=getattr(dashboard, "critical_blocker_count", 0) or 0,
+            recommendation_count=getattr(dashboard, "recommendation_count", 0) or 0,
+            summary_message=getattr(dashboard, "summary_message", "") or "",
+            available=True,
         )
 
     @staticmethod

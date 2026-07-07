@@ -221,10 +221,19 @@ class TestWorkspaceActionFlowContract(unittest.TestCase):
         return si, ws
 
     def _make_workspace(self):
+        self._load_modules()
         ws = SimpleNamespace()
+        dashboard_mod = sys.modules["factory_dashboard"]
         ws.review_panel_names = ("Validation", "Manufacturing", "Cost", "Commercial", "Release")
         ws.review_panel_read_models = ()
         ws.message_center_read_model = SimpleNamespace(messages=())
+        ws.factory_dashboard_read_model = dashboard_mod.FactoryDashboardReadModel()
+        ws._foi_readiness = None
+        ws._foi_blocking = None
+        ws._foi_recommendations = None
+        ws._foi_decision = None
+        ws._nesting_savings_report = None
+        ws._nesting_savings_dashboard_section = None
         ws._manufacturing_production_package = None
         ws._manufacturing_cost_summary = None
         ws._manufacturing_commercial_result = None
@@ -246,11 +255,23 @@ class TestWorkspaceActionFlowContract(unittest.TestCase):
         def set_commercial_result(cr):
             ws._manufacturing_commercial_result = cr
 
+        def set_factory_dashboard_read_model(read_model):
+            ws.factory_dashboard_read_model = read_model
+
+        def set_nesting_savings_report(report):
+            ws._nesting_savings_report = report
+
+        def set_nesting_savings_dashboard_section(section):
+            ws._nesting_savings_dashboard_section = section
+
         ws.set_review_panel_read_models = set_review_panel_read_models
         ws.set_message_center_read_model = set_message_center_read_model
         ws.set_manufacturing_result = set_manufacturing_result
         ws.set_cost_result = set_cost_result
         ws.set_commercial_result = set_commercial_result
+        ws.set_factory_dashboard_read_model = set_factory_dashboard_read_model
+        ws.set_nesting_savings_report = set_nesting_savings_report
+        ws.set_nesting_savings_dashboard_section = set_nesting_savings_dashboard_section
 
         set_review_panel_read_models(
             tuple(SimpleNamespace(panel_name=n, sections=(), available=False)
@@ -394,7 +415,127 @@ class TestWorkspaceActionFlowContract(unittest.TestCase):
         self.assertEqual(status, "ok")
         self.assertIs(ws._manufacturing_commercial_result, commercial_result)
 
-    # ── 6. no duplicate pipeline/builders ─────────────────────────────
+    # ── 6. dashboard nesting savings support ──────────────────────────
+
+    def test_refresh_dashboard_preserves_behavior_without_nesting_savings(self):
+        self._load_modules()
+        ws = self._make_workspace()
+        dashboard_mod = sys.modules["factory_dashboard"]
+        ws._foi_readiness = SimpleNamespace(
+            status="READY",
+            blocking_count=0,
+            warning_count=0,
+            ready_count=2,
+            summary_message="Readiness: READY",
+        )
+        ws._foi_blocking = SimpleNamespace(
+            status="READY",
+            critical_count=0,
+            high_count=0,
+            medium_count=0,
+            low_count=0,
+        )
+        ws._foi_recommendations = SimpleNamespace(
+            recommendations=(SimpleNamespace(),),
+            high_confidence_count=1,
+            medium_confidence_count=0,
+            low_confidence_count=0,
+            none_confidence_count=0,
+        )
+        ws._foi_decision = SimpleNamespace(
+            decision_status="START_READY",
+            confidence="HIGH",
+            summary_message="Decision: START_READY",
+            blocking_item_ids=(),
+            recommendation_ids=(),
+        )
+        integration = self._make_integration(ws)
+
+        dashboard = integration.refresh_dashboard()
+
+        self.assertIsInstance(dashboard, dashboard_mod.FactoryDashboardReadModel)
+        self.assertEqual(
+            tuple(section.section_name for section in dashboard.sections),
+            (
+                "Factory Readiness",
+                "Blocking Analysis",
+                "Action Recommendations",
+                "Production Decision",
+            ),
+        )
+
+    def test_refresh_dashboard_includes_nesting_savings_section_from_report(self):
+        self._load_modules()
+        ws = self._make_workspace()
+        dashboard_mod = sys.modules["factory_dashboard"]
+        ws._foi_readiness = SimpleNamespace(
+            status="READY",
+            blocking_count=0,
+            warning_count=0,
+            ready_count=1,
+            summary_message="Readiness: READY",
+        )
+        ws._foi_decision = SimpleNamespace(
+            decision_status="START_READY",
+            confidence="HIGH",
+            summary_message="Decision: START_READY",
+            blocking_item_ids=(),
+            recommendation_ids=(),
+        )
+        ws._nesting_savings_report = SimpleNamespace(
+            material_savings=120.5,
+            waste_reduction=33.25,
+            recovered_value_delta=10.0,
+            total_manufacturing_cost_delta=-87.75,
+            profitability_delta=54.0,
+        )
+        integration = self._make_integration(ws)
+
+        dashboard = integration.refresh_dashboard()
+
+        self.assertIsInstance(dashboard, dashboard_mod.FactoryDashboardReadModel)
+        self.assertEqual(
+            dashboard.sections[-1].section_name,
+            "Nesting Savings Comparison",
+        )
+
+    def test_refresh_dashboard_uses_precomputed_nesting_section_when_provided(self):
+        self._load_modules()
+        ws = self._make_workspace()
+        dashboard_mod = sys.modules["factory_dashboard"]
+        ws._nesting_savings_dashboard_section = dashboard_mod.FactoryDashboardSection(
+            section_name="Nesting Savings Comparison",
+            rows=(("Material Savings", "999.99"),),
+        )
+        integration = self._make_integration(ws)
+
+        dashboard = integration.refresh_dashboard()
+
+        self.assertEqual(len(dashboard.sections), 1)
+        self.assertEqual(dashboard.sections[0].rows, (("Material Savings", "999.99"),))
+
+    def test_refresh_dashboard_displays_nesting_savings_values_exactly(self):
+        self._load_modules()
+        ws = self._make_workspace()
+        ws._nesting_savings_report = SimpleNamespace(
+            material_savings=123.4,
+            waste_reduction=0.0,
+            recovered_value_delta=-5.5,
+            total_manufacturing_cost_delta=-42.25,
+            profitability_delta=9.99,
+        )
+        integration = self._make_integration(ws)
+
+        dashboard = integration.refresh_dashboard()
+        rows = dict(dashboard.sections[0].rows)
+
+        self.assertEqual(rows["Material Savings"], "123.40")
+        self.assertEqual(rows["Waste Reduction"], "0.00")
+        self.assertEqual(rows["Recovered Value Improvement"], "-5.50")
+        self.assertEqual(rows["Total Manufacturing Cost Delta"], "-42.25")
+        self.assertEqual(rows["Profitability Impact"], "9.99")
+
+    # ── 7. no duplicate pipeline/builders ─────────────────────────────
 
     def test_methods_reuse_existing_pipelines(self):
         import inspect
@@ -410,7 +551,7 @@ class TestWorkspaceActionFlowContract(unittest.TestCase):
         body = source[body_start:end_pos] if end_pos > body_start else source[body_start:]
         self.assertNotIn("class ", body)
 
-    # ── 7. no forbidden imports ──────────────────────────────────────
+    # ── 8. no forbidden imports ──────────────────────────────────────
 
     def test_no_freecad_imports(self):
         import inspect
@@ -441,6 +582,7 @@ class TestWorkspaceActionFlowContract(unittest.TestCase):
         source = inspect.getsource(si_mod)
         self.assertNotIn("NestingSavingsBuilder", source)
         self.assertNotIn("NestingSavingsReport", source)
+        self.assertNotIn("ManufacturingCostCalculator", source)
         self.assertNotIn("WasteIntelligenceBuilder", source)
 
 
