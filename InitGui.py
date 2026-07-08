@@ -3,10 +3,14 @@ from commands.workbench_commands import (
     OpenConfiguratorCommand,
     CreateEngineeringDemonstrationCommand,
     CreateWardrobeCommand,
+    OpenConfiguratorV2Command,
 )
 
 if "SmartFurniture_OpenConfigurator" not in FreeCADGui.listCommands():
     FreeCADGui.addCommand("SmartFurniture_OpenConfigurator", OpenConfiguratorCommand())
+
+if "SmartFurniture_OpenConfiguratorV2" not in FreeCADGui.listCommands():
+    FreeCADGui.addCommand("SmartFurniture_OpenConfiguratorV2", OpenConfiguratorV2Command())
 
 if "SmartFurniture_CreateWardrobe" not in FreeCADGui.listCommands():
     FreeCADGui.addCommand("SmartFurniture_CreateWardrobe", CreateWardrobeCommand())
@@ -26,6 +30,7 @@ class SmartFurnitureWorkbench(FreeCADGui.Workbench):
             "SmartFurniture",
             [
                 "SmartFurniture_OpenConfigurator",
+                "SmartFurniture_OpenConfiguratorV2",
                 "SmartFurniture_CreateWardrobe",
                 "SmartFurniture_EngineeringDemo",
             ],
@@ -34,6 +39,7 @@ class SmartFurnitureWorkbench(FreeCADGui.Workbench):
             "Smart Furniture",
             [
                 "SmartFurniture_OpenConfigurator",
+                "SmartFurniture_OpenConfiguratorV2",
                 "SmartFurniture_CreateWardrobe",
                 "SmartFurniture_EngineeringDemo",
             ],

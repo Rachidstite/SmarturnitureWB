@@ -27,6 +27,50 @@ class OpenConfiguratorCommand:
         return True
 
 
+def _open_configurator_v2():
+    """Private helper — instantiate and show a fully wired Configurator V2 workspace.
+
+    Lazy imports ensure FreeCAD-bound modules are loaded only when this
+    helper is called (inside ``Activated()``), preserving test isolation
+    for ``ui.configurator_v2``.
+
+    Returns the workspace widget for testing.
+    """
+    from ui.configurator_v2 import (
+        create_configurator_v2_workspace,
+        ConfiguratorV2ServiceBindings,
+    )
+    from ui.configurator_v2.service_integration import attach_service_integration
+    from application.engineering_application_service import EngineeringApplicationService
+
+    service = EngineeringApplicationService()
+    bindings = ConfiguratorV2ServiceBindings(
+        engineering_application_service=service,
+    )
+    workspace = create_configurator_v2_workspace(service_bindings=bindings)
+    integration = attach_service_integration(workspace, bindings)
+    workspace.set_project_context(current_product_family="Base Cabinet")
+    integration.create_base_cabinet()
+    workspace.show()
+    return workspace
+
+
+class OpenConfiguratorV2Command:
+
+    def GetResources(self):
+        return {
+            'Pixmap': '',
+            'MenuText': 'Configurator V2',
+            'ToolTip': 'Open SmartFurniture Configurator V2 with live editing',
+        }
+
+    def Activated(self):
+        _open_configurator_v2()
+
+    def IsActive(self):
+        return True
+
+
 class CreateWardrobeCommand:
 
     def GetResources(self):
