@@ -1,4 +1,5 @@
 import importlib
+from dataclasses import dataclass
 import sys
 import types
 import unittest
@@ -256,6 +257,103 @@ class TestSceneProjectionContract(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             scene_projection.build_scene_projection([_BackendLikeNode()])
+
+    def test_safe_metadata_handles_dict_unchanged(self):
+        scene_projection, _, _, _ = self._import_modules()
+
+        metadata = {"role": "back_panel", "source_reference": "scene:node-1"}
+
+        self.assertEqual(
+            scene_projection._safe_metadata(types.SimpleNamespace(metadata=metadata)),
+            (("role", "back_panel"), ("source_reference", "scene:node-1")),
+        )
+
+    def test_safe_metadata_handles_list_and_tuple_pairs_unchanged(self):
+        scene_projection, _, _, _ = self._import_modules()
+
+        list_metadata = [("role", "back_panel"), ("finish", "Oak")]
+        tuple_metadata = (("role", "back_panel"), ("finish", "Oak"))
+
+        self.assertEqual(
+            scene_projection._safe_metadata(types.SimpleNamespace(metadata=list_metadata)),
+            (("role", "back_panel"), ("finish", "Oak")),
+        )
+        self.assertEqual(
+            scene_projection._safe_metadata(types.SimpleNamespace(metadata=tuple_metadata)),
+            (("role", "back_panel"), ("finish", "Oak")),
+        )
+
+    def test_safe_metadata_handles_dataclass_metadata(self):
+        scene_projection, _, _, _ = self._import_modules()
+
+        @dataclass
+        class DataclassMetadata:
+            role: str = "back_panel"
+            finish: str = "Oak"
+
+        self.assertEqual(
+            scene_projection._safe_metadata(types.SimpleNamespace(metadata=DataclassMetadata())),
+            (("role", "back_panel"), ("finish", "Oak")),
+        )
+
+    def test_safe_metadata_handles_simple_namespace_metadata(self):
+        scene_projection, _, _, _ = self._import_modules()
+
+        metadata = types.SimpleNamespace(role="back_panel", finish="Oak")
+
+        self.assertEqual(
+            scene_projection._safe_metadata(types.SimpleNamespace(metadata=metadata)),
+            (("role", "back_panel"), ("finish", "Oak")),
+        )
+
+    def test_safe_metadata_handles_plain_object_metadata(self):
+        scene_projection, _, _, _ = self._import_modules()
+
+        class PlainMetadata:
+            def __init__(self):
+                self.role = "back_panel"
+                self.finish = "Oak"
+
+        self.assertEqual(
+            scene_projection._safe_metadata(types.SimpleNamespace(metadata=PlainMetadata())),
+            (("role", "back_panel"), ("finish", "Oak")),
+        )
+
+    def test_safe_metadata_handles_non_iterable_metadata_without_crashing(self):
+        scene_projection, _, _, _ = self._import_modules()
+
+        class NonIterableMetadata:
+            __slots__ = ()
+
+        self.assertEqual(
+            scene_projection._safe_metadata(types.SimpleNamespace(metadata=NonIterableMetadata())),
+            (),
+        )
+
+    def test_build_scene_projection_handles_object_like_metadata(self):
+        scene_projection, _, _, _ = self._import_modules()
+
+        class ObjectLikeNode:
+            def __init__(self):
+                self.identity = types.SimpleNamespace(key="node-1")
+                self.node_type = "BACK_PANEL"
+                self.label = "Back Panel"
+                self.name = "Back Panel"
+                self.visible = True
+                self.selectable = True
+                self.x = 0.0
+                self.y = 0.0
+                self.z = 0.0
+                self.width = 18.0
+                self.depth = 600.0
+                self.height = 720.0
+                self.metadata = types.SimpleNamespace(role="back_panel", finish="Oak")
+
+        projection = scene_projection.build_scene_projection([ObjectLikeNode()])
+
+        self.assertTrue(projection.scene_available)
+        self.assertEqual(projection.node_count, 1)
+        self.assertEqual(projection.nodes[0].display_metadata, (("role", "back_panel"), ("finish", "Oak")))
 
 
 if __name__ == "__main__":

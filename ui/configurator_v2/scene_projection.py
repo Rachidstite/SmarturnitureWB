@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -293,15 +293,45 @@ def _safe_metadata(node: Any) -> tuple[tuple[str, str], ...]:
     metadata = _get_value(node, "display_metadata", data.get("display_metadata", None))
     if metadata is None:
         metadata = _get_value(node, "metadata", data.get("metadata", {}))
-    if isinstance(metadata, Mapping):
-        items = metadata.items()
-    else:
-        items = metadata or ()
+
+    def _metadata_items(value: Any) -> tuple[tuple[Any, Any], ...]:
+        if value is None:
+            return ()
+        if isinstance(value, Mapping):
+            return tuple(value.items())
+        if isinstance(value, (list, tuple)):
+            return tuple(value)
+        if is_dataclass(value):
+            return tuple((item.name, getattr(value, item.name)) for item in fields(value))
+        if hasattr(value, "__dict__"):
+            return tuple(
+                (key, item)
+                for key, item in vars(value).items()
+                if not key.startswith("_") and not callable(item)
+            )
+        items = getattr(value, "items", None)
+        if callable(items):
+            try:
+                return tuple(items())
+            except TypeError:
+                return ()
+        return ()
+
+    items = _metadata_items(metadata)
     pairs = []
-    for key, value in items:
-        if key in {"Shape", "ViewObject", "Document"}:
+    for item in items:
+        if isinstance(item, Mapping):
+            key = item.get("name", item.get("label", item.get("key", "")))
+            value = item.get("value", item.get("text", ""))
+        elif isinstance(item, (list, tuple)) and len(item) == 2:
+            key, value = item
+        else:
+            key = getattr(item, "name", getattr(item, "label", getattr(item, "key", "")))
+            value = getattr(item, "value", getattr(item, "text", ""))
+        key_name = str(key)
+        if key_name in {"Shape", "ViewObject", "Document"}:
             continue
-        pairs.append((_ensure_str(str(key), "display_metadata.key"), _ensure_str(str(value), "display_metadata.value")))
+        pairs.append((_ensure_str(key_name, "display_metadata.key"), _ensure_str(str(value), "display_metadata.value")))
     return tuple(pairs)
 
 
