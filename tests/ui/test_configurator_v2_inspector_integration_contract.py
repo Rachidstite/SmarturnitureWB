@@ -92,6 +92,25 @@ class _FakeTabWidget(_FakeWidget):
         self.tabs.append((widget, title))
 
 
+class _FakeScrollArea(_FakeWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._widget_resizable = False
+        self._widget = None
+
+    def setWidgetResizable(self, resizable):
+        self._widget_resizable = bool(resizable)
+
+    def widgetResizable(self):
+        return self._widget_resizable
+
+    def setWidget(self, widget):
+        self._widget = widget
+
+    def widget(self):
+        return self._widget
+
+
 class _FakeLineEdit(_FakeWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -111,6 +130,7 @@ def _fake_qt_module():
             QPushButton=_FakeButton,
             QLabel=_FakeWidget,
             QTabWidget=_FakeTabWidget,
+            QScrollArea=_FakeScrollArea,
         ),
         QtCore=types.SimpleNamespace(),
     )
@@ -157,6 +177,89 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         self.assertEqual(len(workspace.inspector_region.group_field_labels["Geometry"]), 1)
         self.assertEqual(len(workspace.inspector_region.group_field_labels["Materials"]), 1)
         self.assertEqual(len(workspace.inspector_region.group_field_labels["Hardware"]), 1)
+
+    def test_inspector_region_uses_scroll_area_for_content(self):
+        workspace_module, _, _, _ = self._import_modules()
+        workspace = workspace_module.create_configurator_v2_workspace()
+        inspector = workspace.inspector_region
+
+        self.assertIsNotNone(inspector.inspector_scroll_area)
+        self.assertTrue(inspector.inspector_scroll_area.widgetResizable())
+        self.assertIs(inspector.inspector_scroll_area.widget(), inspector.inspector_scroll_content)
+        self.assertIs(inspector.body_layout, inspector.inspector_scroll_content_layout)
+        self.assertGreater(len(inspector.body_layout.items), 0)
+
+    def test_inspector_scroll_area_preserves_editable_fields_and_groups(self):
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0, shelf_count=3, door_count=2)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "base-cabinet",
+                "selection_type": "CABINET",
+                "display_name": "Base Cabinet",
+                "source_reference": "EngineeringIntegration",
+            }
+        )
+
+        inspector = workspace.inspector_region
+        self.assertEqual(
+            sorted(inspector.editable_field_inputs.keys()),
+            ["depth_mm", "door_count", "height_mm", "shelf_count", "width_mm"],
+        )
+        self.assertEqual(len(inspector.group_field_labels["Geometry"]), 3)
+        self.assertEqual(len(inspector.group_field_labels["Configuration"]), 2)
+        self.assertTrue(
+            any("Width: 800.0 mm" in row for row in inspector.render_rows),
+            inspector.render_rows,
+        )
+
+    def test_editable_field_labels_render_cleanly_without_source_reference(self):
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0, shelf_count=3, door_count=2)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+
+        integration.refresh_inspector(
+            {
+                "selection_id": "base-cabinet",
+                "selection_type": "CABINET",
+                "display_name": "Base Cabinet",
+                "source_reference": "EngineeringIntegration",
+            }
+        )
+
+        geometry_labels = [getattr(lbl, "_text", "") or "" for lbl in workspace.inspector_region.group_field_labels["Geometry"]]
+        configuration_labels = [getattr(lbl, "_text", "") or "" for lbl in workspace.inspector_region.group_field_labels["Configuration"]]
+        self.assertEqual(geometry_labels, ["Width", "Height", "Depth"])
+        self.assertEqual(configuration_labels, ["Shelf Count", "Door Count"])
+        self.assertTrue(
+            all("ActiveEngineeringState.specification" not in label for label in geometry_labels + configuration_labels),
+            geometry_labels + configuration_labels,
+        )
+        self.assertIn("width_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("height_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("depth_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("shelf_count", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("door_count", workspace.inspector_region.editable_field_inputs)
+        geometry_rows = workspace.inspector_region.field_group_rows["Geometry"]
+        config_rows = workspace.inspector_region.field_group_rows["Configuration"]
+        self.assertTrue(any(getattr(child, "_text", "") == "mm" for child in geometry_rows[0].layout().items))
+        self.assertTrue(any(hasattr(child, "editingFinished") for child in geometry_rows[0].layout().items))
 
     def test_selection_updates_inspector_without_backend_calls(self):
         workspace_module, _, adapters, _ = self._import_modules()
@@ -290,10 +393,9 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
 
         geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
         geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
-        width_rows = [t for t in geometry_texts if "Width" in t]
         self.assertTrue(
-            any("800" in t and "mm" in t for t in width_rows),
-            f"Expected Width: 800 mm in Geometry fields, got: {geometry_texts}",
+            any("Width: 800" in row and "mm" in row for row in workspace.inspector_region.render_rows),
+            f"Expected Width: 800 mm in Geometry rows, got: {workspace.inspector_region.render_rows}",
         )
 
     def test_inspector_reads_height_mm_from_specification(self):
@@ -320,10 +422,9 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
 
         geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
         geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
-        height_rows = [t for t in geometry_texts if "Height" in t]
         self.assertTrue(
-            any("900" in t and "mm" in t for t in height_rows),
-            f"Expected Height: 900 mm in Geometry fields, got: {geometry_texts}",
+            any("Height: 900" in row and "mm" in row for row in workspace.inspector_region.render_rows),
+            f"Expected Height: 900 mm in Geometry rows, got: {workspace.inspector_region.render_rows}",
         )
 
     def test_inspector_reads_depth_mm_from_specification(self):
@@ -350,10 +451,9 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
 
         geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
         geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
-        depth_rows = [t for t in geometry_texts if "Depth" in t]
         self.assertTrue(
-            any("600" in t and "mm" in t for t in depth_rows),
-            f"Expected Depth: 600 mm in Geometry fields, got: {geometry_texts}",
+            any("Depth: 600" in row and "mm" in row for row in workspace.inspector_region.render_rows),
+            f"Expected Depth: 600 mm in Geometry rows, got: {workspace.inspector_region.render_rows}",
         )
 
     def test_inspector_not_from_preview_read_model(self):
@@ -428,27 +528,23 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         materials_texts = [getattr(lbl, "_text", "") or "" for lbl in materials_labels]
 
         # Original fields preserved
-        self.assertTrue(
-            any("Family: Base Cabinet" in t for t in identity_texts),
-            f"Existing Identity fields lost, got: {identity_texts}",
-        )
-        self.assertTrue(
-            any("Material: Birch Plywood" in t for t in materials_texts),
-            f"Existing Materials fields lost, got: {materials_texts}",
-        )
+        self.assertEqual(identity_texts, ["Family"])
+        self.assertEqual(materials_texts, ["Material"])
+        self.assertTrue(any("Family: Base Cabinet" in t for t in render_rows))
+        self.assertTrue(any("Material: Birch Plywood" in t for t in render_rows))
         # Specification fields present
         geometry_labels = workspace.inspector_region.group_field_labels.get("Geometry", [])
         geometry_texts = [getattr(lbl, "_text", "") or "" for lbl in geometry_labels]
         self.assertTrue(
-            any("Width: 800" in t for t in geometry_texts),
-            f"Specification Width field missing, got: {geometry_texts}",
+            any("Width: 800" in t for t in render_rows),
+            f"Specification Width field missing, got: {render_rows}",
         )
         self.assertTrue(
-            any("Height: 900" in t for t in geometry_texts),
+            any("Height: 900" in t for t in render_rows),
             "Specification Height field missing",
         )
         self.assertTrue(
-            any("Depth: 600" in t for t in geometry_texts),
+            any("Depth: 600" in t for t in render_rows),
             "Specification Depth field missing",
         )
         # Warnings preserved
@@ -992,8 +1088,8 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         config_labels = workspace.inspector_region.group_field_labels.get("Configuration", [])
         config_texts = [getattr(lbl, "_text", "") or "" for lbl in config_labels]
         self.assertTrue(
-            any("Shelf Count: 4" in t for t in config_texts),
-            f"Expected 'Shelf Count: 4' in Configuration fields, got: {config_texts}",
+            any("Shelf Count: 4" in t for t in workspace.inspector_region.render_rows),
+            f"Expected 'Shelf Count: 4' in Configuration rows, got: {workspace.inspector_region.render_rows}",
         )
 
     def test_shelf_count_field_is_editable(self):
@@ -1334,8 +1430,8 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         config_labels = workspace.inspector_region.group_field_labels.get("Configuration", [])
         config_texts = [getattr(lbl, "_text", "") or "" for lbl in config_labels]
         self.assertTrue(
-            any("Door Count: 3" in t for t in config_texts),
-            f"Expected 'Door Count: 3' in Configuration, got: {config_texts}",
+            any("Door Count: 3" in t for t in workspace.inspector_region.render_rows),
+            f"Expected 'Door Count: 3' in Configuration rows, got: {workspace.inspector_region.render_rows}",
         )
 
     def test_door_count_field_is_editable(self):

@@ -726,6 +726,22 @@ class InspectorRegion(_ShellFrame):
             parent=parent,
         )
         self.on_field_commit = on_field_commit
+        self.inspector_scroll_area = None
+        self.inspector_scroll_content = None
+        self.inspector_scroll_content_layout = self.body_layout
+
+        scroll_area_cls = getattr(QtWidgets, "QScrollArea", None)
+        if scroll_area_cls is not None:
+            self.inspector_scroll_area = scroll_area_cls()
+            if hasattr(self.inspector_scroll_area, "setWidgetResizable"):
+                self.inspector_scroll_area.setWidgetResizable(True)
+            self.inspector_scroll_content = QtWidgets.QWidget()
+            self.inspector_scroll_content_layout = QtWidgets.QVBoxLayout(self.inspector_scroll_content)
+            self.body_layout.addWidget(self.inspector_scroll_area)
+            if hasattr(self.inspector_scroll_area, "setWidget"):
+                self.inspector_scroll_area.setWidget(self.inspector_scroll_content)
+            self.body_layout = self.inspector_scroll_content_layout
+
         self.read_model = empty_inspector_read_model()
         self.render_rows: list[str] = []
         self.selection_summary_values: dict[str, object] = {}
@@ -734,6 +750,7 @@ class InspectorRegion(_ShellFrame):
         self.group_containers: dict[str, object] = {}
         self.group_field_labels: dict[str, list[object]] = {group: [] for group in INSPECTOR_FIELD_GROUPS}
         self.editable_field_inputs: dict[str, object] = {}
+        self.field_source_references: dict[str, str] = {}
 
         self._rebuild_render_state()
 
@@ -765,12 +782,17 @@ class InspectorRegion(_ShellFrame):
             row_text = f"{field.label}: {value_text}"
             if field.source_reference:
                 row_text = f"{row_text} [{field.source_reference}]"
+                self.field_source_references[field.name] = field.source_reference
+            row_widget = QtWidgets.QWidget()
+            row_layout = QtWidgets.QHBoxLayout(row_widget)
+            if hasattr(row_widget, "setLayout"):
+                row_widget.setLayout(row_layout)
             label = QtWidgets.QLabel()
             if hasattr(label, "setText"):
-                label.setText(row_text)
-            self.body_layout.addWidget(label)
-            group_rows.append(label)
-            self.group_field_labels.setdefault(group_name, []).append(label)
+                label.setText(field.label)
+            if hasattr(label, "setMinimumWidth"):
+                label.setMinimumWidth(96)
+            row_layout.addWidget(label)
             self.render_rows.append(f"{group_name} | {row_text}")
             if field.editable and field.name in {"width_mm", "height_mm", "depth_mm", "shelf_count", "door_count"}:
                 editor_cls = getattr(QtWidgets, "QLineEdit", None)
@@ -778,6 +800,8 @@ class InspectorRegion(_ShellFrame):
                     editor = editor_cls()
                     if hasattr(editor, "setText"):
                         editor.setText(field.value)
+                    if hasattr(editor, "setMinimumWidth"):
+                        editor.setMinimumWidth(160)
                     if hasattr(editor, "editingFinished") and callable(self.on_field_commit):
                         editor.editingFinished.connect(
                             lambda field_name=field.name, line_edit=editor: self.commit_field_edit(
@@ -785,8 +809,18 @@ class InspectorRegion(_ShellFrame):
                                 line_edit.text() if hasattr(line_edit, "text") else "",
                             )
                         )
-                    self.body_layout.addWidget(editor)
                     self.editable_field_inputs[field.name] = editor
+                    row_layout.addWidget(editor)
+            if field.unit:
+                unit_label = QtWidgets.QLabel()
+                if hasattr(unit_label, "setText"):
+                    unit_label.setText(field.unit)
+                if hasattr(unit_label, "setMinimumWidth"):
+                    unit_label.setMinimumWidth(24)
+                row_layout.addWidget(unit_label)
+            self.body_layout.addWidget(row_widget)
+            group_rows.append(row_widget)
+            self.group_field_labels.setdefault(group_name, []).append(label)
         self.field_group_rows[group_name] = group_rows
 
     def _rebuild_render_state(self):
@@ -798,6 +832,7 @@ class InspectorRegion(_ShellFrame):
         self.group_containers = {}
         self.group_field_labels = {group: [] for group in INSPECTOR_FIELD_GROUPS}
         self.editable_field_inputs = {}
+        self.field_source_references = {}
 
         read_model = self.read_model or empty_inspector_read_model()
         warnings_text = ", ".join(read_model.warnings) if read_model.warnings else "None"
@@ -906,6 +941,8 @@ class ActionBarRegion(QtWidgets.QWidget):
 
 
 class ConfiguratorV2Workspace(QtWidgets.QWidget):
+    _runtime_debug_sequence = 0
+
     def __init__(
         self,
         parent=None,
@@ -913,6 +950,8 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         service_bindings: ConfiguratorV2ServiceBindings | None = None,
     ):
         super().__init__(parent)
+        type(self)._runtime_debug_sequence += 1
+        self.runtime_debug_id = f"cv2ws-{type(self)._runtime_debug_sequence:04d}"
         self.shell_model = ConfiguratorV2ShellModel()
         self.service_bindings = service_bindings or ConfiguratorV2ServiceBindings()
 
@@ -1241,6 +1280,26 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def set_commercial_result(self, commercial_result: Any = None):
         self._manufacturing_commercial_result = commercial_result
+
+    def runtime_debug_snapshot(self) -> dict[str, Any]:
+        """Return a small runtime trace payload for identity and inspector state."""
+        inspector_fields = tuple(getattr(field, "name", "") for field in (self.inspector_read_model.fields or ()))
+        editable_field_keys = tuple(sorted(getattr(self.inspector_region, "editable_field_inputs", {}).keys()))
+        visible_state = None
+        if hasattr(self, "isVisible") and callable(getattr(self, "isVisible")):
+            try:
+                visible_state = bool(self.isVisible())
+            except Exception:
+                visible_state = None
+        return {
+            "workspace_id": id(self),
+            "runtime_debug_id": getattr(self, "runtime_debug_id", ""),
+            "has_active_engineering_state": getattr(self, "active_engineering_state", None) is not None,
+            "has_specification": getattr(getattr(self, "active_engineering_state", None), "specification", None) is not None,
+            "inspector_field_names": inspector_fields,
+            "editable_field_input_keys": editable_field_keys,
+            "visible": visible_state,
+        }
 
 
 def create_configurator_v2_workspace(

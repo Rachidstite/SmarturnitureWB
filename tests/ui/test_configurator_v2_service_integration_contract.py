@@ -270,6 +270,20 @@ class TestConfiguratorV2ServiceIntegrationContract(unittest.TestCase):
         self.assertFalse(state.cost_stale)
         self.assertFalse(state.commercial_stale)
 
+    def test_workspace_runtime_debug_snapshot_reports_identity_and_inspector_state(self):
+        _, workspace_module, _, _, _ = self._import_modules()
+
+        workspace = workspace_module.create_configurator_v2_workspace()
+        snapshot = workspace.runtime_debug_snapshot()
+
+        self.assertIn("workspace_id", snapshot)
+        self.assertIn("runtime_debug_id", snapshot)
+        self.assertTrue(snapshot["runtime_debug_id"].startswith("cv2ws-"))
+        self.assertTrue(snapshot["has_active_engineering_state"])
+        self.assertFalse(snapshot["has_specification"])
+        self.assertEqual(snapshot["inspector_field_names"], ())
+        self.assertEqual(snapshot["editable_field_input_keys"], ())
+
     def test_workspace_initializes_active_engineering_state(self):
         engineering_state, workspace_module, _, _, _ = self._import_modules()
 
@@ -369,6 +383,70 @@ class TestConfiguratorV2ServiceIntegrationContract(unittest.TestCase):
         self.assertTrue(state.manufacturing_stale)
         self.assertTrue(state.cost_stale)
         self.assertTrue(state.commercial_stale)
+
+    def test_create_base_cabinet_populates_editable_inspector_fields(self):
+        """Base cabinet creation must expose engineering fields to the inspector."""
+        _, workspace_module, integration_module, read_models, _ = self._import_modules()
+        scene_graph = _FakeSceneGraph(
+            [
+                _FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 600.0, 580.0, 720.0),
+                _FakeNode("divider-1", "Divider", "DIVIDER", 194.0, 0.0, 98.0, 18.0, 552.0, 604.0),
+            ]
+        )
+        specification = types.SimpleNamespace(
+            width_mm=600.0,
+            height_mm=720.0,
+            depth_mm=580.0,
+            shelf_count=3,
+            door_count=2,
+        )
+        cabinet = types.SimpleNamespace(graph=scene_graph, scene_graph=scene_graph)
+        engineering_service = Mock()
+        engineering_service.execute.return_value = ApplicationServiceResult(
+            success=True,
+            data={
+                "cabinet": cabinet,
+                "specification": specification,
+                "metadata": {"material": "MDF", "sku": "BC-600"},
+            },
+            errors=(),
+            diagnostics=(),
+        )
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=engineering_service,
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+
+        integration.create_base_cabinet()
+
+        self.assertIs(workspace.active_engineering_state.specification, specification)
+        self.assertIsInstance(workspace.inspector_read_model, read_models.InspectorReadModel)
+        self.assertEqual(
+            [field.name for field in workspace.inspector_read_model.fields[:5]],
+            ["width_mm", "height_mm", "depth_mm", "shelf_count", "door_count"],
+        )
+        self.assertEqual(
+            workspace.inspector_read_model.fields[0].source_reference,
+            "ActiveEngineeringState.specification",
+        )
+        self.assertIn("width_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("height_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("depth_mm", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("shelf_count", workspace.inspector_region.editable_field_inputs)
+        self.assertIn("door_count", workspace.inspector_region.editable_field_inputs)
+        self.assertEqual(workspace.inspector_region.editable_field_inputs["width_mm"].text(), "600.0")
+        self.assertEqual(workspace.inspector_region.editable_field_inputs["height_mm"].text(), "720.0")
+        self.assertEqual(workspace.inspector_region.editable_field_inputs["depth_mm"].text(), "580.0")
+        self.assertEqual(workspace.inspector_region.editable_field_inputs["shelf_count"].text(), "3")
+        self.assertEqual(workspace.inspector_region.editable_field_inputs["door_count"].text(), "2")
+        self.assertTrue(any("Width: 600.0 mm" in row for row in workspace.inspector_region.render_rows))
+        self.assertTrue(any("Height: 720.0 mm" in row for row in workspace.inspector_region.render_rows))
+        self.assertTrue(any("Depth: 580.0 mm" in row for row in workspace.inspector_region.render_rows))
+        self.assertTrue(any("Shelf Count: 3" in row for row in workspace.inspector_region.render_rows))
+        self.assertTrue(any("Door Count: 2" in row for row in workspace.inspector_region.render_rows))
 
     def test_create_base_cabinet_uses_active_engineering_state_not_preview_as_source_of_truth(self):
         _, workspace_module, integration_module, _, _ = self._import_modules()
