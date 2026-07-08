@@ -64,6 +64,19 @@ class TestWardrobeVisualQualityContract(unittest.TestCase):
             self.assertGreaterEqual(shelf.transform.z, cabinet.t)
             self.assertLess(shelf.transform.z, cabinet.h - cabinet.t)
 
+    def test_wardrobe_divider_remains_full_structural(self):
+        cabinet = WardrobeBuilder(uid="VISUAL_QA_FS", width=1200, height=2000, depth=600)
+        left_id, _right_id = cabinet.add_divider(x_offset=600)
+        project = cabinet.build()
+
+        divider = project.graph.get_node(f"{cabinet.uid}_{left_id}_D_600")
+        if divider is None:
+            divider = project.graph._by_role[NodeRole.DIVIDER][0]
+
+        self.assertEqual(divider.transform.z, cabinet.t)
+        self.assertEqual(divider.height, cabinet.h - (2 * cabinet.t))
+        self.assertEqual(divider.thickness, cabinet.t)
+
 
 if __name__ == "__main__":
     unittest.main()

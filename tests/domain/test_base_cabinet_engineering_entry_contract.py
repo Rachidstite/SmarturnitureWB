@@ -35,6 +35,36 @@ class FakeCabinetBuilder:
 
 
 class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
+    def _build_engineered_base_cabinet(self):
+        from engine.geometry_engine import GeometryEngine
+
+        fake_freecad = types.ModuleType("FreeCAD")
+        fake_part = types.ModuleType("Part")
+        fake_part.makeBox = lambda *args, **kwargs: object()
+        fake_freecad_gui = types.ModuleType("FreeCADGui")
+
+        cabinet = Cabinet()
+        spec = BaseCabinetSpecification()
+        attach_base_cabinet_engineering_models(cabinet, spec)
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "FreeCAD": fake_freecad,
+                "Part": fake_part,
+                "FreeCADGui": fake_freecad_gui,
+            },
+        ):
+            cabinet_builder_module = import_module("engine.cabinet_builder")
+            builder = cabinet_builder_module.CabinetBuilder()
+            builder._cabinet = cabinet
+            builder.mat = MaterialManager()
+            builder.geo = GeometryEngine(cabinet, builder.mat)
+            builder.geo.resolve_all()
+            builder._attach_section_engineering_components()
+
+        return cabinet, builder
+
     def test_accepts_base_cabinet_specification(self):
         FakeCabinetBuilder.instances_created = 0
         FakeCabinetBuilder.build_calls = 0
@@ -315,6 +345,63 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         roles = [node.role for node in graph.all_nodes()]
         self.assertEqual(roles.count(NodeRole.SHELF), 3)
         self.assertEqual(roles.count(NodeRole.DIVIDER), 2)
+
+    def test_base_cabinet_divider_starts_on_bottom_panel_top_face(self):
+        cabinet, builder = self._build_engineered_base_cabinet()
+        divider = cabinet.engineering_model.dividers[0]
+
+        expected_z = cabinet.params.base_height + builder.mat.mdf_thickness
+        self.assertAlmostEqual(divider.position_mm[2], expected_z)
+
+    def test_base_cabinet_divider_height_matches_full_structural_rule(self):
+        cabinet, builder = self._build_engineered_base_cabinet()
+        divider = cabinet.engineering_model.dividers[0]
+
+        expected_height = (
+            cabinet.params.height
+            - cabinet.params.base_height
+            - (2 * builder.mat.mdf_thickness)
+        )
+        self.assertAlmostEqual(divider.height_mm, expected_height)
+
+    def test_base_cabinet_divider_depth_remains_unchanged(self):
+        cabinet, builder = self._build_engineered_base_cabinet()
+        divider = cabinet.engineering_model.dividers[0]
+        resolved_divider = builder.geo.resolved_sections[0].divider
+
+        self.assertAlmostEqual(divider.depth_mm, resolved_divider.depth)
+
+    def test_base_cabinet_divider_x_position_remains_unchanged(self):
+        cabinet, builder = self._build_engineered_base_cabinet()
+        divider = cabinet.engineering_model.dividers[0]
+        resolved_divider = builder.geo.resolved_sections[0].divider
+
+        self.assertAlmostEqual(divider.position_mm[0], resolved_divider.x)
+
+    def test_base_cabinet_divider_y_position_remains_unchanged(self):
+        cabinet, builder = self._build_engineered_base_cabinet()
+        divider = cabinet.engineering_model.dividers[0]
+        resolved_divider = builder.geo.resolved_sections[0].divider
+
+        self.assertAlmostEqual(divider.position_mm[1], resolved_divider.y)
+
+    def test_scene_graph_copies_base_cabinet_divider_geometry_unchanged(self):
+        cabinet, builder = self._build_engineered_base_cabinet()
+        graph = SceneGraphBuilder(cabinet, builder.mat).build(builder.geo)
+
+        scene_dividers = [node for node in graph.all_nodes() if node.role == NodeRole.DIVIDER]
+        self.assertEqual(len(scene_dividers), len(cabinet.engineering_model.dividers))
+
+        for scene_divider, engineering_divider in zip(
+            scene_dividers,
+            cabinet.engineering_model.dividers,
+        ):
+            self.assertAlmostEqual(scene_divider.x, engineering_divider.position_mm[0])
+            self.assertAlmostEqual(scene_divider.y, engineering_divider.position_mm[1])
+            self.assertAlmostEqual(scene_divider.z, engineering_divider.position_mm[2])
+            self.assertAlmostEqual(scene_divider.width, engineering_divider.width_mm)
+            self.assertAlmostEqual(scene_divider.depth, engineering_divider.depth_mm)
+            self.assertAlmostEqual(scene_divider.height, engineering_divider.height_mm)
 
 
     def test_open_sections_populate_engineering_shelves_from_geometry(self):

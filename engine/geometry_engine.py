@@ -224,11 +224,15 @@ x=start_x, y=shelf_start_y, z=z_pos,
         # --- Divider ---
         div = None
         if idx < sec_count - 1:
-            CLEARANCE = 1.0
             div_depth = D - 20 - BT - section_sliding
-            div = ResolvedDivider(x=start_x + inner_w, y=section_sliding, z=base_H + T + CLEARANCE, width=T,
-                                  depth=div_depth,
-                                  height=params.height - base_H - 2 * T - 2 * CLEARANCE)
+            div = ResolvedDivider(
+                x=start_x + inner_w,
+                y=section_sliding,
+                z=base_H + T,
+                width=T,
+                depth=div_depth,
+                height=params.height - base_H - 2 * T,
+            )
 
         return ResolvedSection(
             inner_x=start_x, inner_width=inner_w,
