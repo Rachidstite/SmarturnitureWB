@@ -6,6 +6,7 @@ from dataclasses import is_dataclass
 from unittest.mock import Mock, patch
 
 from application.application_service_result import ApplicationServiceResult
+from domain.base_cabinet_specification import BaseCabinetSpecification
 
 
 class _FakeSignal:
@@ -92,6 +93,14 @@ class _FakeTabWidget(_FakeWidget):
         self.tabs.append((widget, title))
 
 
+class _FakeTimer(_FakeWidget):
+    @staticmethod
+    def singleShot(_ms, callback):
+        if callable(callback):
+            return callback()
+        return None
+
+
 class _FakeLineEdit(_FakeWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -111,6 +120,7 @@ def _fake_qt_module():
             QPushButton=_FakeButton,
             QLabel=_FakeWidget,
             QTabWidget=_FakeTabWidget,
+            QTimer=_FakeTimer,
         ),
         QtCore=types.SimpleNamespace(),
     )
@@ -562,6 +572,191 @@ class TestConfiguratorV2ServiceIntegrationContract(unittest.TestCase):
         )
         self.assertEqual(workspace.active_engineering_state.specification.width_mm, 800.0)
         self.assertEqual(workspace.active_engineering_state.metadata["sku"], "BC-800")
+
+    def _make_frozen_dimension_update_integration(self, workspace_module, integration_module, *, specification, updated_result_specification, updated_scene_graph):
+        engineering_service = Mock()
+        engineering_service.execute.side_effect = [
+            ApplicationServiceResult(
+                success=True,
+                data={
+                    "cabinet": types.SimpleNamespace(
+                        graph=_FakeSceneGraph(
+                            [_FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 600.0, 580.0, 720.0)]
+                        ),
+                        scene_graph=_FakeSceneGraph(
+                            [_FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 600.0, 580.0, 720.0)]
+                        ),
+                    ),
+                    "specification": specification,
+                    "metadata": {"material": "MDF"},
+                },
+                errors=(),
+                diagnostics=(),
+            ),
+            ApplicationServiceResult(
+                success=True,
+                data={
+                    "cabinet": types.SimpleNamespace(
+                        graph=updated_scene_graph,
+                        scene_graph=updated_scene_graph,
+                    ),
+                    "specification": updated_result_specification,
+                    "metadata": {"material": "MDF", "sku": "BC-800"},
+                },
+                errors=(),
+                diagnostics=(),
+            ),
+        ]
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=engineering_service,
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.create_base_cabinet()
+        return workspace, integration, engineering_service
+
+    def test_update_active_base_cabinet_width_handles_frozen_dataclass_specification(self):
+        _, workspace_module, integration_module, _, _ = self._import_modules()
+        specification = BaseCabinetSpecification(width_mm=600.0, height_mm=720.0, depth_mm=580.0)
+        updated_scene_graph = _FakeSceneGraph(
+            [_FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 800.0, 580.0, 720.0)]
+        )
+        workspace, integration, engineering_service = self._make_frozen_dimension_update_integration(
+            workspace_module,
+            integration_module,
+            specification=specification,
+            updated_result_specification=BaseCabinetSpecification(width_mm=800.0, height_mm=720.0, depth_mm=580.0),
+            updated_scene_graph=updated_scene_graph,
+        )
+
+        integration.update_active_base_cabinet_width(800.0)
+
+        self.assertEqual(specification.width_mm, 600.0)
+        self.assertEqual(specification.height_mm, 720.0)
+        self.assertEqual(specification.depth_mm, 580.0)
+        self.assertEqual(
+            engineering_service.execute.call_args_list[1].kwargs["specification"].width_mm,
+            800.0,
+        )
+        self.assertEqual(workspace.active_engineering_state.specification.width_mm, 800.0)
+
+    def test_update_active_base_cabinet_height_handles_frozen_dataclass_specification(self):
+        _, workspace_module, integration_module, _, _ = self._import_modules()
+        specification = BaseCabinetSpecification(width_mm=600.0, height_mm=720.0, depth_mm=580.0)
+        updated_scene_graph = _FakeSceneGraph(
+            [_FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 600.0, 580.0, 900.0)]
+        )
+        workspace, integration, engineering_service = self._make_frozen_dimension_update_integration(
+            workspace_module,
+            integration_module,
+            specification=specification,
+            updated_result_specification=BaseCabinetSpecification(width_mm=600.0, height_mm=900.0, depth_mm=580.0),
+            updated_scene_graph=updated_scene_graph,
+        )
+
+        integration.update_active_base_cabinet_height(900.0)
+
+        self.assertEqual(specification.height_mm, 720.0)
+        self.assertEqual(
+            engineering_service.execute.call_args_list[1].kwargs["specification"].height_mm,
+            900.0,
+        )
+        self.assertEqual(workspace.active_engineering_state.specification.height_mm, 900.0)
+
+    def test_update_active_base_cabinet_depth_handles_frozen_dataclass_specification(self):
+        _, workspace_module, integration_module, _, _ = self._import_modules()
+        specification = BaseCabinetSpecification(width_mm=600.0, height_mm=720.0, depth_mm=580.0)
+        updated_scene_graph = _FakeSceneGraph(
+            [_FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 600.0, 650.0, 720.0)]
+        )
+        workspace, integration, engineering_service = self._make_frozen_dimension_update_integration(
+            workspace_module,
+            integration_module,
+            specification=specification,
+            updated_result_specification=BaseCabinetSpecification(width_mm=600.0, height_mm=720.0, depth_mm=650.0),
+            updated_scene_graph=updated_scene_graph,
+        )
+
+        integration.update_active_base_cabinet_depth(650.0)
+
+        self.assertEqual(specification.depth_mm, 580.0)
+        self.assertEqual(
+            engineering_service.execute.call_args_list[1].kwargs["specification"].depth_mm,
+            650.0,
+        )
+        self.assertEqual(workspace.active_engineering_state.specification.depth_mm, 650.0)
+
+    def test_update_active_base_cabinet_shelf_count_handles_frozen_dataclass_specification(self):
+        _, workspace_module, integration_module, _, _ = self._import_modules()
+        specification = BaseCabinetSpecification(
+            width_mm=600.0,
+            height_mm=720.0,
+            depth_mm=580.0,
+            shelf_count=3,
+            door_count=2,
+        )
+        updated_scene_graph = _FakeSceneGraph(
+            [_FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 600.0, 580.0, 720.0)]
+        )
+        workspace, integration, engineering_service = self._make_frozen_dimension_update_integration(
+            workspace_module,
+            integration_module,
+            specification=specification,
+            updated_result_specification=BaseCabinetSpecification(
+                width_mm=600.0,
+                height_mm=720.0,
+                depth_mm=580.0,
+                shelf_count=5,
+                door_count=2,
+            ),
+            updated_scene_graph=updated_scene_graph,
+        )
+
+        integration.update_active_base_cabinet_shelf_count(5)
+
+        self.assertEqual(specification.shelf_count, 3)
+        self.assertEqual(
+            engineering_service.execute.call_args_list[1].kwargs["specification"].shelf_count,
+            5,
+        )
+        self.assertEqual(workspace.active_engineering_state.specification.shelf_count, 5)
+
+    def test_update_active_base_cabinet_door_count_handles_frozen_dataclass_specification(self):
+        _, workspace_module, integration_module, _, _ = self._import_modules()
+        specification = BaseCabinetSpecification(
+            width_mm=600.0,
+            height_mm=720.0,
+            depth_mm=580.0,
+            shelf_count=3,
+            door_count=2,
+        )
+        updated_scene_graph = _FakeSceneGraph(
+            [_FakeNode("cabinet-1", "Cabinet", "CABINET", 0.0, 0.0, 0.0, 600.0, 580.0, 720.0)]
+        )
+        workspace, integration, engineering_service = self._make_frozen_dimension_update_integration(
+            workspace_module,
+            integration_module,
+            specification=specification,
+            updated_result_specification=BaseCabinetSpecification(
+                width_mm=600.0,
+                height_mm=720.0,
+                depth_mm=580.0,
+                shelf_count=3,
+                door_count=4,
+            ),
+            updated_scene_graph=updated_scene_graph,
+        )
+
+        integration.update_active_base_cabinet_door_count(4)
+
+        self.assertEqual(specification.door_count, 2)
+        self.assertEqual(
+            engineering_service.execute.call_args_list[1].kwargs["specification"].door_count,
+            4,
+        )
+        self.assertEqual(workspace.active_engineering_state.specification.door_count, 4)
 
     def test_update_active_base_cabinet_width_refreshes_preview(self):
         _, workspace_module, integration_module, _, _ = self._import_modules()

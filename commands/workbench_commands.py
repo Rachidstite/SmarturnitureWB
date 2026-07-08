@@ -1,5 +1,7 @@
 import FreeCADGui
 
+last_configurator_v2_workspace = None
+
 
 class OpenConfiguratorCommand:
 
@@ -56,6 +58,7 @@ def _open_configurator_v2():
 
 
 class OpenConfiguratorV2Command:
+    last_workspace = None
 
     def GetResources(self):
         return {
@@ -65,7 +68,10 @@ class OpenConfiguratorV2Command:
         }
 
     def Activated(self):
-        _open_configurator_v2()
+        workspace = _open_configurator_v2()
+        type(self).last_workspace = workspace
+        global last_configurator_v2_workspace
+        last_configurator_v2_workspace = workspace
 
     def IsActive(self):
         return True

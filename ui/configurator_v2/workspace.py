@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from core.qt_compat import QtWidgets
+from core.qt_compat import QtWidgets, QtCore
 from .engineering_state import ActiveEngineeringState
 from .read_models import (
     InspectorFieldReadModel,
@@ -996,32 +996,75 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.factory_dashboard_read_model: FactoryDashboardReadModel | None = None
 
         root_layout = QtWidgets.QVBoxLayout(self)
-        content_layout = QtWidgets.QHBoxLayout()
 
-        left_column = QtWidgets.QVBoxLayout()
-        self.global_navigation_region = GlobalNavigationRegion()
-        self.project_tree_region = ProjectTreeRegion(on_select=self.set_selection)
-        left_column.addWidget(self.global_navigation_region)
-        left_column.addWidget(self.project_tree_region)
-        content_layout.addLayout(left_column)
+        splitter_cls = getattr(QtWidgets, "QSplitter", None)
+        if splitter_cls is not None:
+            self.workspace_splitter = splitter_cls()
+            if hasattr(self.workspace_splitter, "setOrientation") and hasattr(QtCore, "Qt"):
+                self.workspace_splitter.setOrientation(QtCore.Qt.Horizontal)
+            if hasattr(self.workspace_splitter, "setChildrenCollapsible"):
+                self.workspace_splitter.setChildrenCollapsible(False)
 
-        center_column = QtWidgets.QVBoxLayout()
-        self.preview_region = PreviewRegion()
-        center_column.addWidget(self.preview_region)
-        content_layout.addLayout(center_column)
+            left_pane = QtWidgets.QWidget()
+            left_column = QtWidgets.QVBoxLayout(left_pane)
+            self.global_navigation_region = GlobalNavigationRegion()
+            self.project_tree_region = ProjectTreeRegion(on_select=self.set_selection)
+            left_column.addWidget(self.global_navigation_region)
+            left_column.addWidget(self.project_tree_region)
 
-        right_column = QtWidgets.QVBoxLayout()
-        self.project_context_region = ProductContextRegion()
-        self.product_state_indicator = ProductStateIndicator()
-        self.inspector_region = InspectorRegion(on_field_commit=self._handle_inspector_field_commit)
-        self.review_region = ReviewRegion()
-        right_column.addWidget(self.project_context_region)
-        right_column.addWidget(self.product_state_indicator)
-        right_column.addWidget(self.inspector_region)
-        right_column.addWidget(self.review_region)
-        content_layout.addLayout(right_column)
+            center_pane = QtWidgets.QWidget()
+            center_column = QtWidgets.QVBoxLayout(center_pane)
+            self.preview_region = PreviewRegion()
+            center_column.addWidget(self.preview_region)
 
-        root_layout.addLayout(content_layout)
+            right_pane = QtWidgets.QWidget()
+            right_column = QtWidgets.QVBoxLayout(right_pane)
+            self.project_context_region = ProductContextRegion()
+            self.product_state_indicator = ProductStateIndicator()
+            self.inspector_region = InspectorRegion(on_field_commit=self._handle_inspector_field_commit)
+            self.review_region = ReviewRegion()
+            right_column.addWidget(self.project_context_region)
+            right_column.addWidget(self.product_state_indicator)
+            right_column.addWidget(self.inspector_region)
+            right_column.addWidget(self.review_region)
+
+            self.workspace_splitter.addWidget(left_pane)
+            self.workspace_splitter.addWidget(center_pane)
+            self.workspace_splitter.addWidget(right_pane)
+            if hasattr(self.workspace_splitter, "setStretchFactor"):
+                self.workspace_splitter.setStretchFactor(0, 2)
+                self.workspace_splitter.setStretchFactor(1, 5)
+                self.workspace_splitter.setStretchFactor(2, 3)
+            if hasattr(self.workspace_splitter, "setSizes"):
+                self.workspace_splitter.setSizes([240, 660, 300])
+            root_layout.addWidget(self.workspace_splitter)
+        else:
+            content_layout = QtWidgets.QHBoxLayout()
+
+            left_column = QtWidgets.QVBoxLayout()
+            self.global_navigation_region = GlobalNavigationRegion()
+            self.project_tree_region = ProjectTreeRegion(on_select=self.set_selection)
+            left_column.addWidget(self.global_navigation_region)
+            left_column.addWidget(self.project_tree_region)
+            content_layout.addLayout(left_column)
+
+            center_column = QtWidgets.QVBoxLayout()
+            self.preview_region = PreviewRegion()
+            center_column.addWidget(self.preview_region)
+            content_layout.addLayout(center_column)
+
+            right_column = QtWidgets.QVBoxLayout()
+            self.project_context_region = ProductContextRegion()
+            self.product_state_indicator = ProductStateIndicator()
+            self.inspector_region = InspectorRegion(on_field_commit=self._handle_inspector_field_commit)
+            self.review_region = ReviewRegion()
+            right_column.addWidget(self.project_context_region)
+            right_column.addWidget(self.product_state_indicator)
+            right_column.addWidget(self.inspector_region)
+            right_column.addWidget(self.review_region)
+            content_layout.addLayout(right_column)
+
+            root_layout.addLayout(content_layout)
 
         self.message_center_region = MessageCenterRegion()
         root_layout.addWidget(self.message_center_region)
@@ -1095,6 +1138,33 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.service_integration = service_integration
 
     def _handle_inspector_field_commit(self, field_name: str, value: str):
+        def _run_commit():
+            try:
+                if self.service_integration is None:
+                    return
+                if field_name == "width_mm":
+                    self.service_integration.update_active_base_cabinet_width(parsed_value)
+                elif field_name == "height_mm":
+                    self.service_integration.update_active_base_cabinet_height(parsed_value)
+                elif field_name == "depth_mm":
+                    self.service_integration.update_active_base_cabinet_depth(parsed_value)
+                elif field_name == "shelf_count":
+                    self.service_integration.update_active_base_cabinet_shelf_count(parsed_value)
+                elif field_name == "door_count":
+                    self.service_integration.update_active_base_cabinet_door_count(parsed_value)
+            except Exception as exc:
+                integration = self.service_integration
+                if integration is not None and hasattr(integration, "push_message"):
+                    try:
+                        integration.push_message(
+                            severity="WARNING",
+                            text=f"Inspector edit failed for {field_name}: {exc}",
+                            category="Inspector integration",
+                            source_reference="ConfiguratorV2Workspace._handle_inspector_field_commit",
+                        )
+                    except Exception:
+                        pass
+
         if self.service_integration is None:
             return
         try:
@@ -1104,16 +1174,11 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
                 parsed_value = float(value)
         except (TypeError, ValueError):
             return
-        if field_name == "width_mm":
-            self.service_integration.update_active_base_cabinet_width(parsed_value)
-        elif field_name == "height_mm":
-            self.service_integration.update_active_base_cabinet_height(parsed_value)
-        elif field_name == "depth_mm":
-            self.service_integration.update_active_base_cabinet_depth(parsed_value)
-        elif field_name == "shelf_count":
-            self.service_integration.update_active_base_cabinet_shelf_count(parsed_value)
-        elif field_name == "door_count":
-            self.service_integration.update_active_base_cabinet_door_count(parsed_value)
+        timer_cls = getattr(QtCore, "QTimer", None)
+        if timer_cls is not None and hasattr(timer_cls, "singleShot"):
+            timer_cls.singleShot(0, _run_commit)
+        else:
+            _run_commit()
 
     def set_project_tree_read_model(self, read_model: ProjectTreeReadModel):
         self.project_tree_read_model = read_model

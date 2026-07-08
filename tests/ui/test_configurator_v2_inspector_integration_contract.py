@@ -92,6 +92,14 @@ class _FakeTabWidget(_FakeWidget):
         self.tabs.append((widget, title))
 
 
+class _FakeTimer(_FakeWidget):
+    @staticmethod
+    def singleShot(_ms, callback):
+        if callable(callback):
+            return callback()
+        return None
+
+
 class _FakeScrollArea(_FakeWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -132,7 +140,7 @@ def _fake_qt_module():
             QTabWidget=_FakeTabWidget,
             QScrollArea=_FakeScrollArea,
         ),
-        QtCore=types.SimpleNamespace(),
+        QtCore=types.SimpleNamespace(QTimer=_FakeTimer),
     )
 
 
@@ -617,6 +625,121 @@ class TestConfiguratorV2InspectorIntegrationContract(unittest.TestCase):
         editor.editingFinished.emit()
 
         integration.update_active_base_cabinet_width.assert_called_once_with(900.0)
+
+    def test_width_edit_defers_service_update_until_timer_callback(self):
+        """editingFinished must queue the update instead of calling it synchronously."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_width = Mock(return_value=workspace.preview_read_model)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        scheduled = []
+        with patch.object(
+            workspace_module.QtCore.QTimer,
+            "singleShot",
+            side_effect=lambda _ms, callback: scheduled.append(callback),
+        ):
+            editor = workspace.inspector_region.editable_field_inputs["width_mm"]
+            editor.setText("900.0")
+            editor.editingFinished.emit()
+
+        self.assertEqual(len(scheduled), 1)
+        integration.update_active_base_cabinet_width.assert_not_called()
+
+    def test_width_edit_timer_callback_runs_service_update(self):
+        """The deferred timer callback must invoke the correct update method."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_width = Mock(return_value=workspace.preview_read_model)
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        scheduled = []
+        with patch.object(
+            workspace_module.QtCore.QTimer,
+            "singleShot",
+            side_effect=lambda _ms, callback: scheduled.append(callback),
+        ):
+            editor = workspace.inspector_region.editable_field_inputs["width_mm"]
+            editor.setText("900.0")
+            editor.editingFinished.emit()
+
+        self.assertEqual(len(scheduled), 1)
+        scheduled[0]()
+        integration.update_active_base_cabinet_width.assert_called_once_with(900.0)
+
+    def test_width_edit_callback_catches_service_exceptions(self):
+        """Deferred edit callback must not leak service exceptions into Qt."""
+        workspace_module, integration_module, _, _ = self._import_modules()
+        bindings = workspace_module.ConfiguratorV2ServiceBindings(
+            project_application_service=Mock(),
+            engineering_application_service=Mock(),
+            manufacturing_application_service=Mock(),
+        )
+        workspace = workspace_module.create_configurator_v2_workspace(service_bindings=bindings)
+        integration = integration_module.attach_service_integration(workspace, bindings)
+        integration.update_active_base_cabinet_width = Mock(side_effect=RuntimeError("boom"))
+        integration.push_message = Mock()
+
+        spec = self._make_specification(width=800.0, height=900.0, depth=600.0)
+        workspace.active_engineering_state = self._make_engineering_state(spec, workspace_module)
+        workspace.set_selection(
+            workspace_module.ConfiguratorSelection(
+                selection_type="CABINET",
+                selection_id="base-cabinet",
+                display_name="Base Cabinet",
+                source_region="EngineeringIntegration",
+            )
+        )
+
+        scheduled = []
+        with patch.object(
+            workspace_module.QtCore.QTimer,
+            "singleShot",
+            side_effect=lambda _ms, callback: scheduled.append(callback),
+        ):
+            editor = workspace.inspector_region.editable_field_inputs["width_mm"]
+            editor.setText("900.0")
+            editor.editingFinished.emit()
+
+        self.assertEqual(len(scheduled), 1)
+        try:
+            scheduled[0]()
+        except Exception as exc:  # pragma: no cover - defensive failure path
+            self.fail(f"Deferred inspector update leaked exception: {exc}")
+        integration.update_active_base_cabinet_width.assert_called_once_with(900.0)
+        integration.push_message.assert_called()
 
     def test_height_edit_calls_update_active_base_cabinet_height(self):
         """Committing height from the inspector must call the height update method."""

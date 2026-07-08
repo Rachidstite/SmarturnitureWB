@@ -213,6 +213,35 @@ class TestCv2WiringLogic(unittest.TestCase):
             current_product_family="Base Cabinet",
         )
 
+    def test_activated_stores_persistent_workspace_reference(self):
+        mocks = self._call_helper_with_mocks()
+
+        with patch.dict(sys.modules, _patch_freecad_gui()):
+            import commands.workbench_commands as wb
+
+            wb.OpenConfiguratorV2Command.last_workspace = None
+            wb.last_configurator_v2_workspace = None
+            command = wb.OpenConfiguratorV2Command()
+            with patch.object(wb, "_open_configurator_v2", return_value=mocks["result"]):
+                workspace = command.Activated()
+
+        self.assertIsNone(workspace)
+        self.assertIs(wb.OpenConfiguratorV2Command.last_workspace, mocks["result"])
+        self.assertIs(wb.last_configurator_v2_workspace, mocks["result"])
+
+    def test_stored_reference_matches_helper_return_value(self):
+        mocks = self._call_helper_with_mocks()
+
+        with patch.dict(sys.modules, _patch_freecad_gui()):
+            import commands.workbench_commands as wb
+
+            command = wb.OpenConfiguratorV2Command()
+            with patch.object(wb, "_open_configurator_v2", return_value=mocks["result"]):
+                command.Activated()
+
+        self.assertIs(wb.OpenConfiguratorV2Command.last_workspace, mocks["result"])
+        self.assertIs(wb.last_configurator_v2_workspace, mocks["result"])
+
     def test_open_configurator_v2_command_calls_helper(self):
         """OpenConfiguratorV2Command.Activated must reference _open_configurator_v2."""
         source_path = REPO_ROOT / "commands" / "workbench_commands.py"
@@ -229,6 +258,23 @@ class TestCv2WiringLogic(unittest.TestCase):
                         break
                 break
         self.assertTrue(found, "Activated must call _open_configurator_v2")
+
+    def test_legacy_open_configurator_command_remains_unchanged(self):
+        source_path = REPO_ROOT / "commands" / "workbench_commands.py"
+        source = source_path.read_text()
+        tree = ast.parse(source)
+        found = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == "OpenConfiguratorCommand":
+                for item in node.body:
+                    if isinstance(item, ast.FunctionDef) and item.name == "Activated":
+                        segment = ast.get_source_segment(source, item)
+                        self.assertIn("UIManager", segment)
+                        self.assertNotIn("_open_configurator_v2", segment)
+                        found = True
+                        break
+                break
+        self.assertTrue(found, "OpenConfiguratorCommand.Activated must remain legacy UIManager flow")
 
 
 class TestCv2NoFreeCADImports(unittest.TestCase):
