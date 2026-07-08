@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib
+from dataclasses import is_dataclass, replace
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -514,8 +515,11 @@ class ConfiguratorV2ServiceIntegration:
             )
             return self.workspace.preview_read_model
 
-        next_specification = copy.copy(current_specification)
-        setattr(next_specification, field_name, value)
+        if is_dataclass(current_specification):
+            next_specification = replace(current_specification, **{field_name: value})
+        else:
+            next_specification = copy.copy(current_specification)
+            setattr(next_specification, field_name, value)
 
         result = service.execute(specification=next_specification)
         if not result:
