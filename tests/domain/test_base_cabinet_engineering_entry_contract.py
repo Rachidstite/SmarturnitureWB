@@ -28,10 +28,13 @@ class FakeCabinetBuilder:
 
     def __init__(self):
         type(self).instances_created += 1
+        self.scene_graph = object()
 
     def build(self, cabinet):
         type(self).build_calls += 1
         type(self).last_cabinet = cabinet
+        cabinet.graph = self.scene_graph
+        cabinet.scene_graph = self.scene_graph
 
 
 class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):

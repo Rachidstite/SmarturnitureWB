@@ -29,10 +29,13 @@ class FakeCabinetBuilder:
 
     def __init__(self):
         type(self).instances_created += 1
+        self.scene_graph = object()
 
     def build(self, cabinet):
         type(self).build_calls += 1
         type(self).last_cabinet = cabinet
+        cabinet.graph = self.scene_graph
+        cabinet.scene_graph = self.scene_graph
 
 
 def _imported_modules(module):
@@ -88,7 +91,7 @@ class TestEngineeringEntryOrchestrationContract(unittest.TestCase):
         self.assertIsInstance(cabinet.construction_model, object)
         self.assertIsInstance(cabinet.engineering_model, BaseCabinetEngineeringModel)
 
-    def test_engineering_entry_does_not_perform_geometry_or_downstream_work(self):
+    def test_engineering_entry_does_not_perform_downstream_work(self):
         FakeCabinetBuilder.instances_created = 0
         FakeCabinetBuilder.build_calls = 0
         FakeCabinetBuilder.last_cabinet = None
@@ -103,8 +106,8 @@ class TestEngineeringEntryOrchestrationContract(unittest.TestCase):
             )
 
         self.assertIsInstance(cabinet, Cabinet)
-        self.assertIsNone(getattr(cabinet, "graph", None))
-        self.assertIsNone(getattr(cabinet, "scene_graph", None))
+        self.assertIsNotNone(getattr(cabinet, "graph", None))
+        self.assertIs(getattr(cabinet, "graph", None), getattr(cabinet, "scene_graph", None))
 
         module_imports = _imported_modules(base_entry_module)
         self.assertIn("engine.cabinet_builder", module_imports)

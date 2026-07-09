@@ -27,6 +27,15 @@ class FakeCabinetBuilder:
         cabinet.scene_graph = self.scene_graph
 
 
+class MissingSceneGraphCabinetBuilder:
+    def __init__(self):
+        self.scene_graph = None
+
+    def build(self, cabinet):
+        cabinet.graph = None
+        cabinet.scene_graph = None
+
+
 class TestExecutionBoundaryContracts(unittest.TestCase):
     def test_engineering_entry_attaches_engineering_model_without_geometry(self):
         with patch.object(
@@ -98,6 +107,35 @@ class TestExecutionBoundaryContracts(unittest.TestCase):
         source = inspect.getsource(construction_module)
         for token in ("SceneGraph", "GeometryEngine", "ProductFamily"):
             self.assertNotIn(token, source)
+
+    def test_engineering_entry_success_always_exposes_scene_graph(self):
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=FakeCabinetBuilder,
+        ):
+            cabinet = build_base_cabinet_engineering_cabinet(
+                BaseCabinetSpecification()
+            )
+
+        self.assertTrue(hasattr(cabinet, "graph"))
+        self.assertTrue(hasattr(cabinet, "scene_graph"))
+        self.assertIsNotNone(cabinet.graph)
+        self.assertIs(cabinet.graph, cabinet.scene_graph)
+
+    def test_missing_scene_graph_cannot_escape_engineering_boundary(self):
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=MissingSceneGraphCabinetBuilder,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "did not produce a scene graph",
+            ):
+                build_base_cabinet_engineering_cabinet(
+                    BaseCabinetSpecification()
+                )
 
 
 if __name__ == "__main__":

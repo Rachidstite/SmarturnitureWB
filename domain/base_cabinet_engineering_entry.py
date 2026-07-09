@@ -25,9 +25,10 @@ def build_base_cabinet_engineering_cabinet(
     builder = CabinetBuilder()
     builder.build(cabinet)
     scene_graph = getattr(builder, "scene_graph", None)
-    if scene_graph is not None:
-        cabinet.graph = scene_graph
-        cabinet.scene_graph = scene_graph
+    if scene_graph is None:
+        raise RuntimeError("Engineering cabinet build did not produce a scene graph")
+    cabinet.graph = scene_graph
+    cabinet.scene_graph = scene_graph
     return cabinet
 
 

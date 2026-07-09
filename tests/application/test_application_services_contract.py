@@ -65,6 +65,24 @@ class FakeCabinetBuilder:
         cabinet.scene_graph = self.scene_graph
 
 
+class MissingSceneGraphCabinetBuilder:
+    """Simulates a builder that completes without producing a scene graph."""
+
+    instances_created = 0
+    build_calls = 0
+    last_cabinet = None
+
+    def __init__(self):
+        type(self).instances_created += 1
+        self.scene_graph = None
+
+    def build(self, cabinet: Any) -> None:
+        type(self).build_calls += 1
+        type(self).last_cabinet = cabinet
+        cabinet.graph = None
+        cabinet.scene_graph = None
+
+
 def _reset_fake_cabinet_builder() -> None:
     FakeCabinetBuilder.instances_created = 0
     FakeCabinetBuilder.build_calls = 0
@@ -264,6 +282,31 @@ class TestEngineeringApplicationServiceContract(unittest.TestCase):
 
         self.assertTrue(result.success)
         self.assertIsInstance(result.data["cabinet"], Cabinet)
+
+    def test_successful_engineering_result_always_exposes_scene_graph(self):
+        svc = EngineeringApplicationService()
+
+        with patch.object(
+            _eng_entry_module, "CabinetBuilder", new=FakeCabinetBuilder,
+        ):
+            result = svc.execute(specification=BaseCabinetSpecification())
+
+        self.assertTrue(result.success)
+        cabinet = result.data["cabinet"]
+        self.assertIsNotNone(getattr(cabinet, "graph", None))
+        self.assertIs(getattr(cabinet, "graph", None), getattr(cabinet, "scene_graph", None))
+
+    def test_missing_scene_graph_returns_engineering_failure(self):
+        svc = EngineeringApplicationService()
+
+        with patch.object(
+            _eng_entry_module, "CabinetBuilder", new=MissingSceneGraphCabinetBuilder,
+        ):
+            result = svc.execute(specification=BaseCabinetSpecification())
+
+        self.assertFalse(result.success)
+        self.assertIsNone(result.data)
+        self.assertTrue(any("scene graph" in error.lower() for error in result.errors))
 
     def test_no_mock_fallback_in_code(self):
         """Only code lines are checked; comments and docstrings are ignored."""
