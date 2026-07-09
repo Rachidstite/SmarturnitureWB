@@ -996,6 +996,22 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         self.factory_dashboard_read_model: FactoryDashboardReadModel | None = None
 
         root_layout = QtWidgets.QVBoxLayout(self)
+        scroll_area_cls = getattr(QtWidgets, "QScrollArea", None)
+        if scroll_area_cls is not None:
+            self.root_scroll_area = scroll_area_cls()
+            if hasattr(self.root_scroll_area, "setWidgetResizable"):
+                self.root_scroll_area.setWidgetResizable(True)
+            self.root_scroll_content = QtWidgets.QWidget()
+            self.root_scroll_content_layout = QtWidgets.QVBoxLayout(self.root_scroll_content)
+            root_layout.addWidget(self.root_scroll_area)
+            if hasattr(self.root_scroll_area, "setWidget"):
+                self.root_scroll_area.setWidget(self.root_scroll_content)
+            content_host = self.root_scroll_content_layout
+        else:
+            self.root_scroll_area = None
+            self.root_scroll_content = None
+            self.root_scroll_content_layout = root_layout
+            content_host = root_layout
 
         splitter_cls = getattr(QtWidgets, "QSplitter", None)
         if splitter_cls is not None:
@@ -1011,11 +1027,17 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             self.project_tree_region = ProjectTreeRegion(on_select=self.set_selection)
             left_column.addWidget(self.global_navigation_region)
             left_column.addWidget(self.project_tree_region)
+            if hasattr(left_pane, "setMaximumWidth"):
+                left_pane.setMaximumWidth(260)
+            self.left_pane = left_pane
 
             center_pane = QtWidgets.QWidget()
             center_column = QtWidgets.QVBoxLayout(center_pane)
             self.preview_region = PreviewRegion()
             center_column.addWidget(self.preview_region)
+            if hasattr(center_pane, "setMinimumWidth"):
+                center_pane.setMinimumWidth(640)
+            self.center_pane = center_pane
 
             right_pane = QtWidgets.QWidget()
             right_column = QtWidgets.QVBoxLayout(right_pane)
@@ -1027,17 +1049,20 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             right_column.addWidget(self.product_state_indicator)
             right_column.addWidget(self.inspector_region)
             right_column.addWidget(self.review_region)
+            if hasattr(right_pane, "setMinimumWidth"):
+                right_pane.setMinimumWidth(280)
+            self.right_pane = right_pane
 
             self.workspace_splitter.addWidget(left_pane)
             self.workspace_splitter.addWidget(center_pane)
             self.workspace_splitter.addWidget(right_pane)
             if hasattr(self.workspace_splitter, "setStretchFactor"):
-                self.workspace_splitter.setStretchFactor(0, 2)
-                self.workspace_splitter.setStretchFactor(1, 5)
-                self.workspace_splitter.setStretchFactor(2, 3)
+                self.workspace_splitter.setStretchFactor(0, 1)
+                self.workspace_splitter.setStretchFactor(1, 4)
+                self.workspace_splitter.setStretchFactor(2, 2)
             if hasattr(self.workspace_splitter, "setSizes"):
-                self.workspace_splitter.setSizes([240, 660, 300])
-            root_layout.addWidget(self.workspace_splitter)
+                self.workspace_splitter.setSizes([180, 720, 300])
+            content_host.addWidget(self.workspace_splitter)
         else:
             content_layout = QtWidgets.QHBoxLayout()
 
@@ -1046,11 +1071,13 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             self.project_tree_region = ProjectTreeRegion(on_select=self.set_selection)
             left_column.addWidget(self.global_navigation_region)
             left_column.addWidget(self.project_tree_region)
+            self.left_pane = None
             content_layout.addLayout(left_column)
 
             center_column = QtWidgets.QVBoxLayout()
             self.preview_region = PreviewRegion()
             center_column.addWidget(self.preview_region)
+            self.center_pane = None
             content_layout.addLayout(center_column)
 
             right_column = QtWidgets.QVBoxLayout()
@@ -1062,15 +1089,16 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             right_column.addWidget(self.product_state_indicator)
             right_column.addWidget(self.inspector_region)
             right_column.addWidget(self.review_region)
+            self.right_pane = None
             content_layout.addLayout(right_column)
 
-            root_layout.addLayout(content_layout)
+            content_host.addLayout(content_layout)
 
         self.message_center_region = MessageCenterRegion()
-        root_layout.addWidget(self.message_center_region)
+        content_host.addWidget(self.message_center_region)
 
         self.action_bar_region = ActionBarRegion()
-        root_layout.addWidget(self.action_bar_region)
+        content_host.addWidget(self.action_bar_region)
 
     def set_project_context(
         self,

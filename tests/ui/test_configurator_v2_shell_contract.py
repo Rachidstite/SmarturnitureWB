@@ -16,6 +16,8 @@ class _FakeWidget:
         self._object_name = ""
         self._enabled = True
         self._text = ""
+        self._minimum_width = None
+        self._maximum_width = None
         self.children = []
 
     def setLayout(self, layout):
@@ -45,6 +47,12 @@ class _FakeWidget:
     def setMaximumHeight(self, _height):
         return None
 
+    def setMinimumWidth(self, width):
+        self._minimum_width = width
+
+    def setMaximumWidth(self, width):
+        self._maximum_width = width
+
     def setPlaceholderText(self, _text):
         return None
 
@@ -71,6 +79,10 @@ class _FakeTextEdit(_FakeWidget):
 class _FakeLayout:
     def __init__(self, *args, **kwargs):
         self.items = []
+        if args:
+            parent = args[0]
+            if hasattr(parent, "setLayout") and callable(parent.setLayout):
+                parent.setLayout(self)
 
     def addWidget(self, widget):
         self.items.append(widget)
@@ -114,6 +126,49 @@ class _FakeTabWidget(_FakeWidget):
         self.tabs.append((widget, title))
 
 
+class _FakeScrollArea(_FakeWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._widget_resizable = False
+        self._widget = None
+
+    def setWidgetResizable(self, resizable):
+        self._widget_resizable = bool(resizable)
+
+    def widgetResizable(self):
+        return self._widget_resizable
+
+    def setWidget(self, widget):
+        self._widget = widget
+
+    def widget(self):
+        return self._widget
+
+
+class _FakeSplitter(_FakeWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.widgets = []
+        self._orientation = None
+        self._children_collapsible = None
+        self._sizes = []
+
+    def setOrientation(self, orientation):
+        self._orientation = orientation
+
+    def setChildrenCollapsible(self, collapsible):
+        self._children_collapsible = bool(collapsible)
+
+    def addWidget(self, widget):
+        self.widgets.append(widget)
+
+    def setStretchFactor(self, *_args):
+        return None
+
+    def setSizes(self, sizes):
+        self._sizes = list(sizes)
+
+
 def _fake_qt_module():
     fake_qt_widgets = types.SimpleNamespace(
         QMainWindow=_FakeMainWindow,
@@ -131,6 +186,8 @@ def _fake_qt_module():
         QSpinBox=_FakeWidget,
         QTextEdit=_FakeTextEdit,
         QGroupBox=_FakeWidget,
+        QScrollArea=_FakeScrollArea,
+        QSplitter=_FakeSplitter,
         QFileDialog=types.SimpleNamespace(getSaveFileName=lambda *args, **kwargs: ("", "")),
         QMessageBox=types.SimpleNamespace(information=lambda *args, **kwargs: None),
     )
@@ -226,6 +283,34 @@ class TestConfiguratorV2ShellContract(unittest.TestCase):
             workspace.project_context_region.current_product_state,
             "Draft",
         )
+
+    def test_root_workspace_uses_scroll_area_and_keeps_footer_regions(self):
+        module = self._import_workspace_module()
+        workspace = module.create_configurator_v2_workspace()
+
+        self.assertIsNotNone(workspace.root_scroll_area)
+        self.assertTrue(workspace.root_scroll_area.widgetResizable())
+        self.assertIs(workspace.root_scroll_area.widget(), workspace.root_scroll_content)
+        self.assertIsNotNone(workspace.root_scroll_content_layout)
+        self.assertIn(workspace.workspace_splitter, workspace.root_scroll_content_layout.items)
+        self.assertIn(workspace.message_center_region, workspace.root_scroll_content_layout.items)
+        self.assertIn(workspace.action_bar_region, workspace.root_scroll_content_layout.items)
+
+    def test_splitter_layout_biases_preview_and_keeps_panes_ordered(self):
+        module = self._import_workspace_module()
+        workspace = module.create_configurator_v2_workspace()
+
+        self.assertTrue(hasattr(workspace, "workspace_splitter"))
+        self.assertEqual(len(workspace.workspace_splitter.widgets), 3)
+        self.assertIs(workspace.workspace_splitter.widgets[0], workspace.left_pane)
+        self.assertIs(workspace.workspace_splitter.widgets[1], workspace.center_pane)
+        self.assertIs(workspace.workspace_splitter.widgets[2], workspace.right_pane)
+        self.assertEqual(workspace.workspace_splitter._sizes, [180, 720, 300])
+        self.assertEqual(workspace.left_pane._maximum_width, 260)
+        self.assertEqual(workspace.center_pane._minimum_width, 640)
+        self.assertEqual(workspace.right_pane._minimum_width, 280)
+        self.assertIn(workspace.preview_region, workspace.center_pane.layout().items)
+        self.assertIn(workspace.inspector_region, workspace.right_pane.layout().items)
 
     def test_selection_model_updates_ui_state_only(self):
         module = self._import_workspace_module()
