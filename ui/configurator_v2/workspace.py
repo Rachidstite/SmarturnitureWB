@@ -1013,6 +1013,19 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             self.root_scroll_content_layout = root_layout
             content_host = root_layout
 
+        self.project_context_region = ProductContextRegion()
+        self.product_state_indicator = ProductStateIndicator()
+        self.message_center_region = MessageCenterRegion()
+        self.action_bar_region = ActionBarRegion()
+        self.review_region = ReviewRegion()
+
+        self.header_region = QtWidgets.QWidget()
+        header_layout = QtWidgets.QHBoxLayout(self.header_region)
+        header_layout.addWidget(self.project_context_region)
+        header_layout.addWidget(self.product_state_indicator)
+        self.header_layout = header_layout
+        content_host.addWidget(self.header_region)
+
         splitter_cls = getattr(QtWidgets, "QSplitter", None)
         if splitter_cls is not None:
             self.workspace_splitter = splitter_cls()
@@ -1028,7 +1041,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             left_column.addWidget(self.global_navigation_region)
             left_column.addWidget(self.project_tree_region)
             if hasattr(left_pane, "setMaximumWidth"):
-                left_pane.setMaximumWidth(260)
+                left_pane.setMaximumWidth(220)
             self.left_pane = left_pane
 
             center_pane = QtWidgets.QWidget()
@@ -1036,19 +1049,13 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             self.preview_region = PreviewRegion()
             center_column.addWidget(self.preview_region)
             if hasattr(center_pane, "setMinimumWidth"):
-                center_pane.setMinimumWidth(640)
+                center_pane.setMinimumWidth(760)
             self.center_pane = center_pane
 
             right_pane = QtWidgets.QWidget()
             right_column = QtWidgets.QVBoxLayout(right_pane)
-            self.project_context_region = ProductContextRegion()
-            self.product_state_indicator = ProductStateIndicator()
             self.inspector_region = InspectorRegion(on_field_commit=self._handle_inspector_field_commit)
-            self.review_region = ReviewRegion()
-            right_column.addWidget(self.project_context_region)
-            right_column.addWidget(self.product_state_indicator)
             right_column.addWidget(self.inspector_region)
-            right_column.addWidget(self.review_region)
             if hasattr(right_pane, "setMinimumWidth"):
                 right_pane.setMinimumWidth(280)
             self.right_pane = right_pane
@@ -1058,10 +1065,10 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             self.workspace_splitter.addWidget(right_pane)
             if hasattr(self.workspace_splitter, "setStretchFactor"):
                 self.workspace_splitter.setStretchFactor(0, 1)
-                self.workspace_splitter.setStretchFactor(1, 4)
+                self.workspace_splitter.setStretchFactor(1, 6)
                 self.workspace_splitter.setStretchFactor(2, 2)
             if hasattr(self.workspace_splitter, "setSizes"):
-                self.workspace_splitter.setSizes([180, 720, 300])
+                self.workspace_splitter.setSizes([160, 960, 280])
             content_host.addWidget(self.workspace_splitter)
         else:
             content_layout = QtWidgets.QHBoxLayout()
@@ -1081,23 +1088,24 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             content_layout.addLayout(center_column)
 
             right_column = QtWidgets.QVBoxLayout()
-            self.project_context_region = ProductContextRegion()
-            self.product_state_indicator = ProductStateIndicator()
             self.inspector_region = InspectorRegion(on_field_commit=self._handle_inspector_field_commit)
-            self.review_region = ReviewRegion()
-            right_column.addWidget(self.project_context_region)
-            right_column.addWidget(self.product_state_indicator)
             right_column.addWidget(self.inspector_region)
-            right_column.addWidget(self.review_region)
             self.right_pane = None
             content_layout.addLayout(right_column)
 
             content_host.addLayout(content_layout)
 
-        self.message_center_region = MessageCenterRegion()
-        content_host.addWidget(self.message_center_region)
+        tabs_cls = getattr(QtWidgets, "QTabWidget", None)
+        if tabs_cls is not None:
+            self.bottom_tabs = tabs_cls()
+            self.bottom_tabs.addTab(self.review_region, "Review")
+            self.bottom_tabs.addTab(self.message_center_region, "Messages")
+            content_host.addWidget(self.bottom_tabs)
+        else:
+            self.bottom_tabs = None
+            content_host.addWidget(self.review_region)
+            content_host.addWidget(self.message_center_region)
 
-        self.action_bar_region = ActionBarRegion()
         content_host.addWidget(self.action_bar_region)
 
     def set_project_context(

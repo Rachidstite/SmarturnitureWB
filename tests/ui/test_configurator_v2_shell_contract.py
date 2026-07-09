@@ -292,9 +292,30 @@ class TestConfiguratorV2ShellContract(unittest.TestCase):
         self.assertTrue(workspace.root_scroll_area.widgetResizable())
         self.assertIs(workspace.root_scroll_area.widget(), workspace.root_scroll_content)
         self.assertIsNotNone(workspace.root_scroll_content_layout)
+        self.assertIn(workspace.header_region, workspace.root_scroll_content_layout.items)
         self.assertIn(workspace.workspace_splitter, workspace.root_scroll_content_layout.items)
-        self.assertIn(workspace.message_center_region, workspace.root_scroll_content_layout.items)
+        self.assertIn(workspace.bottom_tabs, workspace.root_scroll_content_layout.items)
         self.assertIn(workspace.action_bar_region, workspace.root_scroll_content_layout.items)
+        self.assertLess(
+            workspace.root_scroll_content_layout.items.index(workspace.header_region),
+            workspace.root_scroll_content_layout.items.index(workspace.workspace_splitter),
+        )
+        self.assertLess(
+            workspace.root_scroll_content_layout.items.index(workspace.workspace_splitter),
+            workspace.root_scroll_content_layout.items.index(workspace.bottom_tabs),
+        )
+        self.assertLess(
+            workspace.root_scroll_content_layout.items.index(workspace.bottom_tabs),
+            workspace.root_scroll_content_layout.items.index(workspace.action_bar_region),
+        )
+
+    def test_header_region_contains_context_and_state_widgets(self):
+        module = self._import_workspace_module()
+        workspace = module.create_configurator_v2_workspace()
+
+        self.assertIsNotNone(workspace.header_region)
+        self.assertIn(workspace.project_context_region, workspace.header_region.layout().items)
+        self.assertIn(workspace.product_state_indicator, workspace.header_region.layout().items)
 
     def test_splitter_layout_biases_preview_and_keeps_panes_ordered(self):
         module = self._import_workspace_module()
@@ -305,12 +326,28 @@ class TestConfiguratorV2ShellContract(unittest.TestCase):
         self.assertIs(workspace.workspace_splitter.widgets[0], workspace.left_pane)
         self.assertIs(workspace.workspace_splitter.widgets[1], workspace.center_pane)
         self.assertIs(workspace.workspace_splitter.widgets[2], workspace.right_pane)
-        self.assertEqual(workspace.workspace_splitter._sizes, [180, 720, 300])
-        self.assertEqual(workspace.left_pane._maximum_width, 260)
-        self.assertEqual(workspace.center_pane._minimum_width, 640)
+        self.assertEqual(workspace.workspace_splitter._sizes, [160, 960, 280])
+        self.assertEqual(workspace.left_pane._maximum_width, 220)
+        self.assertEqual(workspace.center_pane._minimum_width, 760)
         self.assertEqual(workspace.right_pane._minimum_width, 280)
         self.assertIn(workspace.preview_region, workspace.center_pane.layout().items)
         self.assertIn(workspace.inspector_region, workspace.right_pane.layout().items)
+        self.assertNotIn(workspace.project_context_region, workspace.right_pane.layout().items)
+        self.assertNotIn(workspace.product_state_indicator, workspace.right_pane.layout().items)
+        self.assertNotIn(workspace.review_region, workspace.right_pane.layout().items)
+
+    def test_bottom_tabs_host_review_and_message_center(self):
+        module = self._import_workspace_module()
+        workspace = module.create_configurator_v2_workspace()
+
+        self.assertIsNotNone(workspace.bottom_tabs)
+        self.assertEqual(
+            workspace.bottom_tabs.tabs,
+            [
+                (workspace.review_region, "Review"),
+                (workspace.message_center_region, "Messages"),
+            ],
+        )
 
     def test_selection_model_updates_ui_state_only(self):
         module = self._import_workspace_module()
