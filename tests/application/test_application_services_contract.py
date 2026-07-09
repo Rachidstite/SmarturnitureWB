@@ -7,8 +7,10 @@ Validates:
 """
 
 import inspect
+import types
 import unittest
 from typing import Any
+from importlib import import_module
 from unittest.mock import patch
 
 # --- Module-level imports ---
@@ -24,8 +26,12 @@ from application.engineering_application_service import EngineeringApplicationSe
 from application.manufacturing_application_service import (
     ManufacturingApplicationService,
 )
+from core.material_manager import MaterialManager
+from domain.base_cabinet_engineering_entry import attach_base_cabinet_engineering_models
 from domain.base_cabinet_specification import BaseCabinetSpecification
+from domain.base_cabinet_specification_adapter import BaseCabinetSpecificationAdapter
 from engine.cabinet import Cabinet
+from engine.geometry_engine import GeometryEngine
 from domain.base_cabinet_manufacturing_outputs_entry import (
     BaseCabinetManufacturingOutputsEntryResult,
 )
@@ -36,6 +42,7 @@ from manufacturing.panel_spec import PanelSpec
 from manufacturing.unified_manufacturing_operation import (
     UnifiedManufacturingOperation,
 )
+from scene_graph.builder import SceneGraphBuilder
 from shared.roles import NodeRole
 
 # ---- helpers ----
@@ -87,6 +94,38 @@ def _reset_fake_cabinet_builder() -> None:
     FakeCabinetBuilder.instances_created = 0
     FakeCabinetBuilder.build_calls = 0
     FakeCabinetBuilder.last_cabinet = None
+
+
+def _build_cabinet_with_scene_graph(specification: BaseCabinetSpecification) -> Cabinet:
+    fake_freecad = types.ModuleType("FreeCAD")
+    fake_part = types.ModuleType("Part")
+    fake_part.makeBox = lambda *args, **kwargs: object()
+    fake_freecad_gui = types.ModuleType("FreeCADGui")
+
+    adapter_result = BaseCabinetSpecificationAdapter.adapt(specification)
+    cabinet = Cabinet(params=adapter_result.cabinet_params)
+    attach_base_cabinet_engineering_models(cabinet, specification)
+
+    with patch.dict(
+        "sys.modules",
+        {
+            "FreeCAD": fake_freecad,
+            "Part": fake_part,
+            "FreeCADGui": fake_freecad_gui,
+        },
+    ):
+        cabinet_builder_module = import_module("engine.cabinet_builder")
+        builder = cabinet_builder_module.CabinetBuilder()
+        builder._cabinet = cabinet
+        builder.mat = MaterialManager()
+        builder.geo = GeometryEngine(cabinet, builder.mat)
+        builder.geo.resolve_all()
+        builder._attach_section_engineering_components()
+
+    graph = SceneGraphBuilder(cabinet, builder.mat).build(builder.geo)
+    cabinet.graph = graph
+    cabinet.scene_graph = graph
+    return cabinet
 
 
 # ---- Fake results for entry-point patching ----
@@ -307,6 +346,25 @@ class TestEngineeringApplicationServiceContract(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertIsNone(result.data)
         self.assertTrue(any("scene graph" in error.lower() for error in result.errors))
+
+    def test_metadata_remains_consistent_with_scene_graph_counts(self):
+        svc = EngineeringApplicationService()
+        spec = BaseCabinetSpecification(shelf_count=1, door_count=3)
+        cabinet = _build_cabinet_with_scene_graph(spec)
+
+        with patch.object(
+            eng_svc_module,
+            "build_base_cabinet_engineering_cabinet",
+            return_value=cabinet,
+        ):
+            result = svc.execute(specification=spec)
+
+        self.assertTrue(result.success)
+        graph = result.data["cabinet"].scene_graph
+        shelf_nodes = [node for node in graph.all_nodes() if node.role == NodeRole.SHELF]
+        door_nodes = [node for node in graph.all_nodes() if node.role == NodeRole.DOOR_PANEL]
+        self.assertEqual(result.data["metadata"]["shelf_count"], len(shelf_nodes))
+        self.assertEqual(result.data["metadata"]["door_count"], len(door_nodes))
 
     def test_no_mock_fallback_in_code(self):
         """Only code lines are checked; comments and docstrings are ignored."""

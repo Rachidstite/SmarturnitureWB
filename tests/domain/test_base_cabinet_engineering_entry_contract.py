@@ -68,6 +68,39 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
 
         return cabinet, builder
 
+    def _build_scene_graph_from_specification(self, specification):
+        from engine.geometry_engine import GeometryEngine
+
+        fake_freecad = types.ModuleType("FreeCAD")
+        fake_part = types.ModuleType("Part")
+        fake_part.makeBox = lambda *args, **kwargs: object()
+        fake_freecad_gui = types.ModuleType("FreeCADGui")
+
+        adapter_result = BaseCabinetSpecificationAdapter.adapt(specification)
+        cabinet = Cabinet(params=adapter_result.cabinet_params)
+        attach_base_cabinet_engineering_models(cabinet, specification)
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "FreeCAD": fake_freecad,
+                "Part": fake_part,
+                "FreeCADGui": fake_freecad_gui,
+            },
+        ):
+            cabinet_builder_module = import_module("engine.cabinet_builder")
+            builder = cabinet_builder_module.CabinetBuilder()
+            builder._cabinet = cabinet
+            builder.mat = MaterialManager()
+            builder.geo = GeometryEngine(cabinet, builder.mat)
+            builder.geo.resolve_all()
+            builder._attach_section_engineering_components()
+
+        graph = SceneGraphBuilder(cabinet, builder.mat).build(builder.geo)
+        cabinet.graph = graph
+        cabinet.scene_graph = graph
+        return cabinet, graph
+
     def test_accepts_base_cabinet_specification(self):
         FakeCabinetBuilder.instances_created = 0
         FakeCabinetBuilder.build_calls = 0
@@ -451,6 +484,40 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
 
         self.assertEqual(len(cabinet.engineering_model.shelves), 3)
         self.assertEqual(len(cabinet.engineering_model.dividers), 2)
+
+    def test_changing_shelf_count_changes_resulting_scene_graph(self):
+        low_spec = BaseCabinetSpecification(shelf_count=0, door_count=0)
+        high_spec = BaseCabinetSpecification(shelf_count=1, door_count=0)
+
+        _, low_graph = self._build_scene_graph_from_specification(low_spec)
+        _, high_graph = self._build_scene_graph_from_specification(high_spec)
+
+        low_shelves = [
+            node for node in low_graph.all_nodes() if node.role == NodeRole.SHELF
+        ]
+        high_shelves = [
+            node for node in high_graph.all_nodes() if node.role == NodeRole.SHELF
+        ]
+
+        self.assertEqual(len(low_shelves), 0)
+        self.assertEqual(len(high_shelves), 1)
+
+    def test_changing_door_count_changes_resulting_scene_graph(self):
+        low_spec = BaseCabinetSpecification(shelf_count=0, door_count=1)
+        high_spec = BaseCabinetSpecification(shelf_count=0, door_count=4)
+
+        _, low_graph = self._build_scene_graph_from_specification(low_spec)
+        _, high_graph = self._build_scene_graph_from_specification(high_spec)
+
+        low_doors = [
+            node for node in low_graph.all_nodes() if node.role == NodeRole.DOOR_PANEL
+        ]
+        high_doors = [
+            node for node in high_graph.all_nodes() if node.role == NodeRole.DOOR_PANEL
+        ]
+
+        self.assertEqual(len(low_doors), 1)
+        self.assertEqual(len(high_doors), 4)
 
     def test_delegates_to_existing_cabinet_builder(self):
         FakeCabinetBuilder.instances_created = 0

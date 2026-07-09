@@ -8,7 +8,7 @@ from domain.base_cabinet_specification_adapter import (
     BaseCabinetSpecificationAdapter,
     BaseCabinetSpecificationAdapterResult,
 )
-from shared.contracts import CabinetParams
+from shared.contracts import CabinetParams, SectionConfig
 
 
 class TestBaseCabinetSpecificationAdapterContract(unittest.TestCase):
@@ -79,6 +79,30 @@ class TestBaseCabinetSpecificationAdapterContract(unittest.TestCase):
         self.assertTrue(result.metadata["toe_kick_required"])
         self.assertEqual(result.metadata["hinge_family"], "STANDARD_110")
         self.assertEqual(result.metadata["drawer_family"], "NONE")
+
+    def test_shelf_and_door_counts_reach_geometry_engine_input_shape(self):
+        specification = BaseCabinetSpecification(
+            shelf_count=4,
+            door_count=3,
+        )
+
+        result = BaseCabinetSpecificationAdapter.adapt(specification)
+        section = result.cabinet_params.sec_data[0]
+
+        self.assertEqual(result.cabinet_params.sec_count, 1)
+        self.assertIsInstance(section, SectionConfig)
+        self.assertEqual(section.shelves, 4)
+        self.assertEqual(section.door_count, 3)
+        self.assertEqual(section.doors, "Inset")
+
+    def test_zero_door_count_disables_door_generation_in_geometry_input_shape(self):
+        specification = BaseCabinetSpecification(door_count=0)
+
+        result = BaseCabinetSpecificationAdapter.adapt(specification)
+        section = result.cabinet_params.sec_data[0]
+
+        self.assertEqual(section.door_count, 0)
+        self.assertEqual(section.doors, "None")
 
     def test_unsupported_mappings_are_not_applied_to_cabinet_params(self):
         specification = BaseCabinetSpecification(

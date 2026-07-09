@@ -58,7 +58,7 @@ class TestBaseCabinetSpecificationValidationContract(unittest.TestCase):
         self.assertEqual(captured["height"], 900.0)
         self.assertEqual(captured["depth"], 620.0)
 
-    def test_unsupported_metadata_fields_are_not_forced_into_cabinet_params(self):
+    def test_shelf_and_door_counts_reach_validation_through_geometry_shape(self):
         spec = BaseCabinetSpecification(
             door_count=3,
             shelf_count=2,
@@ -85,6 +85,10 @@ class TestBaseCabinetSpecificationValidationContract(unittest.TestCase):
         self.assertFalse(hasattr(params, "door_count"))
         self.assertFalse(hasattr(params, "shelf_count"))
         self.assertFalse(hasattr(params, "drawer_family"))
+        self.assertEqual(params.sec_count, 1)
+        self.assertEqual(params.sec_data[0].door_count, 3)
+        self.assertEqual(params.sec_data[0].shelves, 2)
+        self.assertEqual(params.sec_data[0].doors, "Inset")
         self.assertEqual(captured["metadata"]["door_count"], 3)
         self.assertEqual(captured["metadata"]["shelf_count"], 2)
         self.assertEqual(captured["metadata"]["drawer_family"], "DRAWER_CUSTOM")

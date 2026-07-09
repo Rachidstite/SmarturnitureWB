@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from domain.base_cabinet_specification import BaseCabinetSpecification
-from shared.contracts import CabinetParams
+from shared.contracts import CabinetParams, SectionConfig
 
 
 @dataclass(frozen=True)
@@ -35,10 +35,20 @@ class BaseCabinetSpecificationAdapter:
     def adapt(
         specification: BaseCabinetSpecification,
     ) -> BaseCabinetSpecificationAdapterResult:
+        door_count = int(getattr(specification, "door_count", 0) or 0)
+        shelf_count = int(getattr(specification, "shelf_count", 0) or 0)
         cabinet_params = CabinetParams(
             width=specification.width_mm,
             height=specification.height_mm,
             depth=specification.depth_mm,
+            sec_count=1,
+            sec_data={
+                0: SectionConfig(
+                    shelves=max(shelf_count, 0),
+                    doors="Inset" if door_count > 0 else "None",
+                    door_count=max(door_count, 0),
+                )
+            },
             hinge_sku=specification.hinge_family,
         )
         return BaseCabinetSpecificationAdapterResult(
