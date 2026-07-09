@@ -104,6 +104,20 @@ class TestBaseCabinetSpecificationAdapterContract(unittest.TestCase):
         self.assertEqual(section.door_count, 0)
         self.assertEqual(section.doors, "None")
 
+    def test_has_back_panel_true_maps_to_active_back_panel_type(self):
+        result = BaseCabinetSpecificationAdapter.adapt(
+            BaseCabinetSpecification(has_back_panel=True)
+        )
+
+        self.assertEqual(result.cabinet_params.back_panel_type, "REAR")
+
+    def test_has_back_panel_false_maps_to_none_back_panel_type(self):
+        result = BaseCabinetSpecificationAdapter.adapt(
+            BaseCabinetSpecification(has_back_panel=False)
+        )
+
+        self.assertEqual(result.cabinet_params.back_panel_type, "NONE")
+
     def test_unsupported_mappings_are_not_applied_to_cabinet_params(self):
         specification = BaseCabinetSpecification(
             door_count=2,

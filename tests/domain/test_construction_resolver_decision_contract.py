@@ -84,6 +84,14 @@ class TestConstructionResolverDecisionContract(unittest.TestCase):
         self.assertEqual(self.model.back_panel.placement, "Inside rear groove behind side/top/bottom panels")
         self.assertIn("groove_seating", self.model.back_panel.allowed_details)
 
+    def test_back_panel_disabled_decision_does_not_claim_grooved_back(self):
+        disabled_model = ConstructionResolver.resolve(
+            BaseCabinetSpecification(has_back_panel=False)
+        )
+
+        self.assertEqual(disabled_model.specification.back_panel_type, "NONE")
+        self.assertIsNone(disabled_model.back_panel)
+
     def test_drawer_suppression_decision(self):
         self.assertEqual(self.model.specification.drawer_count, 0)
         self.assertEqual(len(self.model.doors), 0)

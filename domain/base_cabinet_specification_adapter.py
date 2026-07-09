@@ -18,13 +18,14 @@ class BaseCabinetSpecificationAdapter:
         cabinet_params: CabinetParams,
     ) -> BaseCabinetSpecification:
         section = cabinet_params.sec_data.get(0) if cabinet_params.sec_data else None
+        back_panel_type = str(getattr(cabinet_params, "back_panel_type", "REAR") or "REAR").upper()
         return BaseCabinetSpecification(
             width_mm=cabinet_params.width,
             height_mm=cabinet_params.height,
             depth_mm=cabinet_params.depth,
             door_count=getattr(section, "door_count", 2),
             shelf_count=getattr(section, "shelves", 1),
-            has_back_panel=True,
+            has_back_panel=back_panel_type != "NONE",
             edge_banding_required=True,
             toe_kick_required=cabinet_params.base_height > 0,
             hinge_family=cabinet_params.hinge_sku,
@@ -42,6 +43,7 @@ class BaseCabinetSpecificationAdapter:
             height=specification.height_mm,
             depth=specification.depth_mm,
             sec_count=1,
+            back_panel_type="REAR" if specification.has_back_panel else "NONE",
             sec_data={
                 0: SectionConfig(
                     shelves=max(shelf_count, 0),

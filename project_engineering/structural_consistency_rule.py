@@ -114,13 +114,16 @@ class StructuralConsistencyRule:
         )
         front_zone_depth = max(float(getattr(spec, "material_thickness_mm", 0.0)) * 2.0, 0.0)
 
-        required_panels = (
+        required_panels = [
             ("left_side_panel", StructuralConsistencyRule.COMPONENT_LEFT_SIDE_PANEL),
             ("right_side_panel", StructuralConsistencyRule.COMPONENT_RIGHT_SIDE_PANEL),
             ("top_panel", StructuralConsistencyRule.COMPONENT_TOP_PANEL),
             ("bottom_panel", StructuralConsistencyRule.COMPONENT_BOTTOM_PANEL),
-            ("back_panel", StructuralConsistencyRule.COMPONENT_BACK_PANEL),
-        )
+        ]
+        if str(getattr(spec, "back_panel_type", "") or "").upper() != "NONE":
+            required_panels.append(
+                ("back_panel", StructuralConsistencyRule.COMPONENT_BACK_PANEL)
+            )
         for attribute_name, component_type in required_panels:
             checked_component_count += 1
             component = getattr(engineering_model, attribute_name, None)

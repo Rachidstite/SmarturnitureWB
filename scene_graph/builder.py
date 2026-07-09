@@ -191,6 +191,7 @@ class SceneGraphBuilder:
         inner_width = spec.width_mm - (2 * thickness)
         back_thickness = spec.back_panel_thickness_mm
         shelf_z = spec.height_mm / 2.0
+        back_panel_type = str(getattr(spec, "back_panel_type", "") or "").upper()
 
         for panel in model.panels:
             if panel.role == "SIDE_PANEL":
@@ -244,31 +245,32 @@ class SceneGraphBuilder:
                     )
                 )
 
-        back_meta = BackPanelMetadata(
-            section_index=0,
-            section_label="REFERENCE",
-            is_section_back=True,
-            groove_depth=model.back_panel.groove_depth_mm,
-            back_offset=20.0,
-            extends_into_groove=True,
-            source_rule="ConstructionResolver",
-        )
-        self._add(
-            SceneNode(
-                PanelIdentity(self.cabinet_id, "BACK", SemanticRole.BACK, 1),
-                inner_width,
-                back_thickness,
-                spec.height_mm - (2 * thickness),
-                thickness,
-                cabinet_depth - back_thickness,
-                thickness,
-                group="Carcass",
-                role=NodeRole.BACK_PANEL,
-                metadata=back_meta,
-                thickness=back_thickness,
-                material=model.back_panel.panel.material,
+        if getattr(model, "back_panel", None) is not None and back_panel_type != "NONE":
+            back_meta = BackPanelMetadata(
+                section_index=0,
+                section_label="REFERENCE",
+                is_section_back=True,
+                groove_depth=model.back_panel.groove_depth_mm,
+                back_offset=20.0,
+                extends_into_groove=True,
+                source_rule="ConstructionResolver",
             )
-        )
+            self._add(
+                SceneNode(
+                    PanelIdentity(self.cabinet_id, "BACK", SemanticRole.BACK, 1),
+                    inner_width,
+                    back_thickness,
+                    spec.height_mm - (2 * thickness),
+                    thickness,
+                    cabinet_depth - back_thickness,
+                    thickness,
+                    group="Carcass",
+                    role=NodeRole.BACK_PANEL,
+                    metadata=back_meta,
+                    thickness=back_thickness,
+                    material=model.back_panel.panel.material,
+                )
+            )
 
         for index, shelf in enumerate(model.shelves):
             shelf_z_position = shelf_z
@@ -352,33 +354,34 @@ class SceneGraphBuilder:
                 material=model.bottom_panel.material,
             )
         )
-        self._add(
-            SceneNode(
-                PanelIdentity(self.cabinet_id, "BACK", SemanticRole.BACK, 1),
-                model.back_panel.width_mm,
-                model.back_panel.depth_mm,
-                model.back_panel.height_mm,
-                model.back_panel.position_mm[0],
-                model.back_panel.position_mm[1],
-                model.back_panel.position_mm[2],
-                group="Carcass",
-                role=NodeRole.BACK_PANEL,
-                metadata=BackPanelMetadata(
-                    section_index=0,
-                    section_label="REFERENCE",
-                    is_section_back=True,
-                    groove_depth=model.back_panel.groove_depth_mm,
-                    back_offset=model.back_panel.position_mm[1],
-                    extends_into_groove=(
-                        model.back_panel.installation_mode
-                        == BackPanelInstallationMode.GROOVED
+        if model.back_panel is not None:
+            self._add(
+                SceneNode(
+                    PanelIdentity(self.cabinet_id, "BACK", SemanticRole.BACK, 1),
+                    model.back_panel.width_mm,
+                    model.back_panel.depth_mm,
+                    model.back_panel.height_mm,
+                    model.back_panel.position_mm[0],
+                    model.back_panel.position_mm[1],
+                    model.back_panel.position_mm[2],
+                    group="Carcass",
+                    role=NodeRole.BACK_PANEL,
+                    metadata=BackPanelMetadata(
+                        section_index=0,
+                        section_label="REFERENCE",
+                        is_section_back=True,
+                        groove_depth=model.back_panel.groove_depth_mm,
+                        back_offset=model.back_panel.position_mm[1],
+                        extends_into_groove=(
+                            model.back_panel.installation_mode
+                            == BackPanelInstallationMode.GROOVED
+                        ),
+                        source_rule=model.back_panel.source_rule,
                     ),
-                    source_rule=model.back_panel.source_rule,
-                ),
-                thickness=model.back_panel.thickness_mm,
-                material=model.back_panel.material,
+                    thickness=model.back_panel.thickness_mm,
+                    material=model.back_panel.material,
+                )
             )
-        )
         for door in getattr(model, "doors", []) or []:
             self._add(
                 SceneNode(

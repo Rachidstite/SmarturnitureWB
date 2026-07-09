@@ -33,7 +33,7 @@ class ConstructionResolver:
             construction_method=ConstructionMethod.CONFIRMAT_OR_MINIFIX,
             back_panel_type=BackPanelType.GROOVED
             if specification.has_back_panel
-            else BackPanelType.GROOVED,
+            else "NONE",
             drawer_count=0,
             wall_mount_count=0,
         )
@@ -81,32 +81,34 @@ class ConstructionResolver:
             position_mm=(0.0, 0.0, 0.0),
             purpose="Bottom panel between side panels",
         )
-        back_panel = BackPanelConstruction(
-            panel=PanelConstruction(
-                role="BACK_PANEL",
-                name="Grooved Back",
-                width_mm=inner_width,
-                height_mm=construction_spec.height_mm - (2 * thickness),
-                thickness_mm=3.0,
-                material="HDF_3",
-                position_mm=(0.0, 0.0, 0.0),
-                purpose="Grooved back panel seated behind the carcass panels",
-            ),
-            placement="Inside rear groove behind side/top/bottom panels",
-            installation_mode="GROOVED",
-            groove_depth_mm=8.0,
-            groove_width_mm=3.2,
-            allowed_details=(
-                "groove_seating",
-                "rear_alignment",
-                "structural_racking_support",
-            ),
-            disallowed_details=(
-                "floating_back_panel",
-                "surface_overlay_back_panel",
-                "drawer_geometry",
-            ),
-        )
+        back_panel = None
+        if specification.has_back_panel:
+            back_panel = BackPanelConstruction(
+                panel=PanelConstruction(
+                    role="BACK_PANEL",
+                    name="Grooved Back",
+                    width_mm=inner_width,
+                    height_mm=construction_spec.height_mm - (2 * thickness),
+                    thickness_mm=3.0,
+                    material="HDF_3",
+                    position_mm=(0.0, 0.0, 0.0),
+                    purpose="Grooved back panel seated behind the carcass panels",
+                ),
+                placement="Inside rear groove behind side/top/bottom panels",
+                installation_mode="GROOVED",
+                groove_depth_mm=8.0,
+                groove_width_mm=3.2,
+                allowed_details=(
+                    "groove_seating",
+                    "rear_alignment",
+                    "structural_racking_support",
+                ),
+                disallowed_details=(
+                    "floating_back_panel",
+                    "surface_overlay_back_panel",
+                    "drawer_geometry",
+                ),
+            )
 
         shelves = tuple(
             ShelfConstruction(

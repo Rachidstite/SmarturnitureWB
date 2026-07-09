@@ -519,6 +519,29 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         self.assertEqual(len(low_doors), 1)
         self.assertEqual(len(high_doors), 4)
 
+    def test_has_back_panel_true_emits_one_back_panel_node(self):
+        _, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(has_back_panel=True)
+        )
+
+        back_nodes = [
+            node for node in graph.all_nodes() if node.role == NodeRole.BACK_PANEL
+        ]
+
+        self.assertEqual(len(back_nodes), 1)
+
+    def test_has_back_panel_false_emits_zero_back_panel_nodes(self):
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(has_back_panel=False)
+        )
+
+        back_nodes = [
+            node for node in graph.all_nodes() if node.role == NodeRole.BACK_PANEL
+        ]
+
+        self.assertIsNone(cabinet.engineering_model.back_panel)
+        self.assertEqual(len(back_nodes), 0)
+
     def test_delegates_to_existing_cabinet_builder(self):
         FakeCabinetBuilder.instances_created = 0
         FakeCabinetBuilder.build_calls = 0

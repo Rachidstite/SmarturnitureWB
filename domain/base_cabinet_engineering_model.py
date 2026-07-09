@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Tuple
+from typing import Optional, Tuple
 
 from domain.furniture_construction_model import CabinetConstructionModel
 from shared.enums import DoorType
@@ -138,7 +138,7 @@ class BaseCabinetEngineeringModel:
     right_side_panel: EngineeringPanelPlacement
     top_panel: EngineeringPanelPlacement
     bottom_panel: EngineeringPanelPlacement
-    back_panel: EngineeringBackPanel
+    back_panel: Optional[EngineeringBackPanel]
     doors: Tuple[EngineeringDoorPlacement, ...] = field(default_factory=tuple)
     shelves: Tuple[EngineeringShelfPlacement, ...] = field(default_factory=tuple)
     dividers: Tuple[EngineeringDividerPlacement, ...] = field(default_factory=tuple)
@@ -226,24 +226,26 @@ class BaseCabinetEngineeringModelBuilder:
             thickness_mm=thickness,
             material="MDF_18",
         )
-        back_panel = EngineeringBackPanel(
-            role="BACK_PANEL",
-            name="Grooved Back",
-            width_mm=inner_width,
-            depth_mm=back_thickness,
-            height_mm=spec.height_mm - (2 * thickness),
-            position_mm=(thickness, depth - back_thickness, thickness),
-            thickness_mm=back_thickness,
-            material="HDF_3",
-            installation_mode=map_back_panel_installation_mode(
-                back_construction.installation_mode
-            ),
-            placement=back_construction.placement,
-            panel_strategy=map_back_panel_strategy(spec.back_panel_type),
-            groove_depth_mm=back_construction.groove_depth_mm,
-            groove_width_mm=back_construction.groove_width_mm,
-            source_rule="ConstructionResolver",
-        )
+        back_panel = None
+        if back_construction is not None and str(getattr(spec, "back_panel_type", "") or "").upper() != "NONE":
+            back_panel = EngineeringBackPanel(
+                role="BACK_PANEL",
+                name="Grooved Back",
+                width_mm=inner_width,
+                depth_mm=back_thickness,
+                height_mm=spec.height_mm - (2 * thickness),
+                position_mm=(thickness, depth - back_thickness, thickness),
+                thickness_mm=back_thickness,
+                material="HDF_3",
+                installation_mode=map_back_panel_installation_mode(
+                    back_construction.installation_mode
+                ),
+                placement=back_construction.placement,
+                panel_strategy=map_back_panel_strategy(spec.back_panel_type),
+                groove_depth_mm=back_construction.groove_depth_mm,
+                groove_width_mm=back_construction.groove_width_mm,
+                source_rule="ConstructionResolver",
+            )
 
         shelves = tuple(
             EngineeringShelfPlacement(

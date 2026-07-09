@@ -366,6 +366,27 @@ class TestEngineeringApplicationServiceContract(unittest.TestCase):
         self.assertEqual(result.data["metadata"]["shelf_count"], len(shelf_nodes))
         self.assertEqual(result.data["metadata"]["door_count"], len(door_nodes))
 
+    def test_has_back_panel_false_returns_success_with_scene_graph_and_no_back_panel_nodes(self):
+        svc = EngineeringApplicationService()
+        spec = BaseCabinetSpecification(has_back_panel=False)
+        cabinet = _build_cabinet_with_scene_graph(spec)
+
+        with patch.object(
+            eng_svc_module,
+            "build_base_cabinet_engineering_cabinet",
+            return_value=cabinet,
+        ):
+            result = svc.execute(specification=spec)
+
+        self.assertTrue(result.success)
+        scene_graph = result.data["cabinet"].scene_graph
+        self.assertIsNotNone(scene_graph)
+        back_nodes = [
+            node for node in scene_graph.all_nodes() if node.role == NodeRole.BACK_PANEL
+        ]
+        self.assertEqual(result.data["metadata"]["has_back_panel"], False)
+        self.assertEqual(len(back_nodes), 0)
+
     def test_no_mock_fallback_in_code(self):
         """Only code lines are checked; comments and docstrings are ignored."""
         code = _source_lines_without_comments(eng_svc_module)

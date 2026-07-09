@@ -47,6 +47,20 @@ class TestConstructionResolverContract(unittest.TestCase):
         self.assertEqual(len(self.model.shelves), 1)
         self.assertIsInstance(self.model.shelves[0], ShelfConstruction)
 
+    def test_resolver_disables_back_panel_when_specification_disables_it(self):
+        model = ConstructionResolver.resolve(
+            BaseCabinetSpecification(
+                width_mm=800.0,
+                height_mm=720.0,
+                depth_mm=560.0,
+                shelf_count=1,
+                has_back_panel=False,
+            )
+        )
+
+        self.assertEqual(model.specification.back_panel_type, "NONE")
+        self.assertIsNone(model.back_panel)
+
     def test_model_contains_explicit_construction_decisions(self):
         top = next(panel for panel in self.model.panels if panel.name == "Top")
         bottom = next(panel for panel in self.model.panels if panel.name == "Bottom")
@@ -160,6 +174,25 @@ class TestConstructionResolverContract(unittest.TestCase):
             (self.model.specification.material_thickness_mm, 0.0, self.spec.height_mm / 2.0),
         )
 
+    def test_engineering_model_disables_back_panel_when_construction_disables_it(self):
+        from domain.base_cabinet_engineering_model import (
+            BaseCabinetEngineeringModelBuilder,
+        )
+
+        disabled_model = ConstructionResolver.resolve(
+            BaseCabinetSpecification(
+                width_mm=800.0,
+                height_mm=720.0,
+                depth_mm=560.0,
+                shelf_count=1,
+                has_back_panel=False,
+            )
+        )
+
+        engineering_model = BaseCabinetEngineeringModelBuilder.build(disabled_model)
+
+        self.assertIsNone(engineering_model.back_panel)
+
     def test_back_panel_mapping_helpers(self):
         self.assertIs(
             map_back_panel_installation_mode("GROOVED"),
@@ -229,6 +262,42 @@ class TestConstructionResolverContract(unittest.TestCase):
         self.assertEqual(back_nodes[0].z, self.model.specification.material_thickness_mm)
         self.assertEqual(shelf_nodes[0].x, self.model.specification.material_thickness_mm)
         self.assertEqual(shelf_nodes[0].z, self.spec.height_mm / 2.0)
+
+    def test_scene_graph_builder_skips_back_panel_when_disabled_in_construction_model(self):
+        from domain.base_cabinet_engineering_model import (
+            BaseCabinetEngineeringModelBuilder,
+        )
+        from engine.cabinet import Cabinet
+        from scene_graph.builder import SceneGraphBuilder
+
+        spec = BaseCabinetSpecification(
+            width_mm=800.0,
+            height_mm=720.0,
+            depth_mm=560.0,
+            shelf_count=1,
+            has_back_panel=False,
+        )
+        model = ConstructionResolver.resolve(spec)
+        cabinet = Cabinet()
+        cabinet.params.width = spec.width_mm
+        cabinet.params.height = spec.height_mm
+        cabinet.params.depth = spec.depth_mm
+        cabinet.params.sec_count = 1
+        cabinet.construction_model = model
+        cabinet.engineering_model = BaseCabinetEngineeringModelBuilder.build(model)
+
+        geo = SimpleNamespace(resolved_top=None, resolved_sections=[], is_buildable=True)
+        mat = SimpleNamespace(mdf_thickness=18.0, back_thickness=3.0)
+
+        graph = SceneGraphBuilder(cabinet, mat, cabinet_id="REF-CAB").build(geo)
+
+        back_nodes = [
+            node
+            for node in graph.all_nodes()
+            if getattr(getattr(node, "role", None), "name", "") == "BACK_PANEL"
+        ]
+
+        self.assertEqual(len(back_nodes), 0)
 
     def test_construction_slice_does_not_import_freecad_or_manufacturing(self):
         import domain.construction_resolver as resolver_module

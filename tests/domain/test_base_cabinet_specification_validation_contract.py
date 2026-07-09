@@ -89,8 +89,10 @@ class TestBaseCabinetSpecificationValidationContract(unittest.TestCase):
         self.assertEqual(params.sec_data[0].door_count, 3)
         self.assertEqual(params.sec_data[0].shelves, 2)
         self.assertEqual(params.sec_data[0].doors, "Inset")
+        self.assertEqual(params.back_panel_type, "NONE")
         self.assertEqual(captured["metadata"]["door_count"], 3)
         self.assertEqual(captured["metadata"]["shelf_count"], 2)
+        self.assertFalse(captured["metadata"]["has_back_panel"])
         self.assertEqual(captured["metadata"]["drawer_family"], "DRAWER_CUSTOM")
 
     def test_no_freecad_import(self):
