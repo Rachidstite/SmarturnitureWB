@@ -502,6 +502,36 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         self.assertEqual(len(low_shelves), 0)
         self.assertEqual(len(high_shelves), 1)
 
+    def test_shelf_count_two_builds_unique_shelf_nodes(self):
+        _, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(shelf_count=2, door_count=0)
+        )
+
+        shelf_nodes = [
+            node for node in graph.all_nodes() if node.role == NodeRole.SHELF
+        ]
+
+        self.assertEqual(len(shelf_nodes), 2)
+        self.assertEqual(
+            len({node.identity.key for node in shelf_nodes}),
+            2,
+        )
+
+    def test_shelf_count_four_builds_unique_shelf_nodes(self):
+        _, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(shelf_count=4, door_count=0)
+        )
+
+        shelf_nodes = [
+            node for node in graph.all_nodes() if node.role == NodeRole.SHELF
+        ]
+
+        self.assertEqual(len(shelf_nodes), 4)
+        self.assertEqual(
+            len({node.identity.key for node in shelf_nodes}),
+            4,
+        )
+
     def test_changing_door_count_changes_resulting_scene_graph(self):
         low_spec = BaseCabinetSpecification(shelf_count=0, door_count=1)
         high_spec = BaseCabinetSpecification(shelf_count=0, door_count=4)
@@ -622,6 +652,83 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         self.assertEqual(cabinet.params.base_height, 80.0)
         self.assertEqual(len(cabinet.engineering_model.plinth_panels), 2)
         self.assertEqual(len(plinth_nodes), 2)
+
+    def test_toe_kick_required_true_raises_bottom_panel_above_plinths(self):
+        cabinet = Cabinet()
+        specification = BaseCabinetSpecification(toe_kick_required=True)
+
+        attach_base_cabinet_engineering_models(cabinet, specification)
+
+        bottom_panel = cabinet.engineering_model.bottom_panel
+        plinth_panels = cabinet.engineering_model.plinth_panels
+
+        self.assertEqual(bottom_panel.position_mm[2], cabinet.params.base_height)
+        self.assertEqual(len(plinth_panels), 2)
+        for plinth_panel in plinth_panels:
+            self.assertEqual(plinth_panel.position_mm[2], 0.0)
+            self.assertEqual(plinth_panel.height_mm, cabinet.params.base_height)
+            self.assertEqual(
+                plinth_panel.position_mm[2] + plinth_panel.height_mm,
+                bottom_panel.position_mm[2],
+            )
+
+    def test_toe_kick_required_false_preserves_existing_bottom_panel_placement(self):
+        cabinet = Cabinet()
+        specification = BaseCabinetSpecification(toe_kick_required=False)
+
+        attach_base_cabinet_engineering_models(cabinet, specification)
+
+        self.assertEqual(cabinet.params.base_height, 80.0)
+        self.assertEqual(cabinet.engineering_model.bottom_panel.position_mm[2], 0.0)
+        self.assertEqual(cabinet.engineering_model.plinth_panels, ())
+
+    def test_toe_kick_required_true_keeps_back_panel_consistent_with_raised_bottom_panel(self):
+        from domain.back_panel_engine import BackPanelRule
+
+        cabinet = Cabinet()
+        specification = BaseCabinetSpecification(
+            toe_kick_required=True,
+            has_back_panel=True,
+        )
+
+        attach_base_cabinet_engineering_models(cabinet, specification)
+
+        bottom_panel = cabinet.engineering_model.bottom_panel
+        back_panel = cabinet.engineering_model.back_panel
+        groove_offset = BackPanelRule.groove_offset
+
+        self.assertIsNotNone(back_panel)
+        self.assertEqual(
+            back_panel.position_mm[2],
+            cabinet.params.base_height + groove_offset,
+        )
+        self.assertEqual(
+            back_panel.height_mm,
+            cabinet.engineering_model.left_side_panel.height_mm
+            - cabinet.params.base_height
+            - (2 * groove_offset),
+        )
+
+    def test_scene_graph_copies_base_cabinet_bottom_and_plinth_z_unchanged(self):
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(toe_kick_required=True)
+        )
+
+        bottom_node = next(
+            node for node in graph.all_nodes() if node.role == NodeRole.BOTTOM_PANEL
+        )
+        plinth_nodes = [
+            node for node in graph.all_nodes() if node.role == NodeRole.PLINTH
+        ]
+
+        self.assertEqual(
+            bottom_node.z,
+            cabinet.engineering_model.bottom_panel.position_mm[2],
+        )
+        self.assertEqual(len(plinth_nodes), len(cabinet.engineering_model.plinth_panels))
+        for node, panel in zip(plinth_nodes, cabinet.engineering_model.plinth_panels):
+            self.assertEqual(node.z, panel.position_mm[2])
+            self.assertEqual(node.height, panel.height_mm)
 
     def test_toe_kick_required_false_emits_zero_plinth_nodes_without_changing_base_height(self):
         cabinet, graph = self._build_scene_graph_from_specification(
