@@ -130,6 +130,37 @@ class TestPanelShapeProcessorBackPanelGroove(unittest.TestCase):
         self.assertEqual(result.cuts[1].args, (112.0, 2.0, 2.0))
         self.assertEqual(result.cuts[1].translated_by, [(8.0, 2.0, 4.0)])
 
+    def test_side_panel_back_panel_groove_is_cut_from_base_shape(self):
+        from manufacturing.panel_shape_processor import process_panel_shape
+
+        base_shape = _FakePanelShape()
+        panel = SimpleNamespace(
+            identity=SimpleNamespace(key="SIDE_PANEL_1"),
+            role=SimpleNamespace(value="SIDE_PANEL"),
+        )
+        features = [
+            SimpleNamespace(
+                kind="back_panel_groove",
+                node_id="SIDE_PANEL_1",
+                placement=(10.0, 577.0, 18.0),
+                size=(8.0, 3.2, 684.0),
+                name="SIDE_PANEL_1_Back_Groove",
+            )
+        ]
+
+        with self._install_part_stub():
+            result = process_panel_shape(
+                base_shape,
+                panel,
+                features,
+                panel_origin=(0.0, 0.0, 0.0),
+            )
+
+        self.assertIsNot(result, base_shape)
+        self.assertEqual(len(result.cuts), 1)
+        self.assertEqual(result.cuts[0].args, (8.0, 3.2, 684.0))
+        self.assertEqual(result.cuts[0].translated_by, [(10.0, 577.0, 18.0)])
+
 
 if __name__ == "__main__":
     unittest.main()

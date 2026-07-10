@@ -48,6 +48,8 @@ def build_visible_geometry_plan(project) -> VisibleGeometryPlan:
             _manufacturing_details_for_node(node, project, cabinet_depth)
         )
 
+    features.extend(_projected_visible_features(project))
+
     if _has_real_wall_mount_data(project):
         production_backed_lines.append("Wall mount data available from project model")
     elif any(_role_value(node) == "BACK_PANEL" for node in physical_nodes):
@@ -67,7 +69,6 @@ def _panel_geometry_features(node, project, cabinet_depth):
     features = []
 
     if role == "BACK_PANEL":
-        features.extend(_back_panel_groove_features(node, cabinet_depth))
         features.extend(_wall_mount_prototype_features(node, cabinet_depth, project))
 
     features.extend(_edge_banding_features(node, project, cabinet_depth))
@@ -98,6 +99,21 @@ def _manufacturing_details_for_node(node, project, cabinet_depth):
     features = []
     features.extend(_screw_features(node, project, cabinet_depth))
     return features
+
+
+def _projected_visible_features(project):
+    from manufacturing.visible_feature_projection import project_visible_features
+
+    projected = list(getattr(project, "projected_visible_features", ()) or ())
+    if projected:
+        return projected
+
+    cabinet = getattr(project, "cabinet", None)
+    graph = getattr(project, "graph", None)
+    if cabinet is None or graph is None:
+        return []
+
+    return list(project_visible_features(cabinet, graph))
 
 
 def _edge_banding_features(node, project, cabinet_depth):
@@ -220,50 +236,6 @@ def _edge_banding_thickness(banding):
     if match:
         return max(float(match.group(1)), 1.0)
     return 1.0
-
-
-def _back_panel_groove_features(node, cabinet_depth):
-    base_x, actual_y, base_z = _panel_world_origin(node, cabinet_depth)
-    width, depth, height = _panel_render_dimensions(node)
-    groove_depth = 4.0
-    groove_thickness = 2.0
-
-    features = [
-        VisibleGeometryFeatureSpec(
-            name=f"{node.identity.key}_Groove_Left",
-            kind="back_panel_groove",
-            node_id=node.identity.key,
-            placement=(base_x + max(width - groove_thickness, 0.0), actual_y + max(depth - groove_depth, 0.0), base_z),
-            size=(groove_thickness, groove_depth, height),
-            color=(0.35, 0.22, 0.12),
-            label="Back panel groove line",
-        ),
-        VisibleGeometryFeatureSpec(
-            name=f"{node.identity.key}_Groove_Right",
-            kind="back_panel_groove",
-            node_id=node.identity.key,
-            placement=(base_x, actual_y + max(depth - groove_depth, 0.0), base_z),
-            size=(groove_thickness, groove_depth, height),
-            color=(0.35, 0.22, 0.12),
-            label="Back panel groove line",
-        ),
-    ]
-
-    if _role_value(node) == "BACK_PANEL":
-        features.append(
-            VisibleGeometryFeatureSpec(
-                name=f"{node.identity.key}_Groove_Slot",
-                kind="back_panel_groove",
-                node_id=node.identity.key,
-                placement=(base_x + 4.0, actual_y + 1.0, base_z + 4.0),
-                size=(max(width - 8.0, 8.0), 2.0, 2.0),
-                color=(0.28, 0.18, 0.10),
-                label="Back panel groove slot",
-                prototype=False,
-            )
-        )
-
-    return features
 
 
 def _hinge_cup_features(node, project, cabinet_depth):

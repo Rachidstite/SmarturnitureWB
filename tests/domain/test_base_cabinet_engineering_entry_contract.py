@@ -542,6 +542,74 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         self.assertIsNone(cabinet.engineering_model.back_panel)
         self.assertEqual(len(back_nodes), 0)
 
+    def test_engineering_groove_dimensions_equal_projected_visible_groove_dimensions(self):
+        from manufacturing.visible_feature_projection import project_visible_features
+
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(has_back_panel=True)
+        )
+
+        features = [
+            feature
+            for feature in project_visible_features(cabinet, graph)
+            if feature.kind == "back_panel_groove"
+        ]
+
+        self.assertEqual(len(features), 3)
+        expected_depth = cabinet.engineering_model.back_panel.groove_depth_mm
+        expected_width = cabinet.engineering_model.back_panel.groove_width_mm
+
+        for feature in features:
+            target = graph.get_node(feature.node_id)
+            if target.role == NodeRole.BOTTOM_PANEL:
+                self.assertEqual(feature.size[1], expected_width)
+                self.assertEqual(feature.size[2], expected_depth)
+            else:
+                self.assertEqual(feature.size[0], expected_depth)
+                self.assertEqual(feature.size[1], expected_width)
+
+    def test_projected_visible_grooves_target_receiving_panels(self):
+        from manufacturing.visible_feature_projection import project_visible_features
+
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(has_back_panel=True)
+        )
+
+        targets = {
+            graph.get_node(feature.node_id).role
+            for feature in project_visible_features(cabinet, graph)
+            if feature.kind == "back_panel_groove"
+        }
+
+        self.assertEqual(
+            targets,
+            {NodeRole.SIDE_PANEL, NodeRole.BOTTOM_PANEL},
+        )
+
+    def test_preview_projection_does_not_change_existing_manufacturing_output(self):
+        from manufacturing.extractor import ManufacturingExtractor
+        from manufacturing.visible_feature_projection import project_visible_features
+
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(has_back_panel=True)
+        )
+
+        features = [
+            feature
+            for feature in project_visible_features(cabinet, graph)
+            if feature.kind == "back_panel_groove"
+        ]
+        panel_specs = ManufacturingExtractor.extract(graph)
+        self.assertTrue(features)
+        self.assertTrue(any(spec.cnc_operations for spec in panel_specs))
+        self.assertFalse(
+            any(
+                type(operation).__name__ == "Groove"
+                for spec in panel_specs
+                for operation in spec.cnc_operations
+            )
+        )
+
     def test_toe_kick_required_true_emits_two_plinth_nodes(self):
         cabinet, graph = self._build_scene_graph_from_specification(
             BaseCabinetSpecification(toe_kick_required=True)

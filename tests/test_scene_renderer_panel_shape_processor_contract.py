@@ -162,6 +162,44 @@ class TestSceneRendererPanelShapeProcessorContract(unittest.TestCase):
         panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
         self.assertEqual(panel_obj.Shape.args, ("processed", (100.0, 3.0, 200.0)))
 
+    def test_side_panel_back_panel_groove_uses_existing_panel_features_path(self):
+        renderer, doc = self._make_renderer(
+            [
+                SimpleNamespace(
+                    kind="back_panel_groove",
+                    node_id="SIDE_PANEL_TEST",
+                    placement=(10.0, 577.0, 18.0),
+                    size=(8.0, 3.2, 684.0),
+                    name="SIDE_PANEL_TEST_Back_Groove",
+                )
+            ]
+        )
+        node = SimpleNamespace(
+            identity=SimpleNamespace(key="SIDE_PANEL_TEST"),
+            role=NodeRole.SIDE_PANEL,
+            width=18.0,
+            depth=580.0,
+            height=720.0,
+            thickness=18.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            group="Carcass",
+        )
+
+        with patch.object(
+            self.renderer,
+            "process_panel_shape",
+            side_effect=lambda base_shape, panel_node, panel_features, panel_origin=None: _FakeShape(
+                ("processed", base_shape.args)
+            ),
+        ) as processor_spy:
+            renderer._render_simple_panel(node)
+
+        processor_spy.assert_called_once()
+        panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
+        self.assertEqual(panel_obj.Shape.args, ("processed", (18.0, 580.0, 720.0)))
+
     def test_unsupported_features_do_not_alter_shape(self):
         renderer, doc = self._make_renderer(
             [

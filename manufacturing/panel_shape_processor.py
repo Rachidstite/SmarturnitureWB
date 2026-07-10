@@ -127,7 +127,7 @@ def _feature_supported_for_panel(panel_node, feature) -> bool:
     panel_role = _panel_role(panel_node)
 
     if feature_kind == "back_panel_groove":
-        return panel_role == "BACK_PANEL"
+        return panel_role in {"BACK_PANEL", "SIDE_PANEL", "TOP_PANEL", "BOTTOM_PANEL"}
     if feature_kind == "shelf_pin_hole":
         return panel_role in {"SIDE_PANEL", "DIVIDER"}
     if feature_kind == "drawer_slide_line":

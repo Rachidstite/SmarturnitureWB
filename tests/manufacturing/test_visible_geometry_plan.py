@@ -1,8 +1,21 @@
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
 
 class TestVisibleGeometryPlan(unittest.TestCase):
+
+    def _projected_back_groove(self, node_id="CAB_SIDE_L"):
+        from manufacturing.visible_geometry_plan import VisibleGeometryFeatureSpec
+
+        return VisibleGeometryFeatureSpec(
+            name=f"{node_id}_Back_Groove",
+            kind="back_panel_groove",
+            node_id=node_id,
+            placement=(10.0, 577.0, 18.0),
+            size=(8.0, 3.2, 684.0),
+            label="Back panel groove",
+        )
 
     def test_builds_manufacturing_geometry_from_existing_project_data(self):
         from domain.manufacturing_compiler import ManufacturingCompiler
@@ -102,6 +115,7 @@ class TestVisibleGeometryPlan(unittest.TestCase):
             uid="CAB",
             joinery=SimpleNamespace(edges=[]),
             topology=SimpleNamespace(d=600.0),
+            projected_visible_features=(self._projected_back_groove(),),
             graph=SimpleNamespace(
                 _by_role={
                     NodeRole.SIDE_PANEL: [side_left, side_right],
@@ -163,6 +177,43 @@ class TestVisibleGeometryPlan(unittest.TestCase):
         self.assertTrue(any("Shelf pin" in feature.label for feature in shelf_pins))
 
         self.assertTrue(plan.prototype_lines)
+
+    def test_projected_visible_features_are_included_without_recreating_grooves(self):
+        from manufacturing.visible_geometry_plan import build_visible_geometry_plan
+
+        side_left = SimpleNamespace(
+            identity=SimpleNamespace(key="CAB_SIDE_L"),
+            role=SimpleNamespace(value="SIDE_PANEL"),
+            category=SimpleNamespace(value="PHYSICAL"),
+            width=18.0,
+            height=720.0,
+            depth=580.0,
+            thickness=18.0,
+            transform=SimpleNamespace(x=0.0, y=0.0, z=0.0),
+            machining_ops=[],
+        )
+        project = SimpleNamespace(
+            uid="CAB",
+            topology=SimpleNamespace(d=580.0),
+            projected_visible_features=(self._projected_back_groove(),),
+            graph=SimpleNamespace(all_nodes=lambda: [side_left]),
+        )
+
+        plan = build_visible_geometry_plan(project)
+        groove_features = [
+            feature for feature in plan.features if feature.kind == "back_panel_groove"
+        ]
+
+        self.assertEqual(len(groove_features), 1)
+        self.assertEqual(groove_features[0].node_id, "CAB_SIDE_L")
+        self.assertEqual(groove_features[0].size, (8.0, 3.2, 684.0))
+
+    def test_visible_geometry_plan_source_contains_no_hardcoded_back_panel_groove_dimensions(self):
+        source = Path("manufacturing/visible_geometry_plan.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("groove_depth = 4.0", source)
+        self.assertNotIn("groove_thickness = 2.0", source)
+        self.assertNotIn("_back_panel_groove_features", source)
 
     def test_confirmat_holes_require_compiled_machining_evidence_and_cover_carcass_panels(self):
         from domain.builders import WardrobeBuilder

@@ -215,6 +215,7 @@ class CabinetBuilder:
         for i, sec in enumerate(cabinet.sections):
             r = self.geo.resolved_sections[i]
         visible_geometry_source = SimpleNamespace(
+            cabinet=self._cabinet,
             graph=self.scene_graph,
             topology=SimpleNamespace(d=self._cabinet.params.depth),
             manufacturing_production_package=getattr(
