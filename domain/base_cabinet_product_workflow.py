@@ -168,7 +168,10 @@ def build_base_cabinet_product_workflow(
     quotation_metadata = dict(quotation_metadata or {})
     scenario = BaseCabinetScenario(specification=specification)
     engineering = build_base_cabinet_engineering_cabinet(specification)
-    engineering_validation = validate_base_cabinet_specification(specification)
+    engineering_validation = validate_base_cabinet_specification(
+        specification,
+        cabinet=engineering,
+    )
     validation = _build_validation_bridge(
         engineering_validation,
         engineering,

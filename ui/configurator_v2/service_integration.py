@@ -676,8 +676,9 @@ class ConfiguratorV2ServiceIntegration:
         return merged
 
     def validate_active_product(self):
+        active_state = getattr(self.workspace, "active_engineering_state", None)
         specification = getattr(
-            getattr(self.workspace, "active_engineering_state", None),
+            active_state,
             "specification",
             None,
         )
@@ -695,7 +696,10 @@ class ConfiguratorV2ServiceIntegration:
             "base_cabinet_specification_validation",
             "validate_base_cabinet_specification",
         )
-        report = validate_base_cabinet_specification(specification)
+        report = validate_base_cabinet_specification(
+            specification,
+            cabinet=getattr(active_state, "cabinet", None),
+        )
         merged = self.refresh_validation(report)
         self.push_message(
             severity="INFO",

@@ -130,7 +130,10 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
             result = build_base_cabinet_product_workflow(specification)
 
         engineering_entry.assert_called_once_with(specification)
-        validation_entry.assert_called_once_with(specification)
+        validation_entry.assert_called_once_with(
+            specification,
+            cabinet=engineering_entry.return_value,
+        )
         manufacturing_validation_service_class.validate.assert_called_once_with(
             scene_graph
         )
@@ -232,7 +235,7 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
             workflow_module,
             "build_base_cabinet_engineering_cabinet",
             return_value=FakeEngineeringCabinet(scene_graph),
-        ), patch.object(
+        ) as engineering_entry, patch.object(
             workflow_module,
             "validate_base_cabinet_specification",
             return_value=self._fake_engineering_validation_report([]),
@@ -257,7 +260,10 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
             )
             build_base_cabinet_product_workflow(specification)
 
-        validation_entry.assert_called_once_with(specification)
+        validation_entry.assert_called_once_with(
+            specification,
+            cabinet=engineering_entry.return_value,
+        )
 
     def test_uses_manufacturing_outputs_entry(self):
         specification = BaseCabinetSpecification()
@@ -951,6 +957,7 @@ class TestBaseCabinetProductWorkflowContract(unittest.TestCase):
 class FakeEngineeringCabinet:
     def __init__(self, scene_graph):
         self.graph = scene_graph
+        self.scene_graph = scene_graph
 
 
 if __name__ == "__main__":
