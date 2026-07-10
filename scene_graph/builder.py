@@ -354,6 +354,22 @@ class SceneGraphBuilder:
                 material=model.bottom_panel.material,
             )
         )
+        for index, plinth_panel in enumerate(getattr(model, "plinth_panels", ()) or (), start=1):
+            self._add(
+                SceneNode(
+                    PanelIdentity(self.cabinet_id, "STRUCTURE", SemanticRole.PLINTH, index),
+                    plinth_panel.width_mm,
+                    plinth_panel.depth_mm,
+                    plinth_panel.height_mm,
+                    plinth_panel.position_mm[0],
+                    plinth_panel.position_mm[1],
+                    plinth_panel.position_mm[2],
+                    group="Carcass",
+                    role=NodeRole.PLINTH,
+                    thickness=plinth_panel.thickness_mm,
+                    material=plinth_panel.material,
+                )
+            )
         if model.back_panel is not None:
             self._add(
                 SceneNode(

@@ -139,6 +139,7 @@ class BaseCabinetEngineeringModel:
     top_panel: EngineeringPanelPlacement
     bottom_panel: EngineeringPanelPlacement
     back_panel: Optional[EngineeringBackPanel]
+    plinth_panels: Tuple[EngineeringPanelPlacement, ...] = field(default_factory=tuple)
     doors: Tuple[EngineeringDoorPlacement, ...] = field(default_factory=tuple)
     shelves: Tuple[EngineeringShelfPlacement, ...] = field(default_factory=tuple)
     dividers: Tuple[EngineeringDividerPlacement, ...] = field(default_factory=tuple)
@@ -272,6 +273,7 @@ class BaseCabinetEngineeringModelBuilder:
             top_panel=top_panel,
             bottom_panel=bottom_panel,
             back_panel=back_panel,
+            plinth_panels=(),
             doors=doors,
             shelves=shelves,
             dividers=dividers,

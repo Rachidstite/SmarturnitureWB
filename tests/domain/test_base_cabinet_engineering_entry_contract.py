@@ -38,7 +38,7 @@ class FakeCabinetBuilder:
 
 
 class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
-    def _build_engineered_base_cabinet(self):
+    def _build_engineered_base_cabinet(self, specification=None):
         from engine.geometry_engine import GeometryEngine
 
         fake_freecad = types.ModuleType("FreeCAD")
@@ -47,7 +47,7 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         fake_freecad_gui = types.ModuleType("FreeCADGui")
 
         cabinet = Cabinet()
-        spec = BaseCabinetSpecification()
+        spec = specification or BaseCabinetSpecification()
         attach_base_cabinet_engineering_models(cabinet, spec)
 
         with patch.dict(
@@ -541,6 +541,100 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
 
         self.assertIsNone(cabinet.engineering_model.back_panel)
         self.assertEqual(len(back_nodes), 0)
+
+    def test_toe_kick_required_true_emits_two_plinth_nodes(self):
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(toe_kick_required=True)
+        )
+
+        plinth_nodes = [
+            node for node in graph.all_nodes() if node.role == NodeRole.PLINTH
+        ]
+
+        self.assertEqual(cabinet.params.base_height, 80.0)
+        self.assertEqual(len(cabinet.engineering_model.plinth_panels), 2)
+        self.assertEqual(len(plinth_nodes), 2)
+
+    def test_toe_kick_required_false_emits_zero_plinth_nodes_without_changing_base_height(self):
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(toe_kick_required=False)
+        )
+
+        plinth_nodes = [
+            node for node in graph.all_nodes() if node.role == NodeRole.PLINTH
+        ]
+
+        self.assertEqual(cabinet.params.base_height, 80.0)
+        self.assertEqual(len(cabinet.engineering_model.plinth_panels), 0)
+        self.assertEqual(len(plinth_nodes), 0)
+
+    def test_manufacturing_extractor_receives_plinth_panels_from_engineering_scene_graph(self):
+        from manufacturing.extractor import ManufacturingExtractor
+
+        _, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(toe_kick_required=True)
+        )
+
+        panel_specs = ManufacturingExtractor.extract(graph)
+        plinth_specs = [
+            spec for spec in panel_specs if spec.role == NodeRole.PLINTH
+        ]
+
+        self.assertEqual(len(plinth_specs), 2)
+
+    def test_cut_list_contains_plinth_panels_automatically(self):
+        from manufacturing.manufacturing_cutlist_builder import ManufacturingCutlistBuilder
+        from manufacturing.manufacturing_runtime_pipeline_builder import (
+            ManufacturingRuntimePipelineBuilder,
+        )
+
+        _, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(toe_kick_required=True)
+        )
+
+        runtime_result = ManufacturingRuntimePipelineBuilder().build(graph)
+        cut_list = ManufacturingCutlistBuilder().build(
+            runtime_result.manufacturing_package
+        )
+        plinth_items = [
+            item for item in cut_list.items if "_PLINTH-" in item["identity"]
+        ]
+
+        self.assertEqual(len(plinth_items), 2)
+
+    def test_cost_includes_plinth_panels_automatically(self):
+        from cost_intelligence.manufacturing_cost_pipeline_builder import (
+            ManufacturingCostPipelineBuilder,
+        )
+        from manufacturing.manufacturing_runtime_pipeline_builder import (
+            ManufacturingRuntimePipelineBuilder,
+        )
+
+        _, graph_with_plinth = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(toe_kick_required=True)
+        )
+        _, graph_without_plinth = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(toe_kick_required=False)
+        )
+
+        runtime_with_plinth = ManufacturingRuntimePipelineBuilder().build(
+            graph_with_plinth
+        )
+        runtime_without_plinth = ManufacturingRuntimePipelineBuilder().build(
+            graph_without_plinth
+        )
+
+        cost_with_plinth = ManufacturingCostPipelineBuilder().build(
+            runtime_with_plinth.manufacturing_production_package
+        )
+        cost_without_plinth = ManufacturingCostPipelineBuilder().build(
+            runtime_without_plinth.manufacturing_production_package
+        )
+
+        self.assertGreater(
+            cost_with_plinth.total_manufacturing_cost,
+            cost_without_plinth.total_manufacturing_cost,
+        )
 
     def test_delegates_to_existing_cabinet_builder(self):
         FakeCabinetBuilder.instances_created = 0
