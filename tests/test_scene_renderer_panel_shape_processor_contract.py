@@ -431,7 +431,9 @@ class TestSceneRendererPanelShapeProcessorContract(unittest.TestCase):
         )
         self.assertEqual(panel_obj.Shape.args, ("processed", (500.0, 18.0, 1800.0)))
 
-    def test_non_back_panel_unsupported_features_preserve_shape(self):
+    def test_side_panel_back_panel_groove_cuts_shape_with_real_shared_role(self):
+        import manufacturing.panel_shape_processor as panel_shape_processor
+
         renderer, doc = self._make_renderer(
             [
                 SimpleNamespace(
@@ -456,11 +458,18 @@ class TestSceneRendererPanelShapeProcessorContract(unittest.TestCase):
             group="Carcass",
         )
 
-        renderer._render_simple_panel(node)
+        with patch.object(
+            panel_shape_processor,
+            "Part",
+            SimpleNamespace(makeBox=lambda *args: _FakeShape(args)),
+        ):
+            renderer._render_simple_panel(node)
 
         panel_obj = next(obj for obj in doc.Objects if isinstance(obj, _FakeObject))
-        self.assertEqual(panel_obj.Shape.args, (18.0, 600.0, 1982.0))
-        self.assertEqual(panel_obj.Shape.cut_calls, [])
+        self.assertEqual(
+            panel_obj.Shape.args,
+            ("cut", (18.0, 600.0, 1982.0), (112.0, 2.0, 2.0)),
+        )
 
 
 if __name__ == "__main__":

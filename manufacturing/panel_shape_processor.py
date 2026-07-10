@@ -102,9 +102,9 @@ def _feature_kind(feature) -> str:
 
 def _panel_role(panel_node) -> str:
     role = getattr(panel_node, "role", "")
-    role_value = str(getattr(role, "value", role) or "").upper()
-    if role_value:
-        return role_value
+    role_name = _normalize_role_name(role)
+    if role_name:
+        return role_name
 
     panel_key = _panel_key(panel_node).upper()
     if "BACK" in panel_key:
@@ -119,6 +119,30 @@ def _panel_role(panel_node) -> str:
         return "DIVIDER"
     if "DOOR" in panel_key:
         return "DOOR_PANEL"
+    return ""
+
+
+def _normalize_role_name(role) -> str:
+    if role is None:
+        return ""
+
+    name = getattr(role, "name", None)
+    if isinstance(name, str):
+        normalized = name.strip().upper()
+        if normalized:
+            return normalized
+
+    value = getattr(role, "value", role)
+    if isinstance(value, str):
+        normalized = value.strip().upper()
+        if normalized:
+            return normalized
+
+    if isinstance(role, str):
+        normalized = role.strip().upper()
+        if normalized:
+            return normalized
+
     return ""
 
 

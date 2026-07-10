@@ -2,6 +2,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from shared.roles import NodeRole
+
 
 class _FakeToolShape:
     def __init__(self, args=()):
@@ -32,6 +34,24 @@ class TestPanelShapeProcessorBackPanelGroove(unittest.TestCase):
             "Part",
             SimpleNamespace(makeBox=lambda *args: _FakeToolShape(args)),
         )
+
+    def test_panel_role_normalization_supports_real_shared_node_role_enum(self):
+        self.assertEqual(self.module._panel_role(SimpleNamespace(role=NodeRole.SIDE_PANEL)), "SIDE_PANEL")
+        self.assertEqual(self.module._panel_role(SimpleNamespace(role=NodeRole.BOTTOM_PANEL)), "BOTTOM_PANEL")
+
+    def test_panel_role_normalization_supports_string_valued_compatibility_role(self):
+        panel = SimpleNamespace(role=SimpleNamespace(value="SIDE_PANEL"))
+        self.assertEqual(self.module._panel_role(panel), "SIDE_PANEL")
+
+    def test_panel_role_normalization_supports_plain_string(self):
+        panel = SimpleNamespace(role="side_panel")
+        self.assertEqual(self.module._panel_role(panel), "SIDE_PANEL")
+
+    def test_panel_role_normalization_keeps_unknown_role_unsupported(self):
+        panel = SimpleNamespace(role=SimpleNamespace(value=object()), identity=SimpleNamespace(key="PANEL_1"))
+        self.assertEqual(self.module._panel_role(panel), "")
+        feature = SimpleNamespace(kind="back_panel_groove", node_id="PANEL_1")
+        self.assertFalse(self.module._feature_supported_for_panel(panel, feature))
 
     def test_no_groove_returns_identical_shape(self):
         from manufacturing.panel_shape_processor import process_panel_shape
