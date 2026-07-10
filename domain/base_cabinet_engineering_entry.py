@@ -50,18 +50,15 @@ def _enrich_toe_kick_engineering_placement(
             offset = BackPanelRule.groove_offset
             new_z = base_height + offset
             new_height = max(cabinet_height - base_height - (2 * offset), 0.0)
-        else:
-            new_z = base_height + thickness
-            new_height = max(cabinet_height - base_height - (2 * thickness), 0.0)
-        back_panel = replace(
-            back_panel,
-            height_mm=new_height,
-            position_mm=(
-                back_panel.position_mm[0],
-                cabinet_depth - back_panel.thickness_mm,
-                new_z,
-            ),
-        )
+            back_panel = replace(
+                back_panel,
+                height_mm=new_height,
+                position_mm=(
+                    back_panel.position_mm[0],
+                    cabinet_depth - back_panel.thickness_mm,
+                    new_z,
+                ),
+            )
 
     inner_width = bottom_panel.width_mm
     plinth_panels = (

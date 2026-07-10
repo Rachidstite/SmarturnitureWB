@@ -551,10 +551,14 @@ class SceneGraphBuilder:
                     thickness=divider.depth_mm,
                 )
             )
-        for shelf in getattr(model, "shelves", []) or []:
+        for shelf_index, shelf in enumerate(getattr(model, "shelves", []) or []):
             self._add(
                 SceneNode(
-                    PanelIdentity.make_shelf(self.cabinet_id, shelf.section_index, 0),
+                    PanelIdentity.make_shelf(
+                        self.cabinet_id,
+                        shelf.section_index,
+                        shelf_index,
+                    ),
                     shelf.width_mm,
                     shelf.depth_mm,
                     shelf.thickness_mm,

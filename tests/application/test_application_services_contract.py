@@ -366,6 +366,24 @@ class TestEngineeringApplicationServiceContract(unittest.TestCase):
         self.assertEqual(result.data["metadata"]["shelf_count"], len(shelf_nodes))
         self.assertEqual(result.data["metadata"]["door_count"], len(door_nodes))
 
+    def test_multi_shelf_scene_graph_builds_with_unique_shelf_identities(self):
+        svc = EngineeringApplicationService()
+        spec = BaseCabinetSpecification(shelf_count=4, door_count=0)
+        cabinet = _build_cabinet_with_scene_graph(spec)
+
+        with patch.object(
+            eng_svc_module,
+            "build_base_cabinet_engineering_cabinet",
+            return_value=cabinet,
+        ):
+            result = svc.execute(specification=spec)
+
+        self.assertTrue(result.success)
+        graph = result.data["cabinet"].scene_graph
+        shelf_nodes = [node for node in graph.all_nodes() if node.role == NodeRole.SHELF]
+        self.assertEqual(len(shelf_nodes), 4)
+        self.assertEqual(len({node.identity.key for node in shelf_nodes}), 4)
+
     def test_has_back_panel_false_returns_success_with_scene_graph_and_no_back_panel_nodes(self):
         svc = EngineeringApplicationService()
         spec = BaseCabinetSpecification(has_back_panel=False)

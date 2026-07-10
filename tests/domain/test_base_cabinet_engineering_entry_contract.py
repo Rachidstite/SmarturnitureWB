@@ -709,6 +709,61 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
             - (2 * groove_offset),
         )
 
+    def test_non_grooved_back_panel_remains_unchanged_when_toe_kick_is_enriched(self):
+        from dataclasses import replace
+        from domain.base_cabinet_engineering_entry import (
+            _enrich_toe_kick_engineering_placement,
+        )
+        from domain.base_cabinet_engineering_model import (
+            BackPanelInstallationMode,
+            BackPanelStrategy,
+            BaseCabinetEngineeringModel,
+            EngineeringBackPanel,
+        )
+        from domain.furniture_construction_model import (
+            CabinetConstructionModel,
+        )
+
+        cabinet = Cabinet()
+        spec = BaseCabinetSpecification(toe_kick_required=True, has_back_panel=True)
+        attach_base_cabinet_engineering_models(cabinet, spec)
+
+        original = cabinet.engineering_model.back_panel
+        self.assertIsNotNone(original)
+        self.assertEqual(
+            str(original.installation_mode.value).upper(), "GROOVED"
+        )
+
+        floating_back = replace(
+            original,
+            installation_mode=BackPanelInstallationMode.FLOATING,
+        )
+        floating_model = replace(
+            cabinet.engineering_model,
+            back_panel=floating_back,
+        )
+
+        result = _enrich_toe_kick_engineering_placement(
+            floating_model,
+            base_height=80.0,
+            toe_kick_required=True,
+            back_thickness=8.0,
+        )
+
+        preserved = result.back_panel
+        self.assertIsNotNone(preserved)
+        self.assertEqual(
+            preserved.position_mm[2], original.position_mm[2],
+            "non-GROOVED back panel Z must not be modified",
+        )
+        self.assertEqual(
+            preserved.height_mm, original.height_mm,
+            "non-GROOVED back panel height must not be modified",
+        )
+        self.assertEqual(
+            preserved.installation_mode, BackPanelInstallationMode.FLOATING,
+        )
+
     def test_scene_graph_copies_base_cabinet_bottom_and_plinth_z_unchanged(self):
         cabinet, graph = self._build_scene_graph_from_specification(
             BaseCabinetSpecification(toe_kick_required=True)
