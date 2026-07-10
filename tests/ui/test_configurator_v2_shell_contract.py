@@ -121,9 +121,31 @@ class _FakeTabWidget(_FakeWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tabs = []
+        self._current_index = 0
+        self._current_widget = None
 
     def addTab(self, widget, title):
         self.tabs.append((widget, title))
+        if self._current_widget is None:
+            self._current_widget = widget
+
+    def setCurrentIndex(self, index):
+        self._current_index = index
+        if 0 <= index < len(self.tabs):
+            self._current_widget = self.tabs[index][0]
+
+    def currentIndex(self):
+        return self._current_index
+
+    def setCurrentWidget(self, widget):
+        self._current_widget = widget
+        for index, (candidate, _title) in enumerate(self.tabs):
+            if candidate is widget:
+                self._current_index = index
+                break
+
+    def currentWidget(self):
+        return self._current_widget
 
 
 class _FakeScrollArea(_FakeWidget):
@@ -223,6 +245,7 @@ class TestConfiguratorV2ShellContract(unittest.TestCase):
             sys.modules,
             {"core.qt_compat": _fake_qt_module()},
         ):
+            sys.modules.pop("ui.configurator_v2.workspace", None)
             return importlib.import_module("ui.configurator_v2.workspace")
 
     def test_shell_can_be_imported_and_constructed(self):
@@ -248,7 +271,7 @@ class TestConfiguratorV2ShellContract(unittest.TestCase):
         self.assertTrue(hasattr(workspace, "message_center_region"))
         self.assertTrue(hasattr(workspace, "action_bar_region"))
 
-    def test_action_names_exist_and_buttons_are_disabled(self):
+    def test_action_names_exist_and_buttons_are_wired(self):
         module = self._import_workspace_module()
         workspace = module.create_configurator_v2_workspace()
 
@@ -256,9 +279,13 @@ class TestConfiguratorV2ShellContract(unittest.TestCase):
             tuple(workspace.action_bar_region.action_buttons.keys()),
             module.ACTION_NAMES,
         )
+        self.assertEqual(
+            tuple(workspace.action_bar_region.action_handlers.keys()),
+            module.ACTION_NAMES,
+        )
         self.assertTrue(
             all(
-                not getattr(button, "_enabled", True)
+                getattr(button, "_enabled", False)
                 for button in workspace.action_bar_region.action_buttons.values()
             )
         )

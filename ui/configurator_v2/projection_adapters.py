@@ -648,6 +648,62 @@ def _visual_component_bounds_label(components: tuple[VisualComponent, ...]) -> s
     return f"min=({min_x}, {min_y}, {min_z}) max=({max_x}, {max_y}, {max_z})"
 
 
+def build_selection_preview_source(
+    *,
+    selection: Any = None,
+    scene_graph: Any = None,
+    current_family: str = "",
+    current_product: str = "",
+    active_family: str = "",
+) -> dict[str, Any]:
+    selection = selection or {}
+    selection_id = _as_str(_get_value(selection, "selection_id", ""))
+    selection_type = _as_str(_get_value(selection, "selection_type", ""))
+    display_name = _as_str(_get_value(selection, "display_name", ""))
+    has_selection = selection_type not in ("", "NONE")
+
+    if scene_graph is not None:
+        return {
+            "scene_graph": scene_graph,
+            "selection": selection,
+            "selected_node_id": selection_id if has_selection else "",
+            "highlight_target": selection_id if has_selection else "",
+            "current_family": current_family or active_family,
+            "preview_title": current_product or current_family or display_name or "Engineering Preview",
+            "preview_state": "Ready",
+            "viewport_message": (
+                f"Focus on {display_name or selection_id}"
+                if has_selection else
+                "Current engineering model ready"
+            ),
+            "available_representations": (
+                "Customer View",
+                "Design View",
+            ),
+            "representation_status": "Ready",
+            "warnings": (),
+        }
+
+    return {
+        "selection": selection,
+        "current_family": current_family,
+        "preview_title": current_family or display_name or "Preview",
+        "preview_state": "Ready" if has_selection else "Unavailable",
+        "viewport_message": (
+            f"Focus on {display_name or selection_id or 'current selection'}"
+            if has_selection
+            else "Select a project or product to populate preview"
+        ),
+        "available_representations": (
+            ("Customer View", "Design View")
+            if has_selection
+            else ()
+        ),
+        "highlight_representation": "Selection Focus" if has_selection else "",
+        "warnings": (),
+    }
+
+
 def build_preview_read_model(
     source: Any = None,
     *,

@@ -25,6 +25,7 @@ from .projection_adapters import (
     build_project_tree_read_model,
     build_release_review_projection,
     build_review_panel_read_models,
+    build_selection_preview_source,
     build_validation_review_projection,
     enrich_inspector_source_with_specification,
 )
@@ -54,6 +55,7 @@ from .workspace import (
 class ConfiguratorV2ServiceIntegration:
     workspace: ConfiguratorV2Workspace
     service_bindings: ConfiguratorV2ServiceBindings | None = None
+    _NOT_CONNECTED_SUFFIX = "is not connected yet"
 
     def __post_init__(self):
         self.service_bindings = self.service_bindings or ConfiguratorV2ServiceBindings()
@@ -116,6 +118,17 @@ class ConfiguratorV2ServiceIntegration:
         if selection and getattr(selection, "selection_id", ""):
             source["selected_node_id"] = selection.selection_id
         return source or None
+
+    def _preview_source_for_selection(self, selection: Any = None) -> dict[str, Any]:
+        workspace = self.workspace
+        active_state = getattr(workspace, "active_engineering_state", None)
+        return build_selection_preview_source(
+            selection=selection or getattr(workspace, "current_selection", None),
+            scene_graph=getattr(active_state, "scene_graph", None) if active_state is not None else None,
+            current_family=getattr(workspace, "current_product_family", None) or "",
+            current_product=getattr(workspace, "current_product", None) or "",
+            active_family=getattr(active_state, "family", "") if active_state is not None else "",
+        )
 
     def _workspace_inspector_source(self):
         selection = getattr(self.workspace, "current_selection", None)
@@ -661,6 +674,61 @@ class ConfiguratorV2ServiceIntegration:
         )
         self.workspace.set_review_panel_read_models(merged)
         return merged
+
+    def validate_active_product(self):
+        specification = getattr(
+            getattr(self.workspace, "active_engineering_state", None),
+            "specification",
+            None,
+        )
+        if specification is None:
+            self.push_message(
+                severity="INFO",
+                text="Validation requires an active engineering specification",
+                category="Validation integration",
+                source_reference="ConfiguratorV2ServiceIntegration.validate_active_product",
+            )
+            return self.refresh_validation(None)
+
+        validate_base_cabinet_specification = self._load_attr(
+            "domain",
+            "base_cabinet_specification_validation",
+            "validate_base_cabinet_specification",
+        )
+        report = validate_base_cabinet_specification(specification)
+        merged = self.refresh_validation(report)
+        self.push_message(
+            severity="INFO",
+            text="Validation review completed",
+            category="Validation integration",
+            source_reference="ConfiguratorV2ServiceIntegration.validate_active_product",
+        )
+        return merged
+
+    def handle_workflow_action(self, action_name: str, *, selection: Any = None):
+        handlers = {
+            "Refresh Preview": lambda: self.refresh_preview(self._preview_source_for_selection(selection)),
+            "Validate": self.validate_active_product,
+            "Generate Manufacturing": lambda: self.generate_manufacturing(
+                source=getattr(
+                    getattr(self.workspace, "active_engineering_state", None),
+                    "scene_graph",
+                    None,
+                )
+            ),
+            "Review Cost": self.review_cost,
+        }
+        handler = handlers.get(action_name)
+        if handler is not None:
+            return handler()
+
+        self.push_message(
+            severity="INFO",
+            text=f"{action_name} {self._NOT_CONNECTED_SUFFIX}",
+            category="Action wiring",
+            source_reference="ConfiguratorV2ServiceIntegration.handle_workflow_action",
+        )
+        return None
 
     def refresh_manufacturing_review(self, source: Any = None):
         if source is None:

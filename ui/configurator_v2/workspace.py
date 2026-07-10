@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
+import core.qt_compat as qt_compat
 from core.qt_compat import QtWidgets, QtCore
 from .engineering_state import ActiveEngineeringState
 from .read_models import (
@@ -18,7 +19,12 @@ from .read_models import (
     empty_project_tree_read_model,
     empty_review_panel_read_models,
 )
-from .projection_adapters import build_inspector_read_model, build_preview_read_model, enrich_inspector_source_with_specification
+from .projection_adapters import (
+    build_inspector_read_model,
+    build_preview_read_model,
+    build_selection_preview_source,
+    enrich_inspector_source_with_specification,
+)
 from .furniture_visual_styles import (
     FurnitureVisualStyle,
     apply_furniture_visual_styles,
@@ -181,7 +187,38 @@ def _frame_layout(widget):
     layout = QtWidgets.QVBoxLayout(widget)
     if hasattr(layout, "setContentsMargins"):
         layout.setContentsMargins(8, 8, 8, 8)
+    if hasattr(layout, "setSpacing"):
+        layout.setSpacing(6)
     return layout
+
+
+def _set_layout_density(layout, *, margins=None, spacing: int | None = None):
+    if layout is None:
+        return
+    if margins is not None and hasattr(layout, "setContentsMargins"):
+        layout.setContentsMargins(*margins)
+    if spacing is not None and hasattr(layout, "setSpacing"):
+        layout.setSpacing(spacing)
+
+
+def _set_widget_size_hints(
+    widget,
+    *,
+    min_width: int | None = None,
+    max_width: int | None = None,
+    min_height: int | None = None,
+    max_height: int | None = None,
+):
+    if widget is None:
+        return
+    if min_width is not None and hasattr(widget, "setMinimumWidth"):
+        widget.setMinimumWidth(min_width)
+    if max_width is not None and hasattr(widget, "setMaximumWidth"):
+        widget.setMaximumWidth(max_width)
+    if min_height is not None and hasattr(widget, "setMinimumHeight"):
+        widget.setMinimumHeight(min_height)
+    if max_height is not None and hasattr(widget, "setMaximumHeight"):
+        widget.setMaximumHeight(max_height)
 
 
 def _clear_layout(layout):
@@ -292,6 +329,7 @@ class GlobalNavigationRegion(_ShellFrame):
             "Top-level product areas for the Configurator workspace.",
             parent=parent,
         )
+        _set_layout_density(self.body_layout, spacing=4)
         self.navigation_entries: dict[str, NavigationEntry] = {
             entry: NavigationEntry(
                 entry,
@@ -309,6 +347,7 @@ class GlobalNavigationRegion(_ShellFrame):
                 button.setCheckable(True)
             if hasattr(button, "setChecked"):
                 button.setChecked(entry.active)
+            _set_widget_size_hints(button, min_height=24, max_height=28)
             self.body_layout.addWidget(button)
             entry.button = button
             self.navigation_buttons[entry_name] = button
@@ -321,6 +360,7 @@ class ProjectTreeRegion(_ShellFrame):
             "Customer, project, room, wall, cabinet, and document hierarchy.",
             parent=parent,
         )
+        _set_layout_density(self.body_layout, spacing=4)
         self.on_select = on_select
         self.selected_node = None
         self.tree_nodes: tuple[str, ...] = ConfiguratorV2ShellModel().project_tree_nodes
@@ -416,6 +456,236 @@ class ProjectTreeRegion(_ShellFrame):
             self.on_select(selection)
 
 
+class PreviewCanvas(QtWidgets.QWidget):
+    _CANVAS_MARGIN = 18.0
+    _DEFAULT_OUTLINE_WIDTH = 2
+    _SELECTED_OUTLINE_WIDTH = 4
+    _HIGHLIGHT_OUTLINE_WIDTH = 2
+    _PAINTABLE_TYPES = frozenset({
+        "CABINET",
+        "PANEL",
+        "SHELF",
+        "DIVIDER",
+        "BACK_PANEL",
+    })
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.visual_components: tuple[VisualComponent, ...] = ()
+        if hasattr(self, "setMinimumHeight"):
+            self.setMinimumHeight(260)
+        if hasattr(self, "setObjectName"):
+            self.setObjectName("preview_canvas")
+
+    def set_visual_components(self, components: tuple[VisualComponent, ...]):
+        self.visual_components = self._paintable_components(components)
+        if hasattr(self, "update"):
+            self.update()
+
+    def clear(self):
+        self.visual_components = ()
+        if hasattr(self, "update"):
+            self.update()
+
+    @classmethod
+    def _paintable_components(
+        cls,
+        components: tuple[VisualComponent, ...] | None,
+    ) -> tuple[VisualComponent, ...]:
+        result: list[VisualComponent] = []
+        for component in components or ():
+            if not isinstance(component, VisualComponent):
+                raise TypeError("components must contain VisualComponent instances")
+            if component.component_type not in cls._PAINTABLE_TYPES:
+                continue
+            if not component.visibility:
+                continue
+            result.append(component)
+        return tuple(result)
+
+    @staticmethod
+    def _component_sort_key(component: VisualComponent) -> tuple[int, str]:
+        order = {
+            "BACK_PANEL": 0,
+            "CABINET": 1,
+            "PANEL": 2,
+            "DIVIDER": 3,
+            "SHELF": 4,
+        }
+        return (order.get(component.component_type, 9), component.id or "")
+
+    @staticmethod
+    def _component_bounds(component: VisualComponent) -> tuple[float, float, float, float] | None:
+        comp_min_x, _, comp_min_z = component.bounding_box.minimum
+        comp_max_x, _, comp_max_z = component.bounding_box.maximum
+        if comp_max_x <= comp_min_x or comp_max_z <= comp_min_z:
+            return None
+        return (comp_min_x, comp_max_x, comp_min_z, comp_max_z)
+
+    @classmethod
+    def _bounds_for_components(
+        cls,
+        components: tuple[VisualComponent, ...],
+    ) -> tuple[float, float, float, float] | None:
+        if not components:
+            return None
+        bounds = [cls._component_bounds(component) for component in components]
+        valid_bounds = [bound for bound in bounds if bound is not None]
+        if not valid_bounds:
+            return None
+        min_x = min(bound[0] for bound in valid_bounds)
+        max_x = max(bound[1] for bound in valid_bounds)
+        min_z = min(bound[2] for bound in valid_bounds)
+        max_z = max(bound[3] for bound in valid_bounds)
+        if max_x <= min_x or max_z <= min_z:
+            return None
+        return (min_x, max_x, min_z, max_z)
+
+    def _fit_rect_to_canvas(
+        self,
+        bounds: tuple[float, float, float, float],
+    ) -> tuple[float, float, float, float, float] | None:
+        min_x, max_x, min_z, max_z = bounds
+        widget_width = self.width() if hasattr(self, "width") else 0
+        widget_height = self.height() if hasattr(self, "height") else 0
+        if widget_width <= 0 or widget_height <= 0:
+            return None
+        width = max_x - min_x
+        height = max_z - min_z
+        if width <= 0.0 or height <= 0.0:
+            return None
+
+        padding = self._CANVAS_MARGIN
+        usable_width = widget_width - (padding * 2.0)
+        usable_height = widget_height - (padding * 2.0)
+        if usable_width <= 0.0 or usable_height <= 0.0:
+            return None
+        scale_x = usable_width / width
+        scale_z = usable_height / height
+        scale = min(scale_x, scale_z)
+        drawing_width = width * scale
+        drawing_height = height * scale
+        offset_x = (widget_width - drawing_width) / 2.0
+        offset_y = (widget_height - drawing_height) / 2.0
+        return (offset_x, offset_y, drawing_width, drawing_height, scale)
+
+    def _component_rect(
+        self,
+        component: VisualComponent,
+        bounds: tuple[float, float, float, float],
+    ) -> tuple[float, float, float, float]:
+        component_bounds = self._component_bounds(component)
+        fit = self._fit_rect_to_canvas(bounds)
+        if component_bounds is None or fit is None:
+            return (0.0, 0.0, 0.0, 0.0)
+        min_x, max_x, min_z, max_z = bounds
+        offset_x, offset_y, _drawing_width, _drawing_height, scale = fit
+        comp_min_x, comp_max_x, comp_min_z, comp_max_z = component_bounds
+
+        x = offset_x + ((comp_min_x - min_x) * scale)
+        y = offset_y + ((max_z - comp_max_z) * scale)
+        width = max((comp_max_x - comp_min_x) * scale, 2.0)
+        height = max((comp_max_z - comp_min_z) * scale, 2.0)
+        return (x, y, width, height)
+
+    @staticmethod
+    def _painter_resources():
+        qt_gui = getattr(qt_compat, "QtGui", None)
+        if qt_gui is None:
+            return None
+        painter_cls = getattr(qt_gui, "QPainter", None)
+        color_cls = getattr(qt_gui, "QColor", None)
+        pen_cls = getattr(qt_gui, "QPen", None)
+        brush_cls = getattr(qt_gui, "QBrush", None)
+        if not all((painter_cls, color_cls, pen_cls, brush_cls)):
+            return None
+        return painter_cls, color_cls, pen_cls, brush_cls
+
+    @staticmethod
+    def _selection_outline_color(color_cls):
+        return color_cls("#2F5D50")
+
+    @staticmethod
+    def _highlight_outline_color(color_cls):
+        return color_cls("#C56A1A")
+
+    def paintEvent(self, _event):
+        resources = self._painter_resources()
+        if resources is None:
+            return
+        painter_cls, color_cls, pen_cls, brush_cls = resources
+        painter = painter_cls(self)
+        try:
+            if hasattr(painter, "setRenderHint"):
+                antialiasing = getattr(painter_cls, "Antialiasing", None)
+                if antialiasing is not None:
+                    painter.setRenderHint(antialiasing, True)
+
+            if hasattr(painter, "fillRect") and hasattr(self, "rect"):
+                painter.fillRect(self.rect(), color_cls("#F7F1E8"))
+
+            components = tuple(sorted(self.visual_components, key=self._component_sort_key))
+            bounds = self._bounds_for_components(components)
+            if bounds is None:
+                return
+
+            for component in components:
+                x, y, width, height = self._component_rect(component, bounds)
+                if width <= 0.0 or height <= 0.0:
+                    continue
+
+                base_color = getattr(component, "base_color", "") or getattr(component, "color", "") or "#C8A26E"
+                accent_color = getattr(component, "accent_color", "") or "#5B4633"
+                fill = color_cls(base_color)
+                stroke = color_cls(accent_color)
+
+                display_state = (getattr(component, "display_state", "") or "").upper()
+                if display_state == "STALE" and hasattr(fill, "setAlpha"):
+                    fill.setAlpha(180)
+                elif display_state == "HIDDEN" and hasattr(fill, "setAlpha"):
+                    fill.setAlpha(80)
+                elif display_state == "UNSUPPORTED" and hasattr(fill, "setAlpha"):
+                    fill.setAlpha(120)
+
+                highlight_selected = getattr(component, "highlight_state", "") == "HIGHLIGHTED"
+                component_selected = getattr(component, "selection_state", "") == "SELECTED"
+                outline_width = self._SELECTED_OUTLINE_WIDTH if component_selected else self._DEFAULT_OUTLINE_WIDTH
+                if component_selected:
+                    stroke = self._selection_outline_color(color_cls)
+                elif highlight_selected:
+                    stroke = self._highlight_outline_color(color_cls)
+
+                if hasattr(painter, "setPen"):
+                    painter.setPen(pen_cls(stroke, outline_width))
+                if hasattr(painter, "setBrush"):
+                    painter.setBrush(brush_cls(fill))
+
+                if hasattr(painter, "drawRect"):
+                    painter.drawRect(int(x), int(y), int(width), int(height))
+
+                if highlight_selected and hasattr(painter, "setPen") and hasattr(painter, "drawRect"):
+                    highlight_stroke = self._highlight_outline_color(color_cls)
+                    painter.setPen(pen_cls(highlight_stroke, self._HIGHLIGHT_OUTLINE_WIDTH))
+                    painter.drawRect(
+                        int(x - 2),
+                        int(y - 2),
+                        max(int(width + 4), 1),
+                        max(int(height + 4), 1),
+                    )
+
+                if component.component_type == "BACK_PANEL" and hasattr(painter, "drawRect"):
+                    inset = 4
+                    painter.drawRect(
+                        int(x + inset),
+                        int(y + inset),
+                        max(int(width - (inset * 2)), 1),
+                        max(int(height - (inset * 2)), 1),
+                    )
+        finally:
+            if hasattr(painter, "end"):
+                painter.end()
+
+
 class PreviewRegion(_ShellFrame):
     def __init__(self, parent=None):
         super().__init__(
@@ -423,11 +693,14 @@ class PreviewRegion(_ShellFrame):
             "Read-model driven preview placeholder backed by projection data.",
             parent=parent,
         )
+        _set_layout_density(self.body_layout, spacing=6)
         self.preview_modes: tuple[str, ...] = ConfiguratorV2ShellModel().preview_modes
         self.preview_mode_selector = QtWidgets.QComboBox()
+        _set_widget_size_hints(self.preview_mode_selector, min_height=28, max_height=32)
         for mode in self.preview_modes:
             self.preview_mode_selector.addItem(mode)
         self.body_layout.addWidget(self.preview_mode_selector)
+        self.preview_canvas = PreviewCanvas()
         self.read_model = empty_preview_read_model()
         self.preview_title_value = QtWidgets.QLabel("")
         self.preview_state_value = QtWidgets.QLabel("")
@@ -445,7 +718,7 @@ class PreviewRegion(_ShellFrame):
         self.viewport_message_value = QtWidgets.QLabel("")
         self.preview_placeholder = QtWidgets.QLabel("Preview unavailable")
         if hasattr(self.preview_placeholder, "setMinimumHeight"):
-            self.preview_placeholder.setMinimumHeight(240)
+            self.preview_placeholder.setMinimumHeight(320)
         self.render_rows: list[str] = []
         self.summary_labels: dict[str, object] = {}
         self.highlighted_selection_id = ""
@@ -483,6 +756,7 @@ class PreviewRegion(_ShellFrame):
         if hasattr(self.preview_mode_selector, "setCurrentText"):
             self.preview_mode_selector.setCurrentText(read_model.preview_mode or "Customer View")
         self.body_layout.addWidget(self.preview_mode_selector)
+        self.body_layout.addWidget(self.preview_canvas)
         self._append_summary("Preview Title", read_model.preview_title or "Preview")
         self._append_summary("Preview Mode", read_model.preview_mode or "Customer View")
         self._append_summary("Preview State", read_model.preview_state or "Unavailable")
@@ -582,11 +856,13 @@ class PreviewRegion(_ShellFrame):
         self.preview_placeholder = QtWidgets.QLabel()
         self._set_label_text(self.preview_placeholder, placeholder_text)
         if hasattr(self.preview_placeholder, "setMinimumHeight"):
-            self.preview_placeholder.setMinimumHeight(240)
+            self.preview_placeholder.setMinimumHeight(320)
         self.body_layout.addWidget(self.preview_placeholder)
 
     def set_read_model(self, read_model: PreviewReadModel):
         self.read_model = read_model or empty_preview_read_model()
+        if not self.visual_components and not self.interactive_components:
+            self.preview_canvas.clear()
         self.highlighted_selection_id = (
             self.read_model.selected_node
             or self.read_model.highlight_target
@@ -604,6 +880,7 @@ class PreviewRegion(_ShellFrame):
     ):
         self.visual_components = tuple(components or ())
         self.visual_styles = apply_furniture_visual_styles(self.visual_components)
+        self.preview_canvas.set_visual_components(self.visual_components)
         self.set_read_model(
             read_model
             or build_preview_read_model(
@@ -618,9 +895,14 @@ class PreviewRegion(_ShellFrame):
         interactive: tuple[InteractiveVisualComponent, ...],
         read_model: PreviewReadModel | None = None,
     ):
+        prior_visual_components = self.visual_components
         self.interactive_components = tuple(interactive or ())
         self.visual_components = ()
         self.visual_styles = ()
+        if prior_visual_components:
+            self.preview_canvas.set_visual_components(prior_visual_components)
+        else:
+            self.preview_canvas.clear()
         self.set_read_model(
             read_model
             or build_preview_read_model(
@@ -638,6 +920,7 @@ class ProductContextRegion(_ShellFrame):
             "Display-only current customer, project, family, product, and state.",
             parent=parent,
         )
+        _set_layout_density(self.body_layout, spacing=2)
         self.current_customer = None
         self.current_project = None
         self.current_product_family = None
@@ -693,6 +976,7 @@ class ProductStateIndicator(_ShellFrame):
             "Display-only indicator for the ADR-0015 state model.",
             parent=parent,
         )
+        _set_layout_density(self.body_layout, spacing=2)
         self.states = ConfiguratorV2ShellModel().product_states
         self.state_labels: dict[str, object] = {}
         self.current_state = "Draft"
@@ -725,6 +1009,7 @@ class InspectorRegion(_ShellFrame):
             "Selected object read model and grouped metadata.",
             parent=parent,
         )
+        _set_layout_density(self.body_layout, spacing=4)
         self.on_field_commit = on_field_commit
         self.inspector_scroll_area = None
         self.inspector_scroll_content = None
@@ -737,6 +1022,7 @@ class InspectorRegion(_ShellFrame):
                 self.inspector_scroll_area.setWidgetResizable(True)
             self.inspector_scroll_content = QtWidgets.QWidget()
             self.inspector_scroll_content_layout = QtWidgets.QVBoxLayout(self.inspector_scroll_content)
+            _set_layout_density(self.inspector_scroll_content_layout, margins=(0, 0, 0, 0), spacing=4)
             self.body_layout.addWidget(self.inspector_scroll_area)
             if hasattr(self.inspector_scroll_area, "setWidget"):
                 self.inspector_scroll_area.setWidget(self.inspector_scroll_content)
@@ -785,6 +1071,7 @@ class InspectorRegion(_ShellFrame):
                 self.field_source_references[field.name] = field.source_reference
             row_widget = QtWidgets.QWidget()
             row_layout = QtWidgets.QHBoxLayout(row_widget)
+            _set_layout_density(row_layout, margins=(0, 0, 0, 0), spacing=6)
             if hasattr(row_widget, "setLayout"):
                 row_widget.setLayout(row_layout)
             label = QtWidgets.QLabel()
@@ -800,8 +1087,7 @@ class InspectorRegion(_ShellFrame):
                     editor = editor_cls()
                     if hasattr(editor, "setText"):
                         editor.setText(field.value)
-                    if hasattr(editor, "setMinimumWidth"):
-                        editor.setMinimumWidth(160)
+                    _set_widget_size_hints(editor, min_width=160, min_height=24, max_height=28)
                     if hasattr(editor, "editingFinished") and callable(self.on_field_commit):
                         editor.editingFinished.connect(
                             lambda field_name=field.name, line_edit=editor: self.commit_field_edit(
@@ -875,7 +1161,31 @@ class ReviewContainer(_ShellFrame):
     def __init__(self, name: str, parent=None):
         super().__init__(name, f"Read-only {name.lower()} evidence.", parent=parent)
         self.review_name = name
-        self.body_layout.addWidget(QtWidgets.QLabel("No report loaded"))
+        self.read_model = ReviewPanelReadModel(panel_name=name)
+        self.render_rows: list[str] = []
+        self.summary_label = QtWidgets.QLabel("No report loaded")
+        if hasattr(self.summary_label, "setWordWrap"):
+            self.summary_label.setWordWrap(True)
+        self.body_layout.addWidget(self.summary_label)
+
+    def set_read_model(self, read_model: ReviewPanelReadModel | None):
+        self.read_model = read_model or ReviewPanelReadModel(panel_name=self.review_name)
+        lines = [self.review_name]
+        if not self.read_model.available:
+            lines.append("Status: Not available")
+        else:
+            lines.append("Status: Available")
+        if self.read_model.stale:
+            lines.append("Freshness: Stale")
+        for section in self.read_model.sections:
+            lines.append(section.section_name)
+            for key, value in section.rows:
+                lines.append(f"{key}: {value}")
+            for warning in section.warnings:
+                lines.append(f"Warning: {warning}")
+        self.render_rows = lines
+        if hasattr(self.summary_label, "setText"):
+            self.summary_label.setText("\n".join(lines[1:]) if len(lines) > 1 else "No report loaded")
 
 
 class ReviewRegion(_ShellFrame):
@@ -892,6 +1202,30 @@ class ReviewRegion(_ShellFrame):
             self.tabs.addTab(widget, panel_name)
             self.review_containers[panel_name] = widget
         self.body_layout.addWidget(self.tabs)
+
+    def set_read_models(self, read_models: tuple[ReviewPanelReadModel, ...]):
+        by_name = {
+            read_model.panel_name: read_model
+            for read_model in tuple(read_models or ())
+        }
+        for panel_name, container in self.review_containers.items():
+            container.set_read_model(
+                by_name.get(panel_name, ReviewPanelReadModel(panel_name=panel_name))
+            )
+
+    def activate_panel(self, panel_name: str):
+        widget = self.review_containers.get(panel_name)
+        if widget is not None and hasattr(self.tabs, "setCurrentWidget"):
+            self.tabs.setCurrentWidget(widget)
+            return
+        for index, (candidate, title) in enumerate(getattr(self.tabs, "tabs", ())):
+            if title != panel_name:
+                continue
+            if hasattr(self.tabs, "setCurrentIndex"):
+                self.tabs.setCurrentIndex(index)
+            elif hasattr(self.tabs, "setCurrentWidget"):
+                self.tabs.setCurrentWidget(candidate)
+            return
 
 
 class MessageCenterRegion(_ShellFrame):
@@ -919,6 +1253,25 @@ class MessageCenterRegion(_ShellFrame):
         if hasattr(self.category_legend, "setWordWrap"):
             self.category_legend.setWordWrap(True)
         self.body_layout.addWidget(self.category_legend)
+        self.render_rows: list[str] = []
+
+    def set_read_model(self, read_model: MessageCenterReadModel | None):
+        read_model = read_model or empty_message_center_read_model()
+        rows = [
+            f"Highest Severity: {read_model.highest_severity}",
+            f"Has Blockers: {'Yes' if read_model.has_blockers else 'No'}",
+            f"Has Stale Outputs: {'Yes' if read_model.has_stale_outputs else 'No'}",
+        ]
+        for message in read_model.messages:
+            rows.append(
+                f"[{message.severity}] {message.category}: {message.text}"
+            )
+        self.render_rows = rows
+        if hasattr(self.message_list, "setText"):
+            self.message_list.setText(
+                "\n".join(rows[3:]) if len(rows) > 3
+                else "No messages. Backend warnings and blockers will appear here."
+            )
 
 
 class ActionBarRegion(QtWidgets.QWidget):
@@ -926,18 +1279,33 @@ class ActionBarRegion(QtWidgets.QWidget):
         super().__init__(parent)
         self.action_names = ConfiguratorV2ShellModel().action_names
         self.action_buttons: dict[str, object] = {}
-        self.last_placeholder_action: str | None = None
+        self.action_handlers: dict[str, Any] = {}
         layout = QtWidgets.QHBoxLayout(self)
+        _set_layout_density(layout, margins=(0, 0, 0, 0), spacing=6)
         for action_name in self.action_names:
             button = QtWidgets.QPushButton(action_name)
             if hasattr(button, "setEnabled"):
                 button.setEnabled(False)
+            _set_widget_size_hints(button, min_height=28, max_height=32)
             layout.addWidget(button)
             self.action_buttons[action_name] = button
 
-    def emit_placeholder_action(self, action_name: str):
-        if action_name in self.action_buttons:
-            self.last_placeholder_action = action_name
+    def bind_action(self, action_name: str, handler):
+        button = self.action_buttons.get(action_name)
+        if button is None:
+            return
+        self.action_handlers[action_name] = handler
+        if hasattr(button, "setEnabled"):
+            button.setEnabled(True)
+        clicked = getattr(button, "clicked", None)
+        if clicked is not None and hasattr(clicked, "connect"):
+            clicked.connect(lambda _checked=False, name=action_name: self.trigger_action(name))
+
+    def trigger_action(self, action_name: str):
+        handler = self.action_handlers.get(action_name)
+        if handler is None:
+            return None
+        return handler()
 
 
 class ConfiguratorV2Workspace(QtWidgets.QWidget):
@@ -1021,10 +1389,17 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
         self.header_region = QtWidgets.QWidget()
         header_layout = QtWidgets.QHBoxLayout(self.header_region)
+        _set_layout_density(header_layout, margins=(0, 0, 0, 0), spacing=8)
         header_layout.addWidget(self.project_context_region)
         header_layout.addWidget(self.product_state_indicator)
         self.header_layout = header_layout
+        _set_widget_size_hints(self.project_context_region, max_height=140)
+        _set_widget_size_hints(self.product_state_indicator, max_height=140)
+        _set_widget_size_hints(self.header_region, max_height=150)
         content_host.addWidget(self.header_region)
+
+        _set_layout_density(root_layout, margins=(0, 0, 0, 0), spacing=0)
+        _set_layout_density(content_host, margins=(10, 8, 10, 10), spacing=8)
 
         splitter_cls = getattr(QtWidgets, "QSplitter", None)
         if splitter_cls is not None:
@@ -1036,6 +1411,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
             left_pane = QtWidgets.QWidget()
             left_column = QtWidgets.QVBoxLayout(left_pane)
+            _set_layout_density(left_column, margins=(0, 0, 0, 0), spacing=6)
             self.global_navigation_region = GlobalNavigationRegion()
             self.project_tree_region = ProjectTreeRegion(on_select=self.set_selection)
             left_column.addWidget(self.global_navigation_region)
@@ -1046,6 +1422,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
             center_pane = QtWidgets.QWidget()
             center_column = QtWidgets.QVBoxLayout(center_pane)
+            _set_layout_density(center_column, margins=(0, 0, 0, 0), spacing=0)
             self.preview_region = PreviewRegion()
             center_column.addWidget(self.preview_region)
             if hasattr(center_pane, "setMinimumWidth"):
@@ -1054,6 +1431,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
             right_pane = QtWidgets.QWidget()
             right_column = QtWidgets.QVBoxLayout(right_pane)
+            _set_layout_density(right_column, margins=(0, 0, 0, 0), spacing=4)
             self.inspector_region = InspectorRegion(on_field_commit=self._handle_inspector_field_commit)
             right_column.addWidget(self.inspector_region)
             if hasattr(right_pane, "setMinimumWidth"):
@@ -1098,6 +1476,8 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         tabs_cls = getattr(QtWidgets, "QTabWidget", None)
         if tabs_cls is not None:
             self.bottom_tabs = tabs_cls()
+            if hasattr(self.bottom_tabs, "setDocumentMode"):
+                self.bottom_tabs.setDocumentMode(True)
             self.bottom_tabs.addTab(self.review_region, "Review")
             self.bottom_tabs.addTab(self.message_center_region, "Messages")
             content_host.addWidget(self.bottom_tabs)
@@ -1107,6 +1487,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
             content_host.addWidget(self.message_center_region)
 
         content_host.addWidget(self.action_bar_region)
+        self._wire_action_bar_handlers()
 
     def set_project_context(
         self,
@@ -1132,6 +1513,48 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         )
         self.product_state_indicator.set_state(self.current_product_state)
 
+    def _build_preview_source_for_selection(
+        self,
+        selection: ConfiguratorSelection,
+    ) -> dict[str, Any]:
+        active_state = getattr(self, "active_engineering_state", None)
+        return build_selection_preview_source(
+            selection=selection or ConfiguratorSelection(),
+            scene_graph=getattr(active_state, "scene_graph", None) if active_state is not None else None,
+            current_family=self.current_product_family or "",
+            current_product=self.current_product or "",
+            active_family=getattr(active_state, "family", "") if active_state is not None else "",
+        )
+
+    @staticmethod
+    def _sync_preview_visual_components_for_selection(
+        components: tuple[VisualComponent, ...],
+        selection: ConfiguratorSelection | None,
+    ) -> tuple[VisualComponent, ...]:
+        components = tuple(components or ())
+        if not components:
+            return ()
+
+        selection = selection or ConfiguratorSelection()
+        selection_id = selection.selection_id or ""
+        has_match = bool(selection_id) and any(
+            component.id == selection_id for component in components
+        )
+        if not has_match:
+            return components
+
+        synchronized: list[VisualComponent] = []
+        for component in components:
+            is_selected = component.id == selection_id
+            synchronized.append(
+                replace(
+                    component,
+                    selection_state="SELECTED" if is_selected else "NORMAL",
+                    highlight_state="HIGHLIGHTED" if is_selected else "NORMAL",
+                )
+            )
+        return tuple(synchronized)
+
     def set_selection(self, selection: ConfiguratorSelection | None):
         selection = selection or ConfiguratorSelection()
         self.current_selection = selection
@@ -1141,30 +1564,20 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         if active_state is not None and getattr(active_state, "specification", None) is not None:
             source = enrich_inspector_source_with_specification(source, active_state)
         self.set_inspector_read_model(build_inspector_read_model(source))
-        self.set_preview_read_model(
-            build_preview_read_model(
-                {
-                    "selection": selection,
-                    "current_family": self.current_product_family,
-                    "preview_title": self.current_product_family or selection.display_name or "Preview",
-                    "preview_state": "Ready" if selection.selection_type not in ("", "NONE") else "Unavailable",
-                    "viewport_message": (
-                        f"Focus on {selection.display_name or selection.selection_id or 'current selection'}"
-                        if selection.selection_type not in ("", "NONE")
-                        else "Select a project or product to populate preview"
-                    ),
-                    "available_representations": (
-                        ("Customer View", "Design View")
-                        if selection.selection_type not in ("", "NONE")
-                        else ()
-                    ),
-                    "highlight_representation": "Selection Focus"
-                    if selection.selection_type not in ("", "NONE")
-                    else "",
-                    "warnings": (),
-                }
-            )
+        preview_read_model = build_preview_read_model(
+            self._build_preview_source_for_selection(selection)
         )
+        if self.preview_visual_components:
+            synchronized = self._sync_preview_visual_components_for_selection(
+                self.preview_visual_components,
+                selection,
+            )
+            self.set_preview_visual_components(
+                synchronized,
+                read_model=preview_read_model,
+            )
+        else:
+            self.set_preview_read_model(preview_read_model)
         self.preview_region.set_selection_highlight(selection)
 
     def clear_selection(self):
@@ -1172,6 +1585,45 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def attach_service_integration(self, service_integration):
         self.service_integration = service_integration
+
+    def _wire_action_bar_handlers(self):
+        for action_name in self.action_names:
+            self.action_bar_region.bind_action(
+                action_name,
+                lambda action_name=action_name: self._handle_action_button(action_name),
+            )
+
+    def _handle_action_button(self, action_name: str):
+        integration = self.service_integration
+        if integration is None or not hasattr(integration, "handle_workflow_action"):
+            return None
+        result = integration.handle_workflow_action(
+            action_name,
+            selection=self.current_selection,
+        )
+        self._activate_workflow_feedback(action_name)
+        return result
+
+    def _activate_workflow_feedback(self, action_name: str):
+        if action_name == "Refresh Preview":
+            return
+        if action_name in ("Validate", "Generate Manufacturing", "Review Cost"):
+            if self.bottom_tabs is not None and hasattr(self.bottom_tabs, "setCurrentWidget"):
+                self.bottom_tabs.setCurrentWidget(self.review_region)
+            elif self.bottom_tabs is not None and hasattr(self.bottom_tabs, "setCurrentIndex"):
+                self.bottom_tabs.setCurrentIndex(0)
+            review_panel = {
+                "Validate": "Validation",
+                "Generate Manufacturing": "Manufacturing",
+                "Review Cost": "Cost",
+            }.get(action_name, "")
+            if review_panel:
+                self.review_region.activate_panel(review_panel)
+            return
+        if self.bottom_tabs is not None and hasattr(self.bottom_tabs, "setCurrentWidget"):
+            self.bottom_tabs.setCurrentWidget(self.message_center_region)
+        elif self.bottom_tabs is not None and hasattr(self.bottom_tabs, "setCurrentIndex"):
+            self.bottom_tabs.setCurrentIndex(1)
 
     def _handle_inspector_field_commit(self, field_name: str, value: str):
         def _run_commit():
@@ -1289,6 +1741,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
 
     def set_message_center_read_model(self, read_model: MessageCenterReadModel):
         self.message_center_read_model = read_model
+        self.message_center_region.set_read_model(read_model)
 
     def set_presentation_aware_inspector(
         self,
@@ -1331,6 +1784,7 @@ class ConfiguratorV2Workspace(QtWidgets.QWidget):
         read_models: tuple[ReviewPanelReadModel, ...],
     ):
         self.review_panel_read_models = tuple(read_models or ())
+        self.review_region.set_read_models(self.review_panel_read_models)
 
     def set_foi_presentation_read_model(
         self,

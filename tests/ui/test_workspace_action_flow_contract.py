@@ -95,14 +95,36 @@ class _FakeTabWidget(_FakeWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tabs = []
+        self._current_index = 0
+        self._current_widget = None
 
     def addTab(self, widget, title):
         self.tabs.append((widget, title))
+        if self._current_widget is None:
+            self._current_widget = widget
 
     def setTabText(self, index, title):
         if 0 <= index < len(self.tabs):
             widget, _ = self.tabs[index]
             self.tabs[index] = (widget, title)
+
+    def setCurrentIndex(self, index):
+        self._current_index = index
+        if 0 <= index < len(self.tabs):
+            self._current_widget = self.tabs[index][0]
+
+    def currentIndex(self):
+        return self._current_index
+
+    def setCurrentWidget(self, widget):
+        self._current_widget = widget
+        for index, (candidate, _title) in enumerate(self.tabs):
+            if candidate is widget:
+                self._current_index = index
+                break
+
+    def currentWidget(self):
+        return self._current_widget
 
 
 def _fake_qt_module():
