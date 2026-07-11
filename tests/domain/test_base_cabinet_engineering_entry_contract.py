@@ -744,12 +744,16 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         panel_specs = ManufacturingExtractor.extract(graph)
         self.assertTrue(features)
         self.assertTrue(any(spec.cnc_operations for spec in panel_specs))
-        self.assertFalse(
-            any(
-                type(operation).__name__ == "Groove"
-                for spec in panel_specs
-                for operation in spec.cnc_operations
-            )
+        groove_count = sum(
+            1
+            for spec in panel_specs
+            for operation in spec.cnc_operations
+            if type(operation).__name__ == "Groove"
+        )
+        self.assertGreaterEqual(
+            groove_count,
+            3,
+            f"Expected at least 3 Groove operations (side/bottom receiving grooves), got {groove_count}",
         )
 
     def test_toe_kick_required_true_emits_two_plinth_nodes(self):
