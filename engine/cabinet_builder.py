@@ -94,11 +94,16 @@ class CabinetBuilder:
         if engineering_model is None:
             return
 
+        preserve_existing_doors = (
+            len(getattr(self.geo, "resolved_sections", []) or []) == 1
+            and len(getattr(engineering_model, "doors", ()) or []) > 0
+        )
+
         thickness = self.mat.mdf_thickness
         shelf_thickness = thickness
         shelves = []
         dividers = []
-        doors = []
+        doors = list(getattr(engineering_model, "doors", ()) or []) if preserve_existing_doors else []
         drawer_boxes = []
         drawer_faces = []
 
@@ -117,30 +122,31 @@ class CabinetBuilder:
                         position_mm=(shelf.x, shelf.y, shelf.z),
                     )
                 )
-            for door_index, door in enumerate(getattr(section, "doors", []) or []):
-                doors.append(
-                    EngineeringDoorPlacement(
-                        name=f"{section_id}_Door_{door_index + 1}",
-                        section_index=index,
-                        section_id=section_id,
-                        door_index=door_index,
-                        source_rule="resolved_door_projection",
-                        x_mm=door.x,
-                        y_mm=door.y,
-                        z_mm=door.z,
-                        width_mm=door.width,
-                        height_mm=door.height,
-                        thickness_mm=thickness,
-                        door_type=door.door_type,
-                        hinge_side=door.hinge_side,
-                        layer=door.layer,
-                        material=getattr(
-                            getattr(engineering_model, "left_side_panel", None),
-                            "material",
-                            "",
-                        ),
+            if not preserve_existing_doors:
+                for door_index, door in enumerate(getattr(section, "doors", []) or []):
+                    doors.append(
+                        EngineeringDoorPlacement(
+                            name=f"{section_id}_Door_{door_index + 1}",
+                            section_index=index,
+                            section_id=section_id,
+                            door_index=door_index,
+                            source_rule="resolved_door_projection",
+                            x_mm=door.x,
+                            y_mm=door.y,
+                            z_mm=door.z,
+                            width_mm=door.width,
+                            height_mm=door.height,
+                            thickness_mm=thickness,
+                            door_type=door.door_type,
+                            hinge_side=door.hinge_side,
+                            layer=door.layer,
+                            material=getattr(
+                                getattr(engineering_model, "left_side_panel", None),
+                                "material",
+                                "",
+                            ),
+                        )
                     )
-                )
             for drawer_index, drawer in enumerate(getattr(section, "drawers", []) or []):
                 drawer_faces.append(
                     EngineeringDrawerFace(

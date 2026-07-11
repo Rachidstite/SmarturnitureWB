@@ -94,7 +94,8 @@ class TestConstructionResolverDecisionContract(unittest.TestCase):
 
     def test_drawer_suppression_decision(self):
         self.assertEqual(self.model.specification.drawer_count, 0)
-        self.assertEqual(len(self.model.doors), 0)
+        self.assertEqual(len(self.model.doors), self.spec.door_count)
+        self.assertIn("drawers", self.model.disallowed_details)
 
     def test_shelf_minimum_decision(self):
         self.assertEqual(self.model.specification.shelf_count, 1)

@@ -261,9 +261,30 @@ class BaseCabinetEngineeringModelBuilder:
             )
             for shelf in construction_model.shelves
         )
+        doors = tuple(
+            EngineeringDoorPlacement(
+                name=door.name,
+                section_index=0,
+                section_id=door.section_id,
+                door_index=door.door_index,
+                source_rule="ConstructionResolver",
+                x_mm=door.position_mm[0],
+                y_mm=door.position_mm[1],
+                z_mm=door.position_mm[2],
+                width_mm=door.width_mm,
+                height_mm=door.height_mm,
+                thickness_mm=door.thickness_mm,
+                door_type=DoorType.from_string(door.door_type),
+                hinge_side=door.hinge_side.value
+                if hasattr(door.hinge_side, "value")
+                else str(door.hinge_side),
+                layer=0,
+                material=left_side.material,
+            )
+            for door in construction_model.doors
+        )
         drawer_boxes: Tuple[EngineeringDrawerBox, ...] = ()
         drawer_faces: Tuple[EngineeringDrawerFace, ...] = ()
-        doors: Tuple[EngineeringDoorPlacement, ...] = ()
         dividers: Tuple[EngineeringDividerPlacement, ...] = ()
 
         return BaseCabinetEngineeringModel(

@@ -153,7 +153,13 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         ):
             build_base_cabinet_engineering_cabinet(BaseCabinetSpecification())
 
-        adapt_spy.assert_called_once()
+        self.assertGreaterEqual(adapt_spy.call_count, 1)
+        self.assertTrue(
+            all(
+                call.args == (BaseCabinetSpecification(),)
+                for call in adapt_spy.call_args_list
+            )
+        )
         resolver_cls.resolve.assert_called_once()
         engineering_model_cls.build.assert_called_once()
         self.assertEqual(FakeCabinetBuilder.instances_created, 1)
@@ -453,9 +459,9 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
         cabinet.params.sec_count = 3
         cabinet.params.section_widths = [450.0, 900.0, 450.0]
         cabinet.params.sec_data = {
-            0: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='None', door_count=2),
-            1: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='None', door_count=2),
-            2: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='None', door_count=2),
+            0: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='Inset', door_count=2),
+            1: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='Inset', door_count=2),
+            2: types.SimpleNamespace(drawers=0, drawer_type='Inset', shelves=1, doors='Inset', door_count=2),
         }
 
         spec = BaseCabinetSpecificationAdapter.from_cabinet_params(cabinet.params)
@@ -548,6 +554,112 @@ class TestBaseCabinetEngineeringEntryContract(unittest.TestCase):
 
         self.assertEqual(len(low_doors), 1)
         self.assertEqual(len(high_doors), 4)
+
+    def test_default_cabinet_preserves_doors_through_engineering_scene_graph_and_manufacturing(self):
+        from manufacturing.extractor import ManufacturingExtractor
+        from manufacturing.manufacturing_cutlist_builder import ManufacturingCutlistBuilder
+        from manufacturing.manufacturing_runtime_pipeline_builder import (
+            ManufacturingRuntimePipelineBuilder,
+        )
+
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification()
+        )
+
+        engineering_doors = cabinet.engineering_model.doors
+        scene_doors = [
+            node for node in graph.all_nodes() if node.role == NodeRole.DOOR_PANEL
+        ]
+        panel_specs = ManufacturingExtractor.extract(graph)
+        door_panel_specs = [
+            spec for spec in panel_specs if spec.role == NodeRole.DOOR_PANEL
+        ]
+        runtime_result = ManufacturingRuntimePipelineBuilder().build(graph)
+        cut_list = ManufacturingCutlistBuilder().build(
+            runtime_result.manufacturing_package
+        )
+        door_cutlist_items = [
+            item for item in cut_list.items if "_DOOR-" in item["identity"]
+        ]
+
+        self.assertEqual(len(engineering_doors), 2)
+        self.assertEqual(len(scene_doors), 2)
+        self.assertEqual(len(door_panel_specs), 2)
+        self.assertEqual(len(door_cutlist_items), 2)
+        self.assertEqual(
+            len({door.identity.key for door in scene_doors}),
+            2,
+        )
+        self.assertEqual(
+            [spec.identity for spec in door_panel_specs],
+            [node.identity.key for node in scene_doors],
+        )
+        self.assertEqual(
+            [item["identity"] for item in door_cutlist_items],
+            [spec.identity for spec in door_panel_specs],
+        )
+        for engineering_door, scene_door, panel_spec in zip(
+            engineering_doors,
+            scene_doors,
+            door_panel_specs,
+        ):
+            self.assertEqual(scene_door.x, engineering_door.x_mm)
+            self.assertEqual(scene_door.y, engineering_door.y_mm)
+            self.assertEqual(scene_door.z, engineering_door.z_mm)
+            self.assertEqual(scene_door.width, engineering_door.width_mm)
+            self.assertEqual(scene_door.height, engineering_door.height_mm)
+            self.assertEqual(panel_spec.width, engineering_door.width_mm)
+            self.assertEqual(panel_spec.height, engineering_door.height_mm)
+
+    def test_default_reference_cabinet_component_mix_includes_two_doors(self):
+        _, graph = self._build_scene_graph_from_specification(BaseCabinetSpecification())
+
+        self.assertEqual(len([node for node in graph.all_nodes() if node.role == NodeRole.SIDE_PANEL]), 2)
+        self.assertEqual(len([node for node in graph.all_nodes() if node.role == NodeRole.TOP_PANEL]), 1)
+        self.assertEqual(len([node for node in graph.all_nodes() if node.role == NodeRole.BOTTOM_PANEL]), 1)
+        self.assertEqual(len([node for node in graph.all_nodes() if node.role == NodeRole.PLINTH]), 2)
+        self.assertEqual(len([node for node in graph.all_nodes() if node.role == NodeRole.BACK_PANEL]), 1)
+        self.assertEqual(len([node for node in graph.all_nodes() if node.role == NodeRole.SHELF]), 1)
+        self.assertEqual(len([node for node in graph.all_nodes() if node.role == NodeRole.DOOR_PANEL]), 2)
+
+    def test_zero_door_count_stays_compatible_across_scene_graph_and_manufacturing(self):
+        from manufacturing.extractor import ManufacturingExtractor
+        from manufacturing.manufacturing_production_package_builder import (
+            ManufacturingProductionPackageBuilder,
+        )
+        from manufacturing.manufacturing_runtime_pipeline_builder import (
+            ManufacturingRuntimePipelineBuilder,
+        )
+
+        cabinet, graph = self._build_scene_graph_from_specification(
+            BaseCabinetSpecification(door_count=0)
+        )
+
+        panel_specs = ManufacturingExtractor.extract(graph)
+        runtime_result = ManufacturingRuntimePipelineBuilder().build(graph)
+
+        self.assertEqual(cabinet.engineering_model.doors, ())
+        self.assertEqual(
+            [node for node in graph.all_nodes() if node.role == NodeRole.DOOR_PANEL],
+            [],
+        )
+        self.assertEqual(
+            [spec for spec in panel_specs if spec.role == NodeRole.DOOR_PANEL],
+            [],
+        )
+        self.assertTrue(
+            all("_DOOR-" not in item["identity"] for item in runtime_result.manufacturing_production_package.cutlist_report.items)
+        )
+        self.assertTrue(
+            all(
+                "HINGE" not in str(getattr(row, "hardware_sku", "") or "").upper()
+                for row in runtime_result.manufacturing_production_package.hardware_report.bom_rows
+            )
+        )
+        self.assertNotIn(
+            ManufacturingProductionPackageBuilder.DOOR_HINGE_WARNING,
+            runtime_result.manufacturing_production_package.warnings,
+        )
 
     def test_has_back_panel_true_emits_one_back_panel_node(self):
         _, graph = self._build_scene_graph_from_specification(

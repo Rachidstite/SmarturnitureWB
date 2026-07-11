@@ -17,6 +17,7 @@ from domain.furniture_construction_model import (
     BackPanelConstruction,
     CabinetConstructionModel,
     CabinetConstructionSpecification,
+    DoorConstruction,
     ShelfConstruction,
 )
 
@@ -44,6 +45,8 @@ class TestConstructionResolverContract(unittest.TestCase):
         self.assertNotIsInstance(self.model.specification, BaseCabinetSpecification)
         self.assertEqual(len(self.model.panels), 4)
         self.assertIsInstance(self.model.back_panel, BackPanelConstruction)
+        self.assertEqual(len(self.model.doors), 2)
+        self.assertTrue(all(isinstance(door, DoorConstruction) for door in self.model.doors))
         self.assertEqual(len(self.model.shelves), 1)
         self.assertIsInstance(self.model.shelves[0], ShelfConstruction)
 
@@ -66,6 +69,7 @@ class TestConstructionResolverContract(unittest.TestCase):
         bottom = next(panel for panel in self.model.panels if panel.name == "Bottom")
         back = self.model.back_panel
         shelf = self.model.shelves[0]
+        left_door, right_door = self.model.doors
 
         self.assertIn("between side panels", top.purpose)
         self.assertIn("between side panels", bottom.purpose)
@@ -74,6 +78,53 @@ class TestConstructionResolverContract(unittest.TestCase):
         self.assertTrue(shelf.is_adjustable)
         self.assertEqual(shelf.fixed_or_adjustable, "ADJUSTABLE")
         self.assertFalse(hasattr(shelf, "position_mm"))
+        self.assertEqual(left_door.hardware_family, self.spec.hinge_family)
+        self.assertEqual(right_door.hardware_family, self.spec.hinge_family)
+
+    def test_default_reference_cabinet_preserves_two_resolved_construction_doors(self):
+        default_model = ConstructionResolver.resolve(BaseCabinetSpecification())
+
+        self.assertEqual(len(default_model.doors), 2)
+
+        first_door, second_door = default_model.doors
+        self.assertEqual(
+            [door.identity for door in default_model.doors],
+            ["SEC-1_DOOR_1", "SEC-1_DOOR_2"],
+        )
+        self.assertEqual(
+            [door.door_index for door in default_model.doors],
+            [0, 1],
+        )
+        self.assertEqual(first_door.width_mm, 279.0)
+        self.assertEqual(second_door.width_mm, 279.0)
+        self.assertEqual(first_door.height_mm, 598.0)
+        self.assertEqual(second_door.height_mm, 598.0)
+        self.assertEqual(first_door.thickness_mm, 18.0)
+        self.assertEqual(second_door.thickness_mm, 18.0)
+        self.assertEqual(first_door.position_mm, (20.0, 2.0, 101.0))
+        self.assertEqual(second_door.position_mm, (301.0, 2.0, 101.0))
+        self.assertEqual(first_door.hinge_count, 2)
+        self.assertEqual(second_door.hinge_count, 2)
+        self.assertEqual(second_door.position_mm[0] - (first_door.position_mm[0] + first_door.width_mm), 2.0)
+        self.assertEqual(first_door.position_mm[0] - default_model.specification.material_thickness_mm, 2.0)
+        self.assertEqual(
+            600.0
+            - default_model.specification.material_thickness_mm
+            - (second_door.position_mm[0] + second_door.width_mm),
+            2.0,
+        )
+        self.assertLessEqual(first_door.position_mm[0] + first_door.width_mm, second_door.position_mm[0])
+
+    def test_zero_and_single_door_counts_remain_valid(self):
+        zero_model = ConstructionResolver.resolve(BaseCabinetSpecification(door_count=0))
+        single_model = ConstructionResolver.resolve(BaseCabinetSpecification(door_count=1))
+
+        self.assertEqual(zero_model.doors, ())
+        self.assertEqual(len(single_model.doors), 1)
+        self.assertEqual(single_model.doors[0].identity, "SEC-1_DOOR_1")
+        self.assertGreater(single_model.doors[0].width_mm, 0.0)
+        self.assertGreater(single_model.doors[0].height_mm, 0.0)
+        self.assertEqual(single_model.doors[0].position_mm[0], 20.0)
 
     def test_renderer_scene_graph_does_not_invent_back_panel_decision(self):
         from engine.cabinet import Cabinet
@@ -173,6 +224,17 @@ class TestConstructionResolverContract(unittest.TestCase):
             engineering_model.shelves[0].position_mm,
             (self.model.specification.material_thickness_mm, 0.0, self.spec.height_mm / 2.0),
         )
+        self.assertEqual(len(engineering_model.doors), len(self.model.doors))
+        for engineering_door, construction_door in zip(engineering_model.doors, self.model.doors):
+            self.assertEqual(engineering_door.source_rule, "ConstructionResolver")
+            self.assertEqual(engineering_door.door_index, construction_door.door_index)
+            self.assertEqual(
+                (engineering_door.x_mm, engineering_door.y_mm, engineering_door.z_mm),
+                construction_door.position_mm,
+            )
+            self.assertEqual(engineering_door.width_mm, construction_door.width_mm)
+            self.assertEqual(engineering_door.height_mm, construction_door.height_mm)
+            self.assertEqual(engineering_door.hinge_side, construction_door.hinge_side.value)
 
     def test_engineering_model_disables_back_panel_when_construction_disables_it(self):
         from domain.base_cabinet_engineering_model import (

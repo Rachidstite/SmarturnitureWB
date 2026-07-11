@@ -78,6 +78,11 @@ class DoorConstruction:
     hinge_count: int
     opening_direction: str
     hardware_family: str
+    door_type: str = "Inset"
+    identity: str = ""
+    section_id: str = "SEC-1"
+    door_index: int = 0
+    position_mm: Tuple[float, float, float] = (0.0, 0.0, 0.0)
 
 
 @dataclass(frozen=True)
@@ -229,6 +234,11 @@ class CabinetConstructionModel:
                 hinge_count=2,
                 opening_direction="LEFT",
                 hardware_family="HINGE_BLUM_110_V1",
+                door_type="Inset",
+                identity="SEC-1_DOOR_1",
+                section_id="SEC-1",
+                door_index=0,
+                position_mm=(18.0, 2.0, 98.0),
             ),
             DoorConstruction(
                 name="Right Door",
@@ -239,6 +249,11 @@ class CabinetConstructionModel:
                 hinge_count=2,
                 opening_direction="RIGHT",
                 hardware_family="HINGE_BLUM_110_V1",
+                door_type="Inset",
+                identity="SEC-1_DOOR_2",
+                section_id="SEC-1",
+                door_index=1,
+                position_mm=(402.0, 2.0, 98.0),
             ),
         )
 

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from core.material_manager import MaterialManager
+from domain.base_cabinet_specification_adapter import BaseCabinetSpecificationAdapter
 from domain.base_cabinet_specification import BaseCabinetSpecification
+from domain.front_layout import FrontLayoutEngine, OpeningContext
 from domain.furniture_construction_model import (
     BackPanelConstruction,
     BackPanelType,
@@ -8,6 +11,8 @@ from domain.furniture_construction_model import (
     CabinetConstructionSpecification,
     ConstructionMethod,
     ConstructionValidationIssue,
+    DoorConstruction,
+    HingeSide,
     HardwareConstruction,
     JoineryConstruction,
     PanelConstruction,
@@ -15,9 +20,157 @@ from domain.furniture_construction_model import (
     ShelfOwnership,
     ValidationSeverity,
 )
+from domain.system32 import System32Engine
+from shared.enums import DoorType
 
 
 class ConstructionResolver:
+    @staticmethod
+    def _resolve_doors(
+        specification: BaseCabinetSpecification,
+        construction_spec: CabinetConstructionSpecification,
+        *,
+        inner_width: float,
+    ) -> tuple[DoorConstruction, ...]:
+        door_count = max(int(getattr(specification, "door_count", 0) or 0), 0)
+        if door_count <= 0:
+            return ()
+
+        adapter_result = BaseCabinetSpecificationAdapter.adapt(specification)
+        params = adapter_result.cabinet_params
+        section_config = (getattr(params, "sec_data", {}) or {}).get(0)
+        if section_config is None:
+            return ()
+
+        door_type = DoorType.from_string(getattr(section_config, "doors", "None"))
+        if door_type == DoorType.NONE:
+            return ()
+
+        mat = MaterialManager()
+        base_height = float(getattr(params, "base_height", 0.0) or 0.0)
+        if not specification.toe_kick_required:
+            base_height = 0.0
+
+        available_height = (
+            construction_spec.height_mm
+            - base_height
+            - (2 * construction_spec.material_thickness_mm)
+        )
+        door_height = available_height - mat.door_top_gap - mat.door_bottom_gap
+        if door_height <= 0.0:
+            return ()
+        door_zone_z = (
+            base_height
+            + construction_spec.material_thickness_mm
+            + mat.door_bottom_gap
+        )
+
+        thickness = construction_spec.material_thickness_mm
+        doors = []
+
+        if door_type.is_overlay():
+            opening = OpeningContext(
+                identity="SEC_0",
+                width=inner_width,
+                height=door_height,
+                local_x=thickness,
+                local_y=door_zone_z,
+                left_divider_thickness=thickness,
+                right_divider_thickness=thickness,
+                top_divider_thickness=thickness,
+                bottom_divider_thickness=thickness,
+                left_overlay=mat.side_overlay,
+                right_overlay=mat.side_overlay,
+            )
+            resolved_fronts = FrontLayoutEngine.generate_doors_for_opening(
+                opening,
+                door_count,
+            )
+            front_y = -thickness + mat.overlay_setback
+            for door_index, front in enumerate(resolved_fronts):
+                hinge_positions = System32Engine.hinge_positions(front.height)
+                hinge_side = HingeSide.LEFT if front.hinge_side == "LEFT" else HingeSide.RIGHT
+                doors.append(
+                    DoorConstruction(
+                        name=f"Door {door_index + 1}",
+                        width_mm=front.width,
+                        height_mm=front.height,
+                        thickness_mm=thickness,
+                        hinge_side=hinge_side,
+                        hinge_count=len(hinge_positions),
+                        opening_direction=hinge_side.value,
+                        hardware_family=specification.hinge_family,
+                        door_type="Overlay",
+                        identity=f"SEC-1_DOOR_{door_index + 1}",
+                        section_id="SEC-1",
+                        door_index=door_index,
+                        position_mm=(front.local_x, front_y, door_zone_z),
+                    )
+                )
+        elif door_type.is_sliding():
+            overlap = mat.sliding_overlap
+            side_extra = mat.sliding_side_extra
+            total_width = inner_width + (2 * side_extra)
+            door_width = (
+                (total_width + ((door_count - 1) * overlap)) / door_count
+                if door_count > 1
+                else total_width
+            )
+            track_step = door_width - overlap
+            start_x = thickness - side_extra
+            for door_index in range(door_count):
+                hinge_positions = System32Engine.hinge_positions(door_height)
+                doors.append(
+                    DoorConstruction(
+                        name=f"Door {door_index + 1}",
+                        width_mm=door_width,
+                        height_mm=door_height,
+                        thickness_mm=thickness,
+                        hinge_side=HingeSide.LEFT,
+                        hinge_count=len(hinge_positions),
+                        opening_direction=HingeSide.LEFT.value,
+                        hardware_family=specification.hinge_family,
+                        door_type="Sliding",
+                        identity=f"SEC-1_DOOR_{door_index + 1}",
+                        section_id="SEC-1",
+                        door_index=door_index,
+                        position_mm=(start_x + (door_index * track_step), 0.0, door_zone_z),
+                    )
+                )
+        else:
+            side_clearance = mat.inset_side_clearance
+            center_gap = mat.door_side_gap
+            available_width = inner_width - (2 * side_clearance) - ((door_count - 1) * center_gap)
+            door_width = available_width / door_count if door_count > 1 else available_width
+            start_x = thickness + side_clearance
+            front_y = mat.clearance
+            for door_index in range(door_count):
+                hinge_side = HingeSide.LEFT if door_index == 0 else HingeSide.RIGHT
+                hinge_positions = System32Engine.hinge_positions(door_height)
+                doors.append(
+                    DoorConstruction(
+                        name=f"Door {door_index + 1}",
+                        width_mm=door_width,
+                        height_mm=door_height,
+                        thickness_mm=thickness,
+                        hinge_side=hinge_side,
+                        hinge_count=len(hinge_positions),
+                        opening_direction=hinge_side.value,
+                        hardware_family=specification.hinge_family,
+                        door_type="Inset",
+                        identity=f"SEC-1_DOOR_{door_index + 1}",
+                        section_id="SEC-1",
+                        door_index=door_index,
+                        position_mm=(
+                            start_x + (door_index * (door_width + center_gap)),
+                            front_y,
+                            door_zone_z,
+                        ),
+                    )
+                )
+
+        return tuple(doors)
+
     @staticmethod
     def resolve(
         specification: BaseCabinetSpecification,
@@ -163,11 +316,17 @@ class ConstructionResolver:
                 ),
             )
 
+        doors = ConstructionResolver._resolve_doors(
+            specification,
+            construction_spec,
+            inner_width=inner_width,
+        )
+
         return CabinetConstructionModel(
             specification=construction_spec,
             panels=(left_side, right_side, top, bottom),
             back_panel=back_panel,
-            doors=(),
+            doors=doors,
             shelves=shelves,
             joinery=joinery,
             hardware=hardware,
@@ -180,10 +339,10 @@ class ConstructionResolver:
                 "grooved_back_panel",
                 "adjustable_shelf",
                 "side_panel_shelf_pin_rows",
+                "door_geometry",
             ),
             disallowed_details=(
                 "drawers",
-                "door_geometry",
                 "wall_mount",
                 "floating_holes",
             ),
