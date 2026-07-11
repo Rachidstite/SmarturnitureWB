@@ -30,7 +30,10 @@ class ManufacturingOperationAdapter:
             z=getattr(operation, "z", 0.0),
             face=getattr(operation, "face", ""),
             axis=getattr(operation, "axis", "Z"),
-            source=operation.__class__.__name__,
+            source=str(
+                metadata.get("source_operation_reference")
+                or operation.__class__.__name__
+            ),
             metadata=metadata,
         )
 

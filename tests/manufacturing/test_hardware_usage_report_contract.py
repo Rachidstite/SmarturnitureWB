@@ -97,6 +97,55 @@ def test_hardware_usage_builder_uses_runtime_metadata_not_geometry():
     }
 
 
+def test_hardware_usage_builder_counts_unique_source_operation_references_once_per_sku():
+    from manufacturing.manufacturing_package import ManufacturingPackage
+    from manufacturing.unified_manufacturing_operation import (
+        UnifiedManufacturingOperation,
+    )
+
+    package = ManufacturingPackage(
+        machining_operations=[
+            UnifiedManufacturingOperation(
+                operation_type="DRILL",
+                metadata={
+                    "hardware_family": "HINGE",
+                    "hardware_sku": "HINGE_BLUM_110_V1",
+                    "hardware_intent": "INTENT_HINGE",
+                    "source_operation_reference": "door-01::hinge-1",
+                },
+            ),
+            UnifiedManufacturingOperation(
+                operation_type="DRILL",
+                metadata={
+                    "hardware_family": "HINGE",
+                    "hardware_sku": "HINGE_BLUM_110_V1",
+                    "hardware_intent": "INTENT_HINGE",
+                    "source_operation_reference": "door-01::hinge-1",
+                },
+            ),
+            UnifiedManufacturingOperation(
+                operation_type="DRILL",
+                metadata={
+                    "hardware_family": "HINGE",
+                    "hardware_sku": "HINGE_BLUM_110_V1",
+                    "hardware_intent": "INTENT_HINGE",
+                    "source_operation_reference": "door-01::hinge-2",
+                },
+            ),
+        ]
+    )
+
+    report = _build_hardware_usage_report(package)
+
+    assert report.hardware_sku_counts == {"HINGE_BLUM_110_V1": 2}
+    assert report.hardware_family_counts == {
+        "HINGE": {"HINGE_BLUM_110_V1": 2},
+    }
+    assert report.hardware_intent_counts == {
+        "INTENT_HINGE": {"HINGE_BLUM_110_V1": 2},
+    }
+
+
 def test_hardware_usage_builder_does_not_require_registry_lookups_or_geometry_inference():
     import manufacturing.hardware_usage_builder as module
 

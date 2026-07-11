@@ -2,17 +2,40 @@ import inspect
 import unittest
 from unittest.mock import patch
 
+import domain.base_cabinet_engineering_entry as engineering_entry_module
 import domain.base_cabinet_manufacturing_outputs_entry as outputs_entry_module
+from core.material_manager import MaterialManager
 from domain.base_cabinet_manufacturing_outputs_entry import (
     BaseCabinetManufacturingOutputsEntryResult,
     build_base_cabinet_manufacturing_outputs_entry,
 )
 from domain.base_cabinet_specification import BaseCabinetSpecification
+from engine.geometry_engine import GeometryEngine
+from manufacturing.manufacturing_production_package_builder import (
+    ManufacturingProductionPackageBuilder,
+)
+from scene_graph.builder import SceneGraphBuilder
 
 
 class FakeEngineeringCabinet:
     def __init__(self, scene_graph):
         self.graph = scene_graph
+
+
+class IntegrationCabinetBuilder:
+    def __init__(self):
+        self.scene_graph = None
+
+    def build(self, cabinet):
+        material_manager = MaterialManager()
+        geometry_engine = GeometryEngine(cabinet, material_manager)
+        geometry_engine.resolve_all()
+        self.scene_graph = SceneGraphBuilder(
+            cabinet,
+            material_manager,
+        ).build(geometry_engine)
+        cabinet.graph = self.scene_graph
+        cabinet.scene_graph = self.scene_graph
 
 
 class TestBaseCabinetManufacturingOutputsEntryContract(unittest.TestCase):
@@ -265,6 +288,125 @@ class TestBaseCabinetManufacturingOutputsEntryContract(unittest.TestCase):
         self.assertNotIn("ManufacturingPackageBuilder", source)
         self.assertNotIn("ManufacturingRuntimeBuilder", source)
         self.assertNotIn("ManufacturingCutlistEngine", source)
+
+    def test_default_two_door_cabinet_preserves_hinges_into_hardware_bom(self):
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ):
+            result = build_base_cabinet_manufacturing_outputs_entry(
+                BaseCabinetSpecification()
+            )
+            production_package = ManufacturingProductionPackageBuilder().build(
+                result.manufacturing_package
+            )
+
+        hinge_rows = [
+            row
+            for row in production_package.hardware_report.bom_rows
+            if row.hardware_sku == "HINGE_BLUM_110_V1"
+        ]
+        assembly_rows = [
+            row
+            for row in production_package.assembly_report.rows
+            if row.hardware_required == "HINGE_BLUM_110_V1"
+        ]
+        self.assertEqual(len(hinge_rows), 1)
+        self.assertEqual(len(assembly_rows), 1)
+        self.assertEqual(hinge_rows[0].quantity, 4)
+        self.assertEqual(len(hinge_rows[0].component_reference), 2)
+        self.assertEqual(len(hinge_rows[0].source_operation_references), 4)
+        self.assertEqual(assembly_rows[0].hardware_quantity, 4)
+        self.assertTrue(assembly_rows[0].required_machining)
+        self.assertNotIn(
+            ManufacturingProductionPackageBuilder.DOOR_HINGE_WARNING,
+            production_package.warnings,
+        )
+
+    def test_zero_door_cabinet_emits_no_hinge_hardware(self):
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ):
+            result = build_base_cabinet_manufacturing_outputs_entry(
+                BaseCabinetSpecification(door_count=0)
+            )
+            production_package = ManufacturingProductionPackageBuilder().build(
+                result.manufacturing_package
+            )
+
+        self.assertEqual(
+            [
+                row
+                for row in production_package.hardware_report.bom_rows
+                if "HINGE" in row.hardware_sku
+            ],
+            [],
+        )
+        self.assertNotIn(
+            ManufacturingProductionPackageBuilder.DOOR_HINGE_WARNING,
+            production_package.warnings,
+        )
+
+    def test_single_door_quantity_matches_resolved_hinge_count(self):
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ):
+            result = build_base_cabinet_manufacturing_outputs_entry(
+                BaseCabinetSpecification(door_count=1)
+            )
+            production_package = ManufacturingProductionPackageBuilder().build(
+                result.manufacturing_package
+            )
+
+        hinge_rows = [
+            row
+            for row in production_package.hardware_report.bom_rows
+            if row.hardware_sku == "HINGE_BLUM_110_V1"
+        ]
+        self.assertEqual(len(hinge_rows), 1)
+        self.assertEqual(hinge_rows[0].quantity, 2)
+        self.assertEqual(len(hinge_rows[0].component_reference), 1)
+
+    def test_taller_supported_cabinet_increases_hinge_bom_quantity_from_resolved_count(self):
+        tall_specification = BaseCabinetSpecification(
+            height_mm=1100.0,
+            door_count=2,
+            shelf_count=1,
+            has_back_panel=True,
+            toe_kick_required=True,
+        )
+
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ):
+            result = build_base_cabinet_manufacturing_outputs_entry(
+                tall_specification
+            )
+            production_package = ManufacturingProductionPackageBuilder().build(
+                result.manufacturing_package
+            )
+            construction_model = engineering_entry_module.build_base_cabinet_engineering_cabinet(
+                tall_specification
+            ).construction_model
+
+        resolved_hinge_count = sum(
+            door.hinge_count for door in construction_model.doors
+        )
+        hinge_rows = [
+            row
+            for row in production_package.hardware_report.bom_rows
+            if row.hardware_sku == "HINGE_BLUM_110_V1"
+        ]
+        self.assertGreater(resolved_hinge_count, 4)
+        self.assertEqual(len(hinge_rows), 1)
+        self.assertEqual(hinge_rows[0].quantity, resolved_hinge_count)
 
 
 if __name__ == "__main__":

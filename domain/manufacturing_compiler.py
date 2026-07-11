@@ -25,6 +25,44 @@ class ManufacturingCompiler:
                 "hardware_family": getattr(hardware_spec, "hardware_family", ""),
                 "hardware_sku": sku,
                 "hardware_intent": getattr(placement, "hardware_intent", ""),
+                "hardware_description": getattr(
+                    hardware_spec,
+                    "display_name",
+                    "",
+                ),
+                "hardware_category": getattr(
+                    hardware_spec,
+                    "hardware_family",
+                    "",
+                ) or getattr(hardware_spec, "category", ""),
+                "hardware_unit": "pcs",
+                "component_reference": getattr(
+                    placement,
+                    "component_reference",
+                    "",
+                ) or getattr(placement, "target_node_id", "") or getattr(
+                    placement,
+                    "host_node_id",
+                    "",
+                ),
+                "cabinet_reference": getattr(
+                    placement,
+                    "cabinet_reference",
+                    "",
+                ),
+                "source_operation_reference": getattr(
+                    placement,
+                    "source_operation_reference",
+                    "",
+                ),
+                "hinge_family": getattr(placement, "hinge_family", ""),
+                "hinge_side": getattr(placement, "hinge_side", ""),
+                "hardware_ordinal": getattr(placement, "hinge_ordinal", 0),
+                "resolved_hinge_count": getattr(
+                    placement,
+                    "resolved_hinge_count",
+                    0,
+                ),
             }
             
             # Host Processing (مثال: جانب الخزانة)

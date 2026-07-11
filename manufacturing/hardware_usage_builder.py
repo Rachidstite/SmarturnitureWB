@@ -11,8 +11,11 @@ class HardwareUsageBuilder:
         family_counts = {}
         intent_counts = {}
         sku_metadata = {}
+        counted_hardware_instances = set()
 
-        for operation in getattr(manufacturing_package, "machining_operations", []) or []:
+        for index, operation in enumerate(
+            getattr(manufacturing_package, "machining_operations", []) or []
+        ):
             metadata = getattr(operation, "metadata", None) or {}
             if not self._has_complete_identity(metadata):
                 continue
@@ -24,13 +27,17 @@ class HardwareUsageBuilder:
             if not family or not sku or not intent:
                 continue
 
-            sku_counts[sku] = sku_counts.get(sku, 0) + 1
+            usage_reference = self._usage_reference(metadata, index)
+            usage_key = (sku, usage_reference)
+            if usage_key not in counted_hardware_instances:
+                counted_hardware_instances.add(usage_key)
+                sku_counts[sku] = sku_counts.get(sku, 0) + 1
 
-            family_bucket = family_counts.setdefault(family, {})
-            family_bucket[sku] = family_bucket.get(sku, 0) + 1
+                family_bucket = family_counts.setdefault(family, {})
+                family_bucket[sku] = family_bucket.get(sku, 0) + 1
 
-            intent_bucket = intent_counts.setdefault(intent, {})
-            intent_bucket[sku] = intent_bucket.get(sku, 0) + 1
+                intent_bucket = intent_counts.setdefault(intent, {})
+                intent_bucket[sku] = intent_bucket.get(sku, 0) + 1
             self._add_sku_metadata(sku_metadata, sku, family, metadata)
 
         report.hardware_sku_counts = sku_counts
@@ -115,6 +122,19 @@ class HardwareUsageBuilder:
             value = str(metadata.get(key, "") or "").strip()
             if value:
                 bucket.add(value)
+
+    @staticmethod
+    def _usage_reference(metadata, operation_index):
+        reference = HardwareUsageBuilder._first_text(
+            metadata,
+            "source_operation_reference",
+            "source_operation_references",
+            "source_operation_id",
+            "source_operation_ids",
+        )
+        if reference:
+            return reference
+        return f"__op__:{operation_index}"
 
     @staticmethod
     def _freeze_sku_metadata(sku_metadata):
