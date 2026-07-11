@@ -15,6 +15,7 @@ from manufacturing.manufacturing_production_package_builder import (
     ManufacturingProductionPackageBuilder,
 )
 from scene_graph.builder import SceneGraphBuilder
+from shared.identity import PanelIdentity
 
 
 class FakeEngineeringCabinet:
@@ -174,6 +175,132 @@ class TestBaseCabinetManufacturingOutputsEntryContract(unittest.TestCase):
             manufacturing_package
         )
         self.assertIs(result.cut_list, cut_list)
+
+    def test_reference_cabinet_hinge_placements_host_on_resolved_side_panels_and_target_doors(self):
+        captured = {}
+
+        def _capture_compile(_compiler_self, project, context):
+            captured["project"] = project
+            captured["context"] = context
+
+        specification = BaseCabinetSpecification()
+
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ), patch.object(
+            outputs_entry_module.ManufacturingCompiler,
+            "compile",
+            new=_capture_compile,
+        ):
+            cabinet = engineering_entry_module.build_base_cabinet_engineering_cabinet(
+                specification
+            )
+            outputs_entry_module._inject_base_cabinet_hinge_hardware(
+                cabinet,
+                cabinet.graph,
+            )
+
+        placements = [
+            placement
+            for placement in getattr(captured.get("project"), "placements", []) or []
+            if getattr(placement, "hardware_intent", "") == "INTENT_HINGE"
+        ]
+        self.assertTrue(placements, "Expected resolved hinge placements for reference cabinet")
+
+        cabinet_id = outputs_entry_module._resolve_cabinet_id(cabinet)
+        for placement in placements:
+            expected_host_node_id = PanelIdentity.make_side(
+                cabinet_id,
+                getattr(placement, "hinge_side", ""),
+            ).key
+            self.assertIsNotNone(
+                cabinet.graph.get_node(expected_host_node_id),
+                f"Expected authoritative side panel node to exist: {expected_host_node_id}",
+            )
+            self.assertNotEqual(
+                placement.host_node_id,
+                placement.target_node_id,
+                "Hinge host and target topology must not collapse onto the door",
+            )
+            self.assertEqual(
+                placement.host_node_id,
+                expected_host_node_id,
+                "Hinge host_node_id must resolve to the receiving cabinet side panel",
+            )
+            self.assertIn(
+                "_DOOR-",
+                str(getattr(placement, "target_node_id", "") or ""),
+                "Hinge target_node_id must remain the door identity",
+            )
+
+    def test_reference_cabinet_hinge_placement_counts_follow_resolved_construction_doors_without_duplicates(self):
+        captured = {}
+
+        def _capture_compile(_compiler_self, project, context):
+            captured["project"] = project
+            captured["context"] = context
+
+        specification = BaseCabinetSpecification()
+
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ), patch.object(
+            outputs_entry_module.ManufacturingCompiler,
+            "compile",
+            new=_capture_compile,
+        ):
+            cabinet = engineering_entry_module.build_base_cabinet_engineering_cabinet(
+                specification
+            )
+            outputs_entry_module._inject_base_cabinet_hinge_hardware(
+                cabinet,
+                cabinet.graph,
+            )
+
+        placements = [
+            placement
+            for placement in getattr(captured.get("project"), "placements", []) or []
+            if getattr(placement, "hardware_intent", "") == "INTENT_HINGE"
+        ]
+        actual_by_target = {}
+        for placement in placements:
+            target_id = str(getattr(placement, "target_node_id", "") or "")
+            actual_by_target[target_id] = actual_by_target.get(target_id, 0) + 1
+
+        cabinet_id = outputs_entry_module._resolve_cabinet_id(cabinet)
+        expected_by_target = {}
+        for engineering_door, construction_door in zip(
+            getattr(cabinet.engineering_model, "doors", ()) or (),
+            getattr(cabinet.construction_model, "doors", ()) or (),
+        ):
+            door_id = PanelIdentity.make_door(
+                cabinet_id,
+                engineering_door.section_index,
+                engineering_door.door_index,
+            ).key
+            expected_by_target[door_id] = int(
+                getattr(construction_door, "hinge_count", 0) or 0
+            )
+
+        self.assertEqual(
+            actual_by_target,
+            expected_by_target,
+            "Each resolved door must keep its hinge count without duplicate placements",
+        )
+        self.assertEqual(
+            len(
+                {
+                    str(getattr(placement, "source_operation_reference", "") or "")
+                    for placement in placements
+                }
+            ),
+            len(placements),
+            "Each hinge placement must keep a unique source_operation_reference",
+        )
 
     def test_returns_cut_list(self):
         scene_graph = object()

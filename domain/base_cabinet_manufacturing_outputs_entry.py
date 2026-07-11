@@ -80,14 +80,16 @@ def _inject_base_cabinet_hinge_hardware(cabinet, scene_graph):
         hinge_positions = tuple(
             System32Engine.hinge_positions(construction_door.height_mm)
         )[: int(getattr(construction_door, "hinge_count", 0) or 0)]
-        hinge_side = getattr(
-            getattr(construction_door, "hinge_side", None),
-            "value",
-            getattr(construction_door, "hinge_side", ""),
+        hinge_side = _resolve_hinge_side(
+            construction_door,
+            engineering_door,
         )
+        host_node_id = PanelIdentity.make_side(cabinet_id, hinge_side).key
+        if scene_graph.get_node(host_node_id) is None:
+            continue
         for ordinal, position in enumerate(hinge_positions, start=1):
             placement = HardwarePlacement(
-                host_node_id=door_node_id,
+                host_node_id=host_node_id,
                 target_node_id=door_node_id,
                 hardware_intent="INTENT_HINGE",
                 anchor=AnchorCoordinate(
@@ -144,3 +146,13 @@ def _resolve_cabinet_id(cabinet) -> str:
     depth = int(round(float(getattr(params, "depth", 0.0) or 0.0)))
     sec_count = int(getattr(params, "sec_count", 1) or 1)
     return normalize_identity_part(f"CAB-{width}x{height}x{depth}-S{sec_count}")
+
+
+def _resolve_hinge_side(construction_door, engineering_door) -> str:
+    construction_hinge_side = getattr(
+        getattr(construction_door, "hinge_side", None),
+        "value",
+        getattr(construction_door, "hinge_side", ""),
+    )
+    engineering_hinge_side = getattr(engineering_door, "hinge_side", "")
+    return str(construction_hinge_side or engineering_hinge_side or "").strip().upper()

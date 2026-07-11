@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 import domain.base_cabinet_engineering_entry as engineering_entry_module
+from domain.hardware_library import HardwareRegistry
 from domain.base_cabinet_manufacturing_outputs_entry import (
     build_base_cabinet_manufacturing_outputs_entry,
 )
@@ -83,18 +84,120 @@ class TestOperationIdentityRuntimeContract(unittest.TestCase):
             for row in production_package.assembly_report.rows
             if row.hardware_required == "HINGE_BLUM_110_V1"
         ]
+        hardware_rows = [
+            row
+            for row in production_package.hardware_report.bom_rows
+            if row.hardware_sku == "HINGE_BLUM_110_V1"
+        ]
+        door_ids = {
+            str(getattr(node, "identity", "") or "")
+            for node in result.manufacturing_package.panels
+            if node.role == NodeRole.DOOR_PANEL
+        }
+        side_ids = {
+            str(getattr(node, "identity", "") or "")
+            for node in result.manufacturing_package.panels
+            if node.role == NodeRole.SIDE_PANEL
+        }
+        fallback_identities = {"FaceDrill", "EdgeDrill", "MachiningOperation", ""}
+        hinge_source_references = {
+            str(item.get("source_operation_reference", "") or "")
+            for item in hinge_items
+        }
+        door_hinge_items = [
+            item
+            for item in hinge_items
+            if str(item.get("panel_identity", "") or "") in door_ids
+        ]
+        host_hinge_items = [
+            item
+            for item in hinge_items
+            if str(item.get("panel_identity", "") or "") in side_ids
+        ]
+        door_hinge_rows = [
+            row for row in hinge_rows if str(getattr(row, "panel_identity", "") or "") in door_ids
+        ]
+        host_hinge_rows = [
+            row for row in hinge_rows if str(getattr(row, "panel_identity", "") or "") in side_ids
+        ]
 
         self.assertTrue(hinge_items)
         self.assertTrue(hinge_rows)
         self.assertEqual(len(assembly_rows), 1)
+        self.assertEqual(len(hardware_rows), 1)
         self.assertTrue(
-            all(str(item.get("panel_identity", "")).endswith(("_DOOR-1", "_DOOR-2")) for item in hinge_items)
+            hinge_source_references
         )
         self.assertTrue(
-            all(str(item.get("source_operation_reference", "")).startswith("CAB-") for item in hinge_items)
+            all(reference.startswith("CAB-") for reference in hinge_source_references)
         )
         self.assertTrue(
-            all(row.panel_identity.endswith(("_DOOR-1", "_DOOR-2")) for row in hinge_rows)
+            all(
+                str(item.get("panel_identity", "") or "").strip()
+                not in fallback_identities
+                for item in hinge_items
+            )
+        )
+        self.assertTrue(
+            all(
+                str(getattr(row, "panel_identity", "") or "").strip()
+                not in fallback_identities
+                for row in hinge_rows
+            )
+        )
+        self.assertTrue(door_hinge_items)
+        self.assertTrue(host_hinge_items)
+        self.assertTrue(door_hinge_rows)
+        self.assertTrue(host_hinge_rows)
+        self.assertEqual(
+            {str(item.get("source_operation_reference", "") or "") for item in door_hinge_items},
+            hinge_source_references,
+        )
+        self.assertEqual(
+            {str(item.get("source_operation_reference", "") or "") for item in host_hinge_items},
+            hinge_source_references,
+        )
+        self.assertEqual(
+            {str(getattr(row, "source_operation_reference", "") or "") for row in door_hinge_rows},
+            hinge_source_references,
+        )
+        self.assertEqual(
+            {str(getattr(row, "source_operation_reference", "") or "") for row in host_hinge_rows},
+            hinge_source_references,
+        )
+        self.assertTrue(
+            all(
+                str(getattr(row, "operation_type", "") or "") == "DRILL"
+                and float(getattr(row, "diameter", 0.0) or 0.0) in {2.5, 5.0, 35.0}
+                and float(getattr(row, "depth", 0.0) or 0.0) in {10.0, 12.0, 12.5}
+                for row in hinge_rows
+            )
+        )
+        self.assertTrue(
+            any(
+                float(getattr(row, "diameter", 0.0) or 0.0) == 35.0
+                for row in door_hinge_rows
+            ),
+            "Door-side hinge cup rows must remain on door identities",
+        )
+        self.assertTrue(
+            any(
+                float(getattr(row, "diameter", 0.0) or 0.0) == 2.5
+                for row in door_hinge_rows
+            ),
+            "Door-side hinge pilot rows must remain on door identities",
+        )
+        self.assertTrue(
+            all(
+                float(getattr(row, "diameter", 0.0) or 0.0) == 5.0
+                and float(getattr(row, "depth", 0.0) or 0.0) == 12.0
+                for row in host_hinge_rows
+            ),
+            "Host-side hinge rows must match authoritative host-hole geometry",
+        )
+        self.assertEqual(
+            int(getattr(hardware_rows[0], "quantity", 0) or 0),
+            4,
         )
         self.assertEqual(
             {
@@ -102,6 +205,118 @@ class TestOperationIdentityRuntimeContract(unittest.TestCase):
                 for required in assembly_rows[0].required_machining
             },
             set(assembly_rows[0].source_operation_references),
+        )
+        self.assertEqual(
+            set(assembly_rows[0].source_operation_references),
+            hinge_source_references,
+        )
+        self.assertTrue(
+            any(
+                str(getattr(required, "panel_identity", "") or "") in door_ids
+                for required in assembly_rows[0].required_machining
+            )
+        )
+        self.assertTrue(
+            any(
+                str(getattr(required, "panel_identity", "") or "") in side_ids
+                for required in assembly_rows[0].required_machining
+            )
+        )
+
+    def test_base_cabinet_hinge_runtime_distributes_machining_across_door_and_side_panel_identities(self):
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ):
+            result = build_base_cabinet_manufacturing_outputs_entry(
+                BaseCabinetSpecification()
+            )
+            production_package = ManufacturingProductionPackageBuilder().build(
+                result.manufacturing_package
+            )
+
+        cnc_rows = list(
+            getattr(getattr(production_package, "cnc_report", None), "rows", ()) or ()
+        )
+        door_ids = {
+            str(getattr(node, "identity", "") or "")
+            for node in result.manufacturing_package.panels
+            if node.role == NodeRole.DOOR_PANEL
+        }
+        side_ids = {
+            str(getattr(node, "identity", "") or "")
+            for node in result.manufacturing_package.panels
+            if node.role == NodeRole.SIDE_PANEL
+        }
+        hinge_rows = [
+            row
+            for row in cnc_rows
+            if "::hinge-" in str(getattr(row, "source_operation_reference", "") or "")
+        ]
+
+        self.assertTrue(hinge_rows)
+        self.assertTrue(
+            any(row.panel_identity in door_ids for row in hinge_rows),
+            "Door-side hinge machining must remain on door panel identities",
+        )
+        self.assertTrue(
+            any(row.panel_identity in side_ids for row in hinge_rows),
+            "Host-side hinge machining must appear on cabinet side-panel identities",
+        )
+        self.assertTrue(
+            all(
+                str(getattr(row, "panel_identity", "") or "").strip()
+                not in {"FaceDrill", "EdgeDrill", "MachiningOperation", ""}
+                for row in hinge_rows
+            ),
+            "Hinge CNC rows must not fall back to generic operation identities",
+        )
+
+    def test_base_cabinet_hinge_host_side_rows_match_authoritative_hardware_spec_hole_dimensions(self):
+        with patch.object(
+            engineering_entry_module,
+            "CabinetBuilder",
+            new=IntegrationCabinetBuilder,
+        ):
+            result = build_base_cabinet_manufacturing_outputs_entry(
+                BaseCabinetSpecification()
+            )
+            production_package = ManufacturingProductionPackageBuilder().build(
+                result.manufacturing_package
+            )
+
+        side_ids = {
+            str(getattr(node, "identity", "") or "")
+            for node in result.manufacturing_package.panels
+            if node.role == NodeRole.SIDE_PANEL
+        }
+        hinge_rows = [
+            row
+            for row in getattr(production_package.cnc_report, "rows", ()) or ()
+            if "::hinge-" in str(getattr(row, "source_operation_reference", "") or "")
+            and str(getattr(row, "panel_identity", "") or "") in side_ids
+        ]
+        hardware = HardwareRegistry().get_hardware("HINGE_BLUM_110_V1")
+        expected_host_holes = {
+            (
+                float(getattr(hole, "diameter", 0.0) or 0.0),
+                float(getattr(hole, "depth", 0.0) or 0.0),
+            )
+            for hole in getattr(hardware, "host_holes", ()) or ()
+        }
+
+        self.assertTrue(hinge_rows, "Expected cabinet-side hinge host-hole CNC rows")
+        self.assertEqual(
+            {
+                (
+                    float(getattr(row, "diameter", 0.0) or 0.0),
+                    float(getattr(row, "depth", 0.0) or 0.0),
+                )
+                for row in hinge_rows
+            },
+            expected_host_holes,
+            "Cabinet-side hinge rows must match authoritative host_holes from HardwareSpec",
         )
 
     def test_confirmat_panel_identity_survives_runtime_pipeline_to_cnc_rows(self):
