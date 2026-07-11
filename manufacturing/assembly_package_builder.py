@@ -1,4 +1,5 @@
 from manufacturing.assembly_package_report import (
+    AssemblyPanelInventoryRow,
     AssemblyPackageReport,
     AssemblyPackageRow,
 )
@@ -22,6 +23,9 @@ class AssemblyPackageBuilder:
             for hardware_row in hardware_rows
         ]
         report.warnings = warnings
+        report.panel_inventory = self._panel_inventory_rows(
+            getattr(production_package, "product_bom_report", None)
+        )
         return report
 
     @staticmethod
@@ -72,4 +76,28 @@ class AssemblyPackageBuilder:
                 getattr(cnc_row, "source_operation_reference", "") or ""
             ).strip()
             in source_set
+        )
+
+    @staticmethod
+    def _panel_inventory_rows(product_bom_report):
+        rows = getattr(product_bom_report, "rows", ()) or ()
+        return tuple(
+            AssemblyPanelInventoryRow(
+                cabinet_reference=tuple(getattr(row, "cabinet_reference", ()) or ()),
+                component_reference=tuple(
+                    getattr(row, "component_reference", ()) or ()
+                ),
+                panel_identity=str(getattr(row, "identity", "") or ""),
+                description=str(getattr(row, "description", "") or ""),
+                quantity=int(getattr(row, "quantity", 0) or 0),
+                unit=str(getattr(row, "unit", "") or ""),
+                material=getattr(row, "material", None),
+                width_mm=getattr(row, "width_mm", None),
+                height_mm=getattr(row, "height_mm", None),
+                thickness_mm=getattr(row, "thickness_mm", None),
+                component_role=getattr(row, "component_role", None),
+                group=getattr(row, "group", None),
+            )
+            for row in rows
+            if str(getattr(row, "bom_category", "") or "") == "PANEL"
         )

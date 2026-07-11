@@ -37,6 +37,7 @@ class ManufacturingProductionPackageBuilder:
         assembly_report = AssemblyPackageBuilder().build(
             ManufacturingProductionPackage(
                 hardware_report=hardware_report,
+                product_bom_report=product_bom_report,
                 cnc_report=cnc_report,
                 warnings=list(release_result["warnings"]),
             )

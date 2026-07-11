@@ -6,12 +6,14 @@ from dataclasses import fields, is_dataclass
 class TestAssemblyPackageFoundation(unittest.TestCase):
     def test_assembly_report_contract_exists_and_is_dataclass(self):
         from manufacturing.assembly_package_report import (
+            AssemblyPanelInventoryRow,
             AssemblyPackageReport,
             AssemblyPackageRow,
         )
 
         self.assertTrue(is_dataclass(AssemblyPackageReport))
         self.assertTrue(is_dataclass(AssemblyPackageRow))
+        self.assertTrue(is_dataclass(AssemblyPanelInventoryRow))
 
     def test_assembly_report_row_field_inventory_is_stable(self):
         from manufacturing.assembly_package_report import AssemblyPackageRow
@@ -46,6 +48,59 @@ class TestAssemblyPackageFoundation(unittest.TestCase):
         self.assertEqual(row.assembly_notes, ())
         self.assertEqual(row.source_operation_references, ())
 
+    def test_assembly_panel_inventory_row_field_inventory_is_stable(self):
+        from manufacturing.assembly_package_report import AssemblyPanelInventoryRow
+
+        self.assertEqual(
+            [field.name for field in fields(AssemblyPanelInventoryRow)],
+            [
+                "cabinet_reference",
+                "component_reference",
+                "panel_identity",
+                "description",
+                "quantity",
+                "unit",
+                "material",
+                "width_mm",
+                "height_mm",
+                "thickness_mm",
+                "component_role",
+                "group",
+            ],
+        )
+
+    def test_assembly_panel_inventory_row_is_immutable(self):
+        from dataclasses import FrozenInstanceError
+
+        from manufacturing.assembly_package_report import AssemblyPanelInventoryRow
+
+        row = AssemblyPanelInventoryRow(
+            cabinet_reference=(),
+            component_reference=("side-left",),
+            panel_identity="side-left",
+            description="SIDE_PANEL",
+            quantity=1,
+            unit="pcs",
+            material="MDF_18MM",
+            width_mm=600.0,
+            height_mm=720.0,
+            thickness_mm=18.0,
+            component_role="SIDE_PANEL",
+            group="CARCASS",
+        )
+
+        with self.assertRaises(FrozenInstanceError):
+            row.panel_identity = "other"
+
+    def test_assembly_report_backward_compatible_default_construction_still_works(self):
+        from manufacturing.assembly_package_report import AssemblyPackageReport
+
+        report = AssemblyPackageReport()
+
+        self.assertEqual(report.rows, [])
+        self.assertEqual(report.panel_inventory, ())
+        self.assertEqual(report.warnings, [])
+
     def test_empty_production_package_produces_empty_assembly_report(self):
         from manufacturing.assembly_package_builder import AssemblyPackageBuilder
         from manufacturing.manufacturing_production_package import (
@@ -55,6 +110,7 @@ class TestAssemblyPackageFoundation(unittest.TestCase):
         report = AssemblyPackageBuilder().build(ManufacturingProductionPackage())
 
         self.assertEqual(report.rows, [])
+        self.assertEqual(report.panel_inventory, ())
         self.assertEqual(report.warnings, [])
 
     def test_door_and_drawer_hardware_flow_into_assembly_report(self):
