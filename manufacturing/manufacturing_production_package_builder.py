@@ -10,6 +10,7 @@ from manufacturing.hardware_usage_builder import HardwareUsageBuilder
 from manufacturing.manufacturing_production_package import (
     ManufacturingProductionPackage,
 )
+from manufacturing.product_bom_report import ProductBomReport, ProductBomRow
 from manufacturing.manufacturing_release_validator import (
     ManufacturingReleaseValidator,
 )
@@ -27,6 +28,11 @@ class ManufacturingProductionPackageBuilder:
         release_result = ManufacturingReleaseValidator().validate(package)
         hardware_usage_report = HardwareUsageBuilder().build(package)
         hardware_report = HardwareBomBuilder().build(hardware_usage_report)
+        product_bom_report = self._build_product_bom_report(
+            cutlist_report,
+            hardware_report,
+            getattr(package, "panels", []) or [],
+        )
         cnc_report = CNCReportBuilder().build(machining_report)
         assembly_report = AssemblyPackageBuilder().build(
             ManufacturingProductionPackage(
@@ -50,6 +56,7 @@ class ManufacturingProductionPackageBuilder:
             summary_report=summary_report,
             release_ready=release_result["ready"],
             warnings=warnings,
+            product_bom_report=product_bom_report,
             cnc_report=cnc_report,
             assembly_report=assembly_report,
             hardware_report=hardware_report,
@@ -82,3 +89,81 @@ class ManufacturingProductionPackageBuilder:
                 return True
 
         return False
+
+    @staticmethod
+    def _build_product_bom_report(cutlist_report, hardware_report, panels):
+        panels_by_identity = {
+            str(getattr(panel, "identity", "") or ""): panel
+            for panel in panels
+        }
+        rows = []
+
+        for item in getattr(cutlist_report, "items", []) or []:
+            identity = str(item.get("identity", "") or "")
+            panel = panels_by_identity.get(identity)
+            role_name = ManufacturingProductionPackageBuilder._panel_role_name(panel)
+            group = str(getattr(panel, "group", "") or "").strip() or None
+            rows.append(
+                ProductBomRow(
+                    bom_category="PANEL",
+                    identity=identity,
+                    description=role_name or identity,
+                    quantity=int(item.get("quantity", 0) or 0),
+                    unit="pcs",
+                    component_reference=((identity,) if identity else ()),
+                    cabinet_reference=(),
+                    source_reference=((identity,) if identity else ()),
+                    material=str(item.get("material", "") or "") or None,
+                    width_mm=float(item["width"]) if item.get("width") is not None else None,
+                    height_mm=float(item["height"]) if item.get("height") is not None else None,
+                    thickness_mm=(
+                        float(item["thickness"])
+                        if item.get("thickness") is not None
+                        else None
+                    ),
+                    component_role=role_name or None,
+                    group=group,
+                )
+            )
+
+        for row in getattr(hardware_report, "bom_rows", []) or []:
+            rows.append(
+                ProductBomRow(
+                    bom_category=str(getattr(row, "bom_category", "") or "HARDWARE"),
+                    identity=str(getattr(row, "hardware_sku", "") or ""),
+                    description=str(getattr(row, "description", "") or ""),
+                    quantity=int(getattr(row, "quantity", 0) or 0),
+                    unit=str(getattr(row, "unit", "") or ""),
+                    component_reference=tuple(
+                        getattr(row, "component_reference", ()) or ()
+                    ),
+                    cabinet_reference=tuple(
+                        getattr(row, "cabinet_reference", ()) or ()
+                    ),
+                    source_reference=tuple(
+                        getattr(row, "source_operation_references", ()) or ()
+                    ),
+                )
+            )
+
+        warnings = []
+        for source in (
+            getattr(cutlist_report, "warnings", None),
+            getattr(hardware_report, "warnings", None),
+        ):
+            for warning in list(source or []):
+                if warning not in warnings:
+                    warnings.append(warning)
+
+        return ProductBomReport(
+            rows=tuple(rows),
+            warnings=tuple(warnings),
+            source="ManufacturingProductionPackageBuilder",
+        )
+
+    @staticmethod
+    def _panel_role_name(panel):
+        role = getattr(panel, "role", None)
+        if role is None:
+            return ""
+        return str(getattr(role, "name", role) or "").strip()
