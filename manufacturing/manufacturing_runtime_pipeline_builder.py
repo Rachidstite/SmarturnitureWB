@@ -18,10 +18,8 @@ class ManufacturingRuntimePipelineBuilder:
     def build(self, scene_graph):
         panel_specs = ManufacturingExtractor.extract(scene_graph)
         materials = self._resolve_materials(panel_specs)
-        machining_operations = ManufacturingOperationAdapter.to_unified_list(
-            operation
-            for panel in panel_specs
-            for operation in panel.cnc_operations
+        machining_operations = ManufacturingOperationAdapter.to_unified_panel_operations(
+            panel_specs
         )
         edge_operations = [
             UnifiedManufacturingOperation(operation_type="EDGE_BANDING")

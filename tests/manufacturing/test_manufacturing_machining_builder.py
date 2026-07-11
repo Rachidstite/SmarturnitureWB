@@ -62,6 +62,55 @@ class TestManufacturingMachiningBuilder(unittest.TestCase):
         self.assertEqual(report.total_items, 1)
         self.assertIs(report.warnings, package.warnings)
 
+    def test_build_preserves_identity_metadata_for_downstream_consumers(self):
+        from manufacturing.manufacturing_machining_builder import (
+            ManufacturingMachiningBuilder,
+        )
+        from manufacturing.manufacturing_package import ManufacturingPackage
+        from manufacturing.unified_manufacturing_operation import (
+            UnifiedManufacturingOperation,
+        )
+
+        operation = UnifiedManufacturingOperation(
+            operation_type="DRILL",
+            diameter=5.0,
+            depth=12.0,
+            face="LEFT",
+            axis="Z",
+            source="door-01::hinge-1",
+            metadata={
+                "panel_identity": "door-01",
+                "component_reference": "door-01",
+                "cabinet_reference": "cabinet-01",
+                "source_operation_reference": "door-01::hinge-1",
+                "hardware_intent": "INTENT_HINGE",
+            },
+        )
+        package = ManufacturingPackage(machining_operations=[operation])
+
+        report = ManufacturingMachiningBuilder().build(package)
+
+        self.assertEqual(
+            report.items[0]["panel_identity"],
+            "door-01",
+        )
+        self.assertEqual(
+            report.items[0]["source_operation_reference"],
+            "door-01::hinge-1",
+        )
+        self.assertEqual(
+            report.items[0]["component_reference"],
+            "door-01",
+        )
+        self.assertEqual(
+            report.items[0]["cabinet_reference"],
+            "cabinet-01",
+        )
+        self.assertEqual(
+            report.items[0]["hardware_intent"],
+            "INTENT_HINGE",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -169,6 +169,27 @@ class TestManufacturingOperationAdapter(unittest.TestCase):
             ["DRILL", "DRILL"],
         )
 
+    def test_to_unified_injects_panel_identity_when_panel_context_is_provided(self):
+        from domain.manufacturing_ops import FaceDrill
+        from manufacturing.manufacturing_operation_adapter import (
+            ManufacturingOperationAdapter,
+        )
+
+        operation = FaceDrill(
+            x=10.0,
+            y=20.0,
+            diameter=5.0,
+            depth=12.0,
+            face="TOP",
+        )
+
+        unified = ManufacturingOperationAdapter.to_unified(
+            operation,
+            panel_identity="PANEL-01",
+        )
+
+        self.assertEqual(unified.metadata["panel_identity"], "PANEL-01")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,14 +6,17 @@ from manufacturing.unified_manufacturing_operation import (
 class ManufacturingOperationAdapter:
 
     @staticmethod
-    def to_unified(operation):
+    def to_unified(operation, *, panel_identity=""):
         if isinstance(operation, UnifiedManufacturingOperation):
             return operation
 
         operation_type = ManufacturingOperationAdapter._operation_type(
             operation
         )
-        metadata = dict(getattr(operation, "metadata", None) or {})
+        metadata = ManufacturingOperationAdapter._metadata(
+            operation,
+            panel_identity=panel_identity,
+        )
         original_operation_type = (
             ManufacturingOperationAdapter._original_operation_type(operation)
         )
@@ -45,6 +48,20 @@ class ManufacturingOperationAdapter:
         ]
 
     @staticmethod
+    def to_unified_panel_operations(panel_specs):
+        unified_operations = []
+        for panel in panel_specs or []:
+            panel_identity = str(getattr(panel, "identity", "") or "").strip()
+            for operation in getattr(panel, "cnc_operations", ()) or ():
+                unified_operations.append(
+                    ManufacturingOperationAdapter.to_unified(
+                        operation,
+                        panel_identity=panel_identity,
+                    )
+                )
+        return unified_operations
+
+    @staticmethod
     def _operation_type(operation):
         if hasattr(operation, "op_type"):
             return operation.op_type
@@ -74,3 +91,10 @@ class ManufacturingOperationAdapter:
             return getattr(operation, local_name)
 
         return getattr(operation, absolute_name, 0.0)
+
+    @staticmethod
+    def _metadata(operation, *, panel_identity=""):
+        metadata = dict(getattr(operation, "metadata", None) or {})
+        if panel_identity and not str(metadata.get("panel_identity", "") or "").strip():
+            metadata["panel_identity"] = panel_identity
+        return metadata
